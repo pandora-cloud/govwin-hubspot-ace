@@ -11,7 +11,7 @@
 // or override the suggestion. The backend Lambda performs a final DDB
 // uniqueness check at submit time to close the race window.
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -119,7 +119,17 @@ interface Props {
   onChange: (id: string, parts: SyntheticIdValue) => void;
 }
 
-/** SyntheticIdHelper: emits a unique synthetic govwin_opp_id via onChange. */
+/** SyntheticIdHelper: emits a unique synthetic govwin_opp_id via onChange.
+ *
+ * Avoids the infinite-render loop that the obvious useEffect-on-state pattern
+ * produces in HubSpot's UI Extension iframe: the parent renders a fresh inline
+ * onChange function on every render, so any effect that depends on the
+ * callback identity ends up re-firing forever (effect -> onChange -> parent
+ * setState -> new function reference -> effect re-runs). Instead, stash the
+ * latest onChange in a ref and call it directly from each setter. The ref
+ * doesn't participate in the dependency graph and the setters are the only
+ * code paths that need to notify the parent.
+ */
 export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChange }) => {
   const [source, setSource] = useState<string>("DIRECT");
   const [customer, setCustomer] = useState<string>(deriveCustomerSlug(defaultCompanyName));
@@ -127,13 +137,41 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
   const [sequence, setSequence] = useState<string>("001");
   const [suggested, setSuggested] = useState<string>("001");
 
-  const emit = useCallback(
-    (parts: SyntheticIdValue) => {
-      onChange(composeId(parts), parts);
-    },
-    [onChange]
-  );
+  // Track onChange via a ref so we never rebuild effects when the parent
+  // creates a fresh inline function.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
+  const notify = (next: SyntheticIdValue) => {
+    onChangeRef.current(composeId(next), next);
+  };
+
+  const updateSource = (v: string) => {
+    setSource(v);
+    notify({ source: v, customer, project, sequence });
+  };
+  const updateCustomer = (v: string) => {
+    setCustomer(v);
+    notify({ source, customer: v, project, sequence });
+  };
+  const updateProject = (v: string) => {
+    setProject(v);
+    notify({ source, customer, project: v, sequence });
+  };
+  const updateSequence = (v: string) => {
+    setSequence(v);
+    notify({ source, customer, project, sequence: v });
+  };
+
+  // Emit once on mount so the parent gets the initial composed id.
+  useEffect(() => {
+    notify({ source, customer, project, sequence });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-suggest the next sequence by searching HubSpot for the assembled
+  // prefix. Runs only when source/customer/project change -- not on every
+  // sequence keystroke -- and never depends on a parent-supplied callback.
   useEffect(() => {
     let cancelled = false;
     const prefix = [source, customer, project].filter(Boolean).join("-") + "-";
@@ -145,16 +183,19 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
       if (cancelled) return;
       const next = nextSequence(prefix, ids);
       setSuggested(next);
-      setSequence((current) => (current === "001" || current === "" ? next : current));
+      setSequence((current) => {
+        if (current === "001" || current === "") {
+          notify({ source, customer, project, sequence: next });
+          return next;
+        }
+        return current;
+      });
     });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, customer, project]);
-
-  useEffect(() => {
-    emit({ source, customer, project, sequence });
-  }, [source, customer, project, sequence, emit]);
 
   return (
     <Flex direction="column" gap="sm">
@@ -170,7 +211,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
             name="source_prefix"
             label="Source"
             value={source}
-            onChange={(v) => setSource(String(v ?? "DIRECT"))}
+            onChange={(v) => updateSource(String(v ?? "DIRECT"))}
             options={SOURCE_PREFIXES.filter((p) => p.value !== "GW").map((p) => ({
               label: p.label,
               value: p.value,
@@ -182,7 +223,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
             name="customer_slug"
             label="Customer slug"
             value={customer}
-            onChange={(v) => setCustomer(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
+            onChange={(v) => updateCustomer(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
           />
         </Box>
       </Flex>
@@ -192,7 +233,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
             name="project_slug"
             label="Project slug (optional)"
             value={project}
-            onChange={(v) => setProject(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
+            onChange={(v) => updateProject(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
           />
         </Box>
         <Box flex={1}>
@@ -200,7 +241,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
             name="sequence_number"
             label={`Sequence (suggested: ${suggested})`}
             value={sequence}
-            onChange={(v) => setSequence(String(v ?? "").padStart(3, "0"))}
+            onChange={(v) => updateSequence(String(v ?? "").padStart(3, "0"))}
           />
         </Box>
       </Flex>
