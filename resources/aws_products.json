@@ -1,0 +1,79 @@
+{
+  "version": "2026-05-26",
+  "source": "Curated subset of AWS Partner Central AwsProducts catalog focused on Pandora Cloud federal book. Refresh by exporting the canonical CSV from Partner Central > ACE Pipeline Manager > Import.",
+  "products": [
+    {"Identifier": "AmazonEC2Linux", "Name": "Amazon EC2 (Linux)", "Family": "Compute"},
+    {"Identifier": "AmazonEC2Windows", "Name": "Amazon EC2 (Windows)", "Family": "Compute"},
+    {"Identifier": "AWSLambda", "Name": "AWS Lambda", "Family": "Compute"},
+    {"Identifier": "AmazonECS", "Name": "Amazon ECS", "Family": "Containers"},
+    {"Identifier": "AmazonEKS", "Name": "Amazon EKS", "Family": "Containers"},
+    {"Identifier": "AmazonFargate", "Name": "AWS Fargate", "Family": "Containers"},
+
+    {"Identifier": "AmazonS3", "Name": "Amazon S3", "Family": "Storage"},
+    {"Identifier": "AmazonEBS", "Name": "Amazon EBS", "Family": "Storage"},
+    {"Identifier": "AmazonEFS", "Name": "Amazon EFS", "Family": "Storage"},
+    {"Identifier": "AWSBackup", "Name": "AWS Backup", "Family": "Storage"},
+
+    {"Identifier": "AmazonRDS", "Name": "Amazon RDS", "Family": "Database"},
+    {"Identifier": "AmazonAurora", "Name": "Amazon Aurora", "Family": "Database"},
+    {"Identifier": "AmazonDynamoDB", "Name": "Amazon DynamoDB", "Family": "Database"},
+    {"Identifier": "AmazonRedshift", "Name": "Amazon Redshift", "Family": "Database"},
+    {"Identifier": "AmazonElastiCache", "Name": "Amazon ElastiCache", "Family": "Database"},
+
+    {"Identifier": "AmazonVPC", "Name": "Amazon VPC", "Family": "Networking"},
+    {"Identifier": "AmazonCloudFront", "Name": "Amazon CloudFront", "Family": "Networking"},
+    {"Identifier": "AmazonRoute53", "Name": "Amazon Route 53", "Family": "Networking"},
+    {"Identifier": "AWSDirectConnect", "Name": "AWS Direct Connect", "Family": "Networking"},
+    {"Identifier": "AWSTransitGateway", "Name": "AWS Transit Gateway", "Family": "Networking"},
+
+    {"Identifier": "AWSIAM", "Name": "AWS IAM", "Family": "Security"},
+    {"Identifier": "AWSIAMIdentityCenter", "Name": "AWS IAM Identity Center", "Family": "Security"},
+    {"Identifier": "AmazonCognito", "Name": "Amazon Cognito", "Family": "Security"},
+    {"Identifier": "AWSKMS", "Name": "AWS KMS", "Family": "Security"},
+    {"Identifier": "AWSSecretsManager", "Name": "AWS Secrets Manager", "Family": "Security"},
+    {"Identifier": "AWSCertificateManager", "Name": "AWS Certificate Manager", "Family": "Security"},
+    {"Identifier": "AmazonGuardDuty", "Name": "Amazon GuardDuty", "Family": "Security"},
+    {"Identifier": "AmazonMacie", "Name": "Amazon Macie", "Family": "Security"},
+    {"Identifier": "AWSSecurityHub", "Name": "AWS Security Hub", "Family": "Security"},
+    {"Identifier": "AWSConfig", "Name": "AWS Config", "Family": "Security"},
+    {"Identifier": "AWSWAF", "Name": "AWS WAF", "Family": "Security"},
+    {"Identifier": "AWSShield", "Name": "AWS Shield", "Family": "Security"},
+    {"Identifier": "AWSAuditManager", "Name": "AWS Audit Manager", "Family": "Security"},
+
+    {"Identifier": "AmazonAPIGateway", "Name": "Amazon API Gateway", "Family": "Application Integration"},
+    {"Identifier": "AmazonSNS", "Name": "Amazon SNS", "Family": "Application Integration"},
+    {"Identifier": "AmazonSQS", "Name": "Amazon SQS", "Family": "Application Integration"},
+    {"Identifier": "AmazonEventBridge", "Name": "Amazon EventBridge", "Family": "Application Integration"},
+    {"Identifier": "AWSStepFunctions", "Name": "AWS Step Functions", "Family": "Application Integration"},
+
+    {"Identifier": "AmazonCloudWatch", "Name": "Amazon CloudWatch", "Family": "Management"},
+    {"Identifier": "AWSCloudTrail", "Name": "AWS CloudTrail", "Family": "Management"},
+    {"Identifier": "AWSCloudFormation", "Name": "AWS CloudFormation", "Family": "Management"},
+    {"Identifier": "AWSSystemsManager", "Name": "AWS Systems Manager", "Family": "Management"},
+    {"Identifier": "AWSOrganizations", "Name": "AWS Organizations", "Family": "Management"},
+    {"Identifier": "AWSControlTower", "Name": "AWS Control Tower", "Family": "Management"},
+
+    {"Identifier": "AmazonSageMaker", "Name": "Amazon SageMaker", "Family": "AI/ML"},
+    {"Identifier": "AmazonBedrock", "Name": "Amazon Bedrock", "Family": "AI/ML"},
+    {"Identifier": "AmazonRekognition", "Name": "Amazon Rekognition", "Family": "AI/ML"},
+    {"Identifier": "AmazonComprehend", "Name": "Amazon Comprehend", "Family": "AI/ML"},
+    {"Identifier": "AmazonTextract", "Name": "Amazon Textract", "Family": "AI/ML"},
+    {"Identifier": "AmazonTranscribe", "Name": "Amazon Transcribe", "Family": "AI/ML"},
+    {"Identifier": "AmazonPolly", "Name": "Amazon Polly", "Family": "AI/ML"},
+
+    {"Identifier": "AmazonAthena", "Name": "Amazon Athena", "Family": "Analytics"},
+    {"Identifier": "AmazonEMR", "Name": "Amazon EMR", "Family": "Analytics"},
+    {"Identifier": "AmazonKinesis", "Name": "Amazon Kinesis", "Family": "Analytics"},
+    {"Identifier": "AWSGlue", "Name": "AWS Glue", "Family": "Analytics"},
+    {"Identifier": "AmazonQuickSight", "Name": "Amazon QuickSight", "Family": "Analytics"},
+
+    {"Identifier": "AWSWorkSpaces", "Name": "Amazon WorkSpaces", "Family": "End User Computing"},
+    {"Identifier": "AmazonAppStream2", "Name": "Amazon AppStream 2.0", "Family": "End User Computing"},
+
+    {"Identifier": "AWSGovCloud", "Name": "AWS GovCloud (US)", "Family": "GovCloud"},
+    {"Identifier": "AWSOutposts", "Name": "AWS Outposts", "Family": "Hybrid"},
+    {"Identifier": "AWSSnowball", "Name": "AWS Snow Family", "Family": "Edge"},
+
+    {"Identifier": "Other", "Name": "Other AWS Service (specify in description)", "Family": "Other"}
+  ]
+}
