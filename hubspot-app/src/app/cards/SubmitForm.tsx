@@ -18,11 +18,13 @@ import {
   Select,
   Text,
   TextArea,
+  ToggleGroup,
   hubspot,
 } from "@hubspot/ui-extensions";
 
 import { SolutionPicker } from "./SolutionPicker";
 import { AwsProductsPicker } from "./AwsProductsPicker";
+import { SyntheticIdHelper, SyntheticIdValue } from "./SyntheticIdHelper";
 import {
   COMPETITORS,
   DELIVERY_MODELS,
@@ -315,15 +317,36 @@ export const SubmitForm: React.FC<Props> = ({
 
       <Divider />
 
-      {/* Section 1: Source - simplified (no ToggleGroup, no SyntheticIdHelper) */}
-      <Input
-        name="govwin_opp_id"
-        label="GovWin Opportunity ID (use DIRECT-CUSTOMER-NNN if not from GovWin)"
-        value={state.govwinOppId}
-        onChange={(v) => update("govwinOppId", String(v ?? ""))}
-        error={Boolean(errorFor("govwin_opp_id"))}
-        validationMessage={errorFor("govwin_opp_id")}
+      {/* Section 1: Source */}
+      <ToggleGroup
+        name="from_govwin"
+        toggleType="radioButtonList"
+        label="Did this deal come from GovWin?"
+        value={state.fromGovWin ? "yes" : "no"}
+        onChange={(v) => update("fromGovWin", v === "yes")}
+        options={[
+          { label: "Yes (use the real GovWin Opportunity ID)", value: "yes" },
+          { label: "No (build a synthetic ID)", value: "no" },
+        ]}
+        inline
       />
+      {state.fromGovWin ? (
+        <Input
+          name="govwin_opp_id"
+          label="GovWin Opportunity ID"
+          description="From GovWin IQ. Often looks like OPP123456 or BID987654."
+          value={state.govwinOppId}
+          onChange={(v) => update("govwinOppId", String(v ?? ""))}
+          error={Boolean(errorFor("govwin_opp_id"))}
+          validationMessage={errorFor("govwin_opp_id")}
+          readOnly={Boolean(existingGovwinOppId)}
+        />
+      ) : (
+        <SyntheticIdHelper
+          defaultCompanyName={defaultCompanyName}
+          onChange={(_id, parts) => update("syntheticParts", parts)}
+        />
+      )}
 
       <Divider />
 
