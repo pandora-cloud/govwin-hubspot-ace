@@ -18,7 +18,6 @@ import {
   Select,
   Text,
   TextArea,
-  Toggle,
   hubspot,
 } from "@hubspot/ui-extensions";
 
@@ -320,17 +319,18 @@ export const SubmitForm: React.FC<Props> = ({
 
       <Divider />
 
-      {/* Section 1: Source. Toggle picks between real GovWin ID (ON) and
-          the synthetic builder (OFF). Toggle's onChange is a clean
-          boolean callback so the conditional render below follows state
-          reliably. */}
-      <Toggle
+      {/* Section 1: Source. Checkbox picks between real GovWin ID (checked)
+          and the synthetic builder (unchecked). Using Checkbox because it
+          uses the same `checked`/`onChange` pattern as the Marketing and
+          "Not provided yet" controls elsewhere in this form, which are
+          known to work. */}
+      <Checkbox
         name="from_govwin"
-        label="This deal came from GovWin IQ"
         checked={state.fromGovWin}
         onChange={(checked) => update("fromGovWin", checked)}
-        labelDisplay="top"
-      />
+      >
+        This deal came from GovWin IQ
+      </Checkbox>
       {state.fromGovWin ? (
         <Input
           name="govwin_opp_id"
