@@ -102,11 +102,22 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
     let cancelled = false;
     const fetchSnapshot = async () => {
       try {
-        const response = await hubspot.serverless("get-deal-properties", {
-          propertiesToSend: READ_PROPERTIES,
-        });
+        // Read deal properties directly via the HubSpot CRM API. The UI
+        // Extensions sandbox runs hubspot.fetch with auth attached, so no
+        // serverless function is required for a simple read.
+        const propsQs = READ_PROPERTIES.join(",");
+        const response = await hubspot.fetch(
+          `https://api.hubapi.com/crm/v3/objects/deals/${encodeURIComponent(
+            dealId
+          )}?properties=${encodeURIComponent(propsQs)}`,
+          { method: "GET" }
+        );
         if (cancelled) return;
-        const props = (response?.properties as Record<string, any>) ?? {};
+        if (!response.ok) {
+          throw new Error(`HubSpot CRM API returned ${response.status}`);
+        }
+        const body = await response.json();
+        const props = (body?.properties as Record<string, any>) ?? {};
         const snap: DealSnapshot = {
           dealId,
           dealName: props.dealname ?? null,

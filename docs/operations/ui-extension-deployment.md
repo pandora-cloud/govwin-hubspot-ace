@@ -82,17 +82,28 @@ after registering a new solution in Partner Central.
 ## Step 3: Upload the UI Extension
 
 The Submit-to-AWS card and supporting components live in
-`hubspot-app/src/app/cards/submit-to-aws-card/`. Push:
+`hubspot-app/src/app/cards/`. Push:
 
 ```
 cd hubspot-app
 hs project upload
 ```
 
-Expected output: `Deployed build #N`. `auto-deploy` is on, so the new
-build becomes the active version immediately. No additional install
-step is required; the build inherits the existing app's portal install
-from the May 26 re-authorization.
+Expected output: `Deployed build #N` plus a deploy line for each of
+the three components: `govwin_hubspot_ace_webhooks_app`,
+`govwin_hubspot_ace_webhooks_webhooks`, and `submit_to_aws_card`.
+`auto-deploy` is on, so the new build becomes the active version
+immediately. No additional install step is required; the build
+inherits the existing app's portal install from the May 26
+re-authorization.
+
+**Gotcha that bit us during initial deploy**: card components must
+live directly in `src/app/cards/`, not in a nested subdirectory.
+`hs project validate` happily passes the nested layout but
+`hs project upload` silently excludes the card from the build (the
+component does not appear in `hs project info` output). If you only
+see two components deployed (`...app` and `...webhooks`), check that
+the card files are flat in `cards/`.
 
 If you added new required scopes to `app-hsmeta.json`, you must re-install
 to grant them: open the project in HubSpot
@@ -105,18 +116,42 @@ new access token displays after the install. Update Secrets Manager:
 # via the AWS Console (do not echo the token on a CLI you keep history of).
 ```
 
-## Step 4: Verify the card renders
+## Step 4: Add the card to the deal record layout
+
+A freshly-deployed UI Extension card does NOT auto-appear on records.
+A portal admin has to add it to the record layout once, after which
+it shows up on every deal automatically.
+
+1. In HubSpot, **Settings (gear icon)** -> **Objects** -> **Deals** ->
+   **Record Customization**.
+2. Click **Default view** to open the layout for the standard deal page.
+3. Click **Edit layout** at the top.
+4. In the available-components panel, find **"Submit to AWS Partner Central"**
+   (search by name if the list is long; the card lives under the
+   `submit_to_aws_card` component from the GovWin to ACE Webhooks app).
+5. HubSpot offers two placement choices: add it to the **Overview tab**
+   (recommended -- BD already looks there for deal context) or as
+   a **new tab**. The card is small (status badge + Submit button most
+   of the time, the form when actively submitting). Drag it into the
+   right column of Overview alongside the existing status/data cards.
+6. **Save** at the top right.
+
+The first save propagates the layout to every deal record in the portal.
+A few seconds after saving, refresh any existing deal record and the
+card appears.
+
+## Step 5: Verify the card renders
 
 1. Open any deal on the Government pipeline in HubSpot.
-2. Switch to the deal's overview tab. The Submit-to-AWS card should
-   appear in the sidebar with a status badge.
+2. The Submit-to-AWS card should appear on the Overview tab where
+   you placed it in step 4.
 3. For a deal that has not been submitted yet, the badge reads
    "Not submitted" and a "Submit to AWS" button is visible.
 4. For a deal that already submitted (e.g. USSF SLD45, deal 326365244126),
    the badge reads "Submitted to AWS" and the AWS opportunity id
    (O13740398) appears with a deep link to Partner Central.
 
-## Step 5: End-to-end test on a fresh deal
+## Step 6: End-to-end test on a fresh deal
 
 The cleanest E2E test path:
 
@@ -137,7 +172,7 @@ The cleanest E2E test path:
     the new AWS opportunity id. Verify in the AWS console.
 11. Delete the throwaway deal in HubSpot once verified.
 
-## Step 6: Verify dedup
+## Step 7: Verify dedup
 
 1. Reopen the same throwaway deal. The card should show "Submitted to AWS"
    with the opportunity id from step 5.
