@@ -1,0 +1,14 @@
+{
+  "name": "submit-to-aws-card",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "@hubspot/ui-extensions": "latest",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.3"
+  }
+}
