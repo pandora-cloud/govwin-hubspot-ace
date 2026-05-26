@@ -207,6 +207,45 @@ class ACEClient:
         except ClientError as exc:
             self._raise_api_error("ListSolutions", exc)
 
+    def list_active_solutions(self) -> list[dict[str, str]]:
+        """Return all Active solutions in the configured catalog, paginated.
+
+        The SolutionPicker in the HubSpot UI Extension form needs a clean
+        ``{Id, Name, Category, Status}`` list so it can render a dropdown.
+        boto3's ``list_solutions`` returns a paginated response with verbose
+        SolutionSummary objects; this method handles pagination, filters
+        server-side to ``Status=Active`` so retired solutions never reach
+        the form, and projects each entry down to the four fields the UI
+        needs.
+
+        Returns an empty list when no solutions are registered (notably the
+        Sandbox catalog), so callers can fall back to the
+        OtherSolutionDescription path in the create payload without
+        branching on a None.
+
+        :returns: list of dicts with keys ``Id`` (e.g. ``"S-0051246"``),
+            ``Name`` (display name), ``Category`` (e.g. ``"Professional Service"``),
+            and ``Status`` (always ``"Active"``).
+        """
+        solutions: list[dict[str, str]] = []
+        next_token: str | None = None
+        while True:
+            params: dict[str, Any] = {"Status": ["Active"], "MaxResults": 100}
+            if next_token:
+                params["NextToken"] = next_token
+            response = self.list_solutions(**params)
+            for summary in response.get("SolutionSummaries", []):
+                solutions.append({
+                    "Id": str(summary.get("Id", "")),
+                    "Name": str(summary.get("Name", "")),
+                    "Category": str(summary.get("Category", "")),
+                    "Status": str(summary.get("Status", "")),
+                })
+            next_token = response.get("NextToken")
+            if not next_token:
+                break
+        return solutions
+
     def associate_opportunity(
         self,
         opportunity_identifier: str,

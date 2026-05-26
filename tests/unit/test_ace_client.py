@@ -133,6 +133,66 @@ def test_new_client_token_returns_uuid() -> None:
     assert len(token) == 36
 
 
+class TestListActiveSolutions:
+    def test_returns_normalized_summaries(
+        self, ace: ACEClient, mock_boto: MagicMock
+    ) -> None:
+        mock_boto.list_solutions.return_value = {
+            "SolutionSummaries": [
+                {
+                    "Id": "S-0051246",
+                    "Name": "Pandora Cloud Professional Services",
+                    "Category": "Professional Service",
+                    "Status": "Active",
+                },
+                {
+                    "Id": "S-0050888",
+                    "Name": "Pandora Cloud Compliance Chat (ChatPC)",
+                    "Category": "Software Product",
+                    "Status": "Active",
+                },
+            ]
+        }
+        solutions = ace.list_active_solutions()
+        assert len(solutions) == 2
+        assert solutions[0] == {
+            "Id": "S-0051246",
+            "Name": "Pandora Cloud Professional Services",
+            "Category": "Professional Service",
+            "Status": "Active",
+        }
+        kwargs = mock_boto.list_solutions.call_args.kwargs
+        assert kwargs["Status"] == ["Active"]
+        assert kwargs["MaxResults"] == 100
+
+    def test_paginates_via_next_token(
+        self, ace: ACEClient, mock_boto: MagicMock
+    ) -> None:
+        page1 = {
+            "SolutionSummaries": [
+                {"Id": "S-1", "Name": "A", "Category": "X", "Status": "Active"}
+            ],
+            "NextToken": "tok1",
+        }
+        page2 = {
+            "SolutionSummaries": [
+                {"Id": "S-2", "Name": "B", "Category": "Y", "Status": "Active"}
+            ],
+        }
+        mock_boto.list_solutions.side_effect = [page1, page2]
+        solutions = ace.list_active_solutions()
+        assert [s["Id"] for s in solutions] == ["S-1", "S-2"]
+        assert mock_boto.list_solutions.call_count == 2
+        second_call = mock_boto.list_solutions.call_args_list[1].kwargs
+        assert second_call["NextToken"] == "tok1"
+
+    def test_returns_empty_list_for_sandbox_with_no_solutions(
+        self, ace: ACEClient, mock_boto: MagicMock
+    ) -> None:
+        mock_boto.list_solutions.return_value = {"SolutionSummaries": []}
+        assert ace.list_active_solutions() == []
+
+
 def test_service_unavailable_is_retried(ace: ACEClient, mock_boto: MagicMock) -> None:
     mock_boto.create_opportunity.side_effect = [
         _client_error("ServiceUnavailableException"),
