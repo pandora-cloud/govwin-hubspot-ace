@@ -204,9 +204,12 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
           />
         </Box>
       </Flex>
-      <Text variant="microcopy">
-        Final ID: <strong>{composeId({ source, customer, project, sequence })}</strong>
-      </Text>
+      <Flex direction="row" gap="sm" align="center">
+        <Text variant="microcopy">Final ID:</Text>
+        <Text variant="microcopy" format={{ fontWeight: "bold" }}>
+          {composeId({ source, customer, project, sequence })}
+        </Text>
+      </Flex>
     </Flex>
   );
 };

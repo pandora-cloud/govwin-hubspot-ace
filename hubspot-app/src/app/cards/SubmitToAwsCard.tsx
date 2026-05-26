@@ -233,10 +233,12 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
       </Flex>
 
       {status === "action_required" && snapshot?.aceNextSteps ? (
-        <Text variant="microcopy">
-          <strong>AWS Next Steps: </strong>
-          {snapshot.aceNextSteps}
-        </Text>
+        <Flex direction="column" gap="xs">
+          <Text variant="microcopy" format={{ fontWeight: "bold" }}>
+            AWS Next Steps:
+          </Text>
+          <Text variant="microcopy">{snapshot.aceNextSteps}</Text>
+        </Flex>
       ) : null}
 
       <Divider />
