@@ -11,14 +11,13 @@
 // or override the suggestion. The backend Lambda performs a final DDB
 // uniqueness check at submit time to close the race window.
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Box,
   Flex,
   Input,
   Select,
   Text,
-  hubspot,
 } from "@hubspot/ui-extensions";
 
 import { SOURCE_PREFIXES } from "./enums";
@@ -49,55 +48,6 @@ export function deriveCustomerSlug(companyName: string): string {
     .split(/\s+/)
     .filter((tok) => tok && !STRIP_TOKENS.has(tok));
   return tokens.join("-").slice(0, 20);
-}
-
-/** Search HubSpot for deals whose govwin_opp_id starts with `prefix`. Returns the matched ids. */
-async function searchExistingIds(prefix: string): Promise<string[]> {
-  if (!prefix) return [];
-  const response = await hubspot.fetch(
-    "https://api.hubapi.com/crm/v3/objects/deals/search",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filterGroups: [
-          {
-            filters: [
-              {
-                propertyName: "govwin_opp_id",
-                operator: "CONTAINS_TOKEN",
-                value: `${prefix}*`,
-              },
-            ],
-          },
-        ],
-        properties: ["govwin_opp_id"],
-        limit: 100,
-      }),
-    }
-  );
-  if (!response.ok) return [];
-  const data = await response.json();
-  const ids: string[] = [];
-  for (const r of data.results ?? []) {
-    const id = r.properties?.govwin_opp_id;
-    if (typeof id === "string" && id.startsWith(prefix)) ids.push(id);
-  }
-  return ids;
-}
-
-/** Given an array of ids matching the prefix, suggest the next zero-padded sequence. */
-export function nextSequence(prefix: string, existing: string[]): string {
-  let maxSeq = 0;
-  for (const id of existing) {
-    const tail = id.slice(prefix.length);
-    const match = tail.match(/^(\d{1,4})$/);
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (!Number.isNaN(n) && n > maxSeq) maxSeq = n;
-    }
-  }
-  return String(maxSeq + 1).padStart(3, "0");
 }
 
 export interface SyntheticIdValue {
@@ -135,67 +85,47 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
   const [customer, setCustomer] = useState<string>(deriveCustomerSlug(defaultCompanyName));
   const [project, setProject] = useState<string>("");
   const [sequence, setSequence] = useState<string>("001");
-  const [suggested, setSuggested] = useState<string>("001");
 
   // Track onChange via a ref so we never rebuild effects when the parent
   // creates a fresh inline function.
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const notify = (next: SyntheticIdValue) => {
-    onChangeRef.current(composeId(next), next);
-  };
-
+  // No useEffects of any kind here. Each setter calls onChange directly
+  // and synchronously, so React only re-renders the parent on actual user
+  // input. No mount-time emit, no auto-suggest network call. The form's
+  // validate() reads state.syntheticParts at submit time; if the user
+  // never touched the synthetic builder, syntheticParts stays null and
+  // validate falls through to its "either a real GovWin ID or a synthetic
+  // builder must be filled" check.
   const updateSource = (v: string) => {
     setSource(v);
-    notify({ source: v, customer, project, sequence });
+    onChangeRef.current(
+      composeId({ source: v, customer, project, sequence }),
+      { source: v, customer, project, sequence }
+    );
   };
   const updateCustomer = (v: string) => {
     setCustomer(v);
-    notify({ source, customer: v, project, sequence });
+    onChangeRef.current(
+      composeId({ source, customer: v, project, sequence }),
+      { source, customer: v, project, sequence }
+    );
   };
   const updateProject = (v: string) => {
     setProject(v);
-    notify({ source, customer, project: v, sequence });
+    onChangeRef.current(
+      composeId({ source, customer, project: v, sequence }),
+      { source, customer, project: v, sequence }
+    );
   };
   const updateSequence = (v: string) => {
     setSequence(v);
-    notify({ source, customer, project, sequence: v });
+    onChangeRef.current(
+      composeId({ source, customer, project, sequence: v }),
+      { source, customer, project, sequence: v }
+    );
   };
-
-  // Emit once on mount so the parent gets the initial composed id.
-  useEffect(() => {
-    notify({ source, customer, project, sequence });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Auto-suggest the next sequence by searching HubSpot for the assembled
-  // prefix. Runs only when source/customer/project change -- not on every
-  // sequence keystroke -- and never depends on a parent-supplied callback.
-  useEffect(() => {
-    let cancelled = false;
-    const prefix = [source, customer, project].filter(Boolean).join("-") + "-";
-    if (!source || !customer) {
-      setSuggested("001");
-      return;
-    }
-    searchExistingIds(prefix).then((ids) => {
-      if (cancelled) return;
-      const next = nextSequence(prefix, ids);
-      setSuggested(next);
-      setSequence((current) => {
-        if (current === "001" || current === "") {
-          notify({ source, customer, project, sequence: next });
-          return next;
-        }
-        return current;
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, customer, project]);
 
   return (
     <Flex direction="column" gap="sm">
@@ -239,7 +169,8 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
         <Box flex={1}>
           <Input
             name="sequence_number"
-            label={`Sequence (suggested: ${suggested})`}
+            label="Sequence (3 digits)"
+            description="Bump up if you've used this prefix before."
             value={sequence}
             onChange={(v) => updateSequence(String(v ?? "").padStart(3, "0"))}
           />
