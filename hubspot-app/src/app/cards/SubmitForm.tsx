@@ -160,11 +160,18 @@ export const SubmitForm: React.FC<Props> = ({
 
   const validate = (): FieldError[] => {
     const errs: FieldError[] = [];
-    if (!state.fromGovWin && (!state.syntheticParts || !state.syntheticParts.customer)) {
-      errs.push({ field: "govwin_opp_id", message: "Provide a synthetic GovWin ID." });
-    }
-    if (state.fromGovWin && !state.govwinOppId) {
-      errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
+    // Either the real GovWin ID or the synthetic builder must produce a
+    // value. We don't enforce one-or-the-other UI-wise; the user fills
+    // whichever fits.
+    const hasGovwin = Boolean(state.govwinOppId && state.govwinOppId.trim());
+    const hasSynthetic = Boolean(
+      state.syntheticParts && state.syntheticParts.customer
+    );
+    if (!hasGovwin && !hasSynthetic) {
+      errs.push({
+        field: "govwin_opp_id",
+        message: "Enter a GovWin Opportunity ID or fill in the synthetic builder below.",
+      });
     }
     if (state.partnerNeed.length === 0) {
       errs.push({ field: "partner_need", message: "Pick at least one Partner Need." });
@@ -219,7 +226,9 @@ export const SubmitForm: React.FC<Props> = ({
     if (errs.length > 0) return;
 
     setSubmitting(true);
-    const govwin_opp_id = state.fromGovWin
+    // Real GovWin ID wins if the user filled it. Otherwise compose from
+    // the synthetic builder. validate() already ensured at least one is set.
+    const govwin_opp_id = state.govwinOppId.trim()
       ? state.govwinOppId.trim()
       : state.syntheticParts
         ? [
@@ -316,34 +325,27 @@ export const SubmitForm: React.FC<Props> = ({
 
       <Divider />
 
-      {/* Section 1: Source */}
-      <Select
-        name="from_govwin"
-        label="Did this deal come from GovWin?"
-        value={state.fromGovWin ? "yes" : "no"}
-        onChange={(v) => update("fromGovWin", String(v) === "yes")}
-        options={[
-          { label: "Yes - use the real GovWin Opportunity ID", value: "yes" },
-          { label: "No - build a synthetic ID", value: "no" },
-        ]}
+      {/* Section 1: Source. Fill EITHER the GovWin ID input (if the deal
+          came from GovWin IQ) OR the synthetic builder below. The submit
+          handler picks whichever has a value; the GovWin input wins when
+          both are filled. */}
+      <Input
+        name="govwin_opp_id"
+        label="GovWin Opportunity ID (if this deal came from GovWin)"
+        description="Paste the real ID from GovWin IQ (e.g. OPP123456). Leave blank to build a synthetic ID below."
+        value={state.govwinOppId}
+        onChange={(v) => update("govwinOppId", String(v ?? ""))}
+        error={Boolean(errorFor("govwin_opp_id"))}
+        validationMessage={errorFor("govwin_opp_id")}
+        readOnly={Boolean(existingGovwinOppId)}
       />
-      {state.fromGovWin ? (
-        <Input
-          name="govwin_opp_id"
-          label="GovWin Opportunity ID"
-          description="From GovWin IQ. Often looks like OPP123456 or BID987654."
-          value={state.govwinOppId}
-          onChange={(v) => update("govwinOppId", String(v ?? ""))}
-          error={Boolean(errorFor("govwin_opp_id"))}
-          validationMessage={errorFor("govwin_opp_id")}
-          readOnly={Boolean(existingGovwinOppId)}
-        />
-      ) : (
-        <SyntheticIdHelper
-          defaultCompanyName={defaultCompanyName}
-          onChange={(_id, parts) => update("syntheticParts", parts)}
-        />
-      )}
+      <Text variant="microcopy">
+        Or, if this deal didn't come from GovWin, build a synthetic ID:
+      </Text>
+      <SyntheticIdHelper
+        defaultCompanyName={defaultCompanyName}
+        onChange={(_id, parts) => update("syntheticParts", parts)}
+      />
 
       <Divider />
 
