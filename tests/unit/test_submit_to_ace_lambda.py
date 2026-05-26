@@ -92,6 +92,29 @@ def test_submit_runs_three_call_flow(event_factory, deal_payload) -> None:
     assert result["batchItemFailures"] == []
 
 
+def test_get_owner_failure_does_not_abort_submission(event_factory, deal_payload) -> None:
+    """A missing crm.objects.owners.read scope should not sink the submission.
+
+    Regression test for the SLD45 outage where the legacy private app token
+    lacked the owners scope and submit_to_ace failed with HubSpotAPIError 403
+    on get_owner. The Lambda now logs a warning and continues with
+    OpportunityTeam empty.
+    """
+    from src.hubspot.client import HubSpotAPIError
+
+    ace, state, hubspot = _patches(deal_payload)
+    deal_payload["properties"]["hubspot_owner_id"] = "160603727"
+    hubspot.get_owner.side_effect = HubSpotAPIError("Forbidden", status_code=403)
+    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
+         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
+         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+        result = submit_to_ace.handler(event_factory(), context=None)
+    assert ace.create_opportunity.call_count == 1
+    assert result["results"][0]["status"] == "submitted"
+    payload = ace.create_opportunity.call_args.args[0]
+    assert "OpportunityTeam" not in payload or payload["OpportunityTeam"] == []
+
+
 def test_skips_when_dealstage_not_in_trigger_list(event_factory, deal_payload) -> None:
     ace, state, hubspot = _patches(deal_payload)
     with patch.object(submit_to_ace, "ACEClient", return_value=ace), \

@@ -34,7 +34,7 @@ from src.ace.mapper import (
 from src.ace.validators import is_valid_govwin_id, is_valid_hubspot_object_id
 from src.aws_clients import make_client
 from src.config import load_config
-from src.hubspot.client import HubSpotClient
+from src.hubspot.client import HubSpotAPIError, HubSpotClient
 from src.sync.state import SyncStateManager
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,24 @@ def _load_associated_records(
     props = deal.get("properties") or deal
     if isinstance(props, dict):
         owner_id = str(props.get("hubspot_owner_id") or "")
-    owner = hubspot.get_owner(owner_id) if owner_id else None
+    owner: dict[str, Any] | None = None
+    if owner_id:
+        try:
+            owner = hubspot.get_owner(owner_id)
+        except HubSpotAPIError as exc:
+            # The owners endpoint requires the crm.objects.owners.read scope;
+            # legacy private apps may not have it. AWS accepts an empty
+            # OpportunityTeam at CreateOpportunity time, so degrade gracefully
+            # rather than fail the whole submission. The mapper falls back
+            # to a no-team payload when owner is None.
+            logger.warning(
+                "submit_to_ace: get_owner failed for deal=%s owner=%s status=%s; "
+                "continuing with empty OpportunityTeam. Fix by adding "
+                "crm.objects.owners.read to the HubSpot app scope set.",
+                deal_id,
+                owner_id,
+                getattr(exc, "status_code", "unknown"),
+            )
     return company, contacts, owner
 
 
