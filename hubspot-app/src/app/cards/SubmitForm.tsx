@@ -18,7 +18,6 @@ import {
   Select,
   Text,
   TextArea,
-  ToggleGroup,
   hubspot,
 } from "@hubspot/ui-extensions";
 
@@ -318,17 +317,15 @@ export const SubmitForm: React.FC<Props> = ({
       <Divider />
 
       {/* Section 1: Source */}
-      <ToggleGroup
+      <Select
         name="from_govwin"
-        toggleType="radioButtonList"
         label="Did this deal come from GovWin?"
         value={state.fromGovWin ? "yes" : "no"}
-        onChange={(v) => update("fromGovWin", v === "yes")}
+        onChange={(v) => update("fromGovWin", String(v) === "yes")}
         options={[
-          { label: "Yes (use the real GovWin Opportunity ID)", value: "yes" },
-          { label: "No (build a synthetic ID)", value: "no" },
+          { label: "Yes - use the real GovWin Opportunity ID", value: "yes" },
+          { label: "No - build a synthetic ID", value: "no" },
         ]}
-        inline
       />
       {state.fromGovWin ? (
         <Input
