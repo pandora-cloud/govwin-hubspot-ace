@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag, Link, Text, Flex } from "@hubspot/ui-extensions";
+import { Tag, Link, Flex } from "@hubspot/ui-extensions";
 
 // Maps the AWS-side ReviewStatus + HubSpot dealstage to a compact card badge.
 // The status text comes from govwin_aws_cosell_status (written back by
@@ -81,14 +81,14 @@ export const StatusBadge: React.FC<{
   <Flex direction="row" gap="sm" align="center">
     <Tag variant={VARIANT[status]}>{LABEL[status]}</Tag>
     {awsCosellId ? (
-      <Text variant="microcopy">
-        <Link
-          href={`https://partnercentral.awspartner.com/partnercentral2/s/opportunity/${awsCosellId}`}
-          external
-        >
-          {awsCosellId}
-        </Link>
-      </Text>
+      <Link
+        href={{
+          url: `https://partnercentral.awspartner.com/partnercentral2/s/opportunity/${awsCosellId}`,
+          external: true,
+        }}
+      >
+        {awsCosellId}
+      </Link>
     ) : null}
   </Flex>
 );
