@@ -29,6 +29,14 @@ from botocore.config import Config
 # configured region. Calls to other regions return a 403/endpoint error.
 _US_EAST_1_ONLY = frozenset({"partnercentral-selling"})
 
+# Services that do NOT publish a FIPS endpoint. boto3 with use_fips_endpoint=True
+# will try to resolve `<service>-fips.<region>.api.aws` and fail with DNS lookup
+# error when the service has no FIPS variant. partnercentral-selling is one
+# such service as of 2026-05 — confirmed by attempting CreateOpportunity from a
+# FIPS-enabled Lambda and observing NameResolutionError on
+# partnercentral-selling-fips.us-east-1.api.aws.
+_NO_FIPS_ENDPOINT = frozenset({"partnercentral-selling"})
+
 
 def _fips_enabled() -> bool:
     """Whether FIPS endpoint resolution should be active.
@@ -42,9 +50,13 @@ def _fips_enabled() -> bool:
     return os.environ.get("AWS_USE_FIPS_ENDPOINT", "true").lower() != "false"
 
 
-def _build_config(extra_config: Config | None = None) -> Config:
+def _build_config(
+    extra_config: Config | None = None,
+    *,
+    use_fips: bool = True,
+) -> Config:
     config = Config(
-        use_fips_endpoint=_fips_enabled(),
+        use_fips_endpoint=_fips_enabled() and use_fips,
         retries={"mode": "standard", "max_attempts": 3},
     )
     if extra_config is not None:
@@ -69,16 +81,20 @@ def make_client(
     :returns: boto3 client with FIPS endpoint + correct region.
     """
     effective_region = "us-east-1" if service in _US_EAST_1_ONLY else region
+    use_fips = service not in _NO_FIPS_ENDPOINT
     # boto3-stubs models ``client`` as a Literal-only overload set. We accept
     # arbitrary service strings here so callers don't have to thread literals
     # through every layer; cast keeps mypy quiet without changing runtime.
     return boto3.client(  # type: ignore[call-overload]
-        service, region_name=effective_region, config=_build_config(extra_config)
+        service,
+        region_name=effective_region,
+        config=_build_config(extra_config, use_fips=use_fips),
     )
 
 
 def make_resource(service: str, region: str) -> Any:
     """Return a boto3 resource with FIPS enforced (e.g. for DynamoDB)."""
+    use_fips = service not in _NO_FIPS_ENDPOINT
     return boto3.resource(  # type: ignore[call-overload]
-        service, region_name=region, config=_build_config()
+        service, region_name=region, config=_build_config(use_fips=use_fips)
     )

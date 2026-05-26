@@ -433,7 +433,7 @@ def _customer_block(
         "PostalCode": postal_code,
     }
     if street:
-        address["AddressLine1"] = street[:255]
+        address["StreetAddress"] = street[:255]
     if city:
         address["City"] = city[:50]
     if country_code == "US":
@@ -449,6 +449,9 @@ def _customer_block(
     }
     if other_industry:
         account["OtherIndustry"] = other_industry
+    aws_acct = _get(deal, "govwin_ace_aws_account_id")
+    if aws_acct:
+        account["AwsAccountId"] = str(aws_acct)[:12]
     return {"Account": account}
 
 
@@ -606,12 +609,17 @@ def _opportunity_team(owner: dict[str, Any] | None) -> list[dict[str, Any]]:
     email = owner.get("email")
     if not (first and last and email):
         return []
+    # AWS-side server enum (not in boto3 model): partnerOpportunityTeam[].member.businessTitle
+    # must be one of [PartnerAccountManager, OpportunityOwner]. Confirmed via
+    # 2026-05 ValidationException response from CreateOpportunity. Use
+    # OpportunityOwner for the HubSpot deal owner; this maps to the partner-side
+    # individual driving the engagement.
     return [
         {
             "FirstName": str(first)[:80],
             "LastName": str(last)[:80],
             "Email": str(email)[:80],
-            "BusinessTitle": "Partner",
+            "BusinessTitle": "OpportunityOwner",
         }
     ]
 
@@ -780,10 +788,6 @@ def _project_block(
     related = _get(deal, "govwin_ace_related_opportunity_id")
     if related:
         project["RelatedOpportunityIdentifier"] = str(related)
-    aws_acct = _get(deal, "govwin_ace_aws_account_id")
-    if aws_acct:
-        project["CustomerAwsAccountId"] = str(aws_acct)[:12]
-
     return project
 
 

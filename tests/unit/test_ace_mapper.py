@@ -304,7 +304,7 @@ class TestExtendedFieldMapping:
         addr = payload["Customer"]["Account"]["Address"]
         assert payload["Customer"]["Account"]["CompanyName"] == "Department of Energy"
         assert payload["Customer"]["Account"]["WebsiteUrl"] == "https://www.energy.gov"
-        assert addr["AddressLine1"] == "1000 Independence Ave SW"
+        assert addr["StreetAddress"] == "1000 Independence Ave SW"
         assert addr["City"] == "Washington"
         assert addr["StateOrRegion"] == "Dist. of Columbia"  # "DC" normalized
         assert addr["PostalCode"] == "20585"
@@ -437,7 +437,7 @@ class TestExtendedFieldMapping:
         )
         assert payload["Project"]["CompetitorName"] == "Microsoft Azure"
         assert payload["Project"]["AdditionalComments"] == "BD lead Q3"
-        assert payload["Project"]["CustomerAwsAccountId"] == "123456789012"
+        assert payload["Customer"]["Account"]["AwsAccountId"] == "123456789012"
         assert payload["Project"]["RelatedOpportunityIdentifier"] == "O11111111"
         assert payload["LifeCycle"]["NextSteps"] == "Schedule discovery call"
 
