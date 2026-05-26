@@ -3,7 +3,7 @@
   "type": "webhooks",
   "config": {
     "settings": {
-      "targetUrl": "https://<api-id>.execute-api.us-east-1.amazonaws.com/hubspot",
+      "targetUrl": "https://np1hq84j21.execute-api.us-east-1.amazonaws.com/hubspot",
       "maxConcurrentRequests": 10
     },
     "subscriptions": {
@@ -12,37 +12,37 @@
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "dealstage",
-          "active": false
+          "active": true
         },
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "amount",
-          "active": false
+          "active": true
         },
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "closedate",
-          "active": false
+          "active": true
         },
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "dealname",
-          "active": false
+          "active": true
         },
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "description",
-          "active": false
+          "active": true
         },
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
           "propertyName": "govwin_ace_use_case",
-          "active": false
+          "active": true
         }
       ],
       "legacyCrmObjects": [],
