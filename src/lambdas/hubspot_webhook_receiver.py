@@ -10,17 +10,20 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import hmac
 import json
 import logging
 import os
-import time
 from typing import Any
 
 from botocore.exceptions import ClientError
 
 from src.aws_clients import make_client
 from src.config import load_config
+from src.hubspot.signature import (
+    SignatureConfigError,
+    get_signing_secret,
+    validate_signature,
+)
 from src.lambdas._webhook_routing import classify_property_change
 from src.sync.state import SyncStateManager
 
@@ -34,11 +37,9 @@ logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 MAX_BODY_BYTES = 1 * 1024 * 1024
 MAX_EVENTS_PER_DELIVERY = 100
 SQS_BATCH_SIZE = 10
-SECRET_CACHE_TTL_SECONDS = 300
 
 _secrets_client: Any | None = None
 _sqs_client: Any | None = None
-_secret_cache: dict[str, tuple[str, float]] = {}
 
 
 def _ensure_clients(region: str) -> None:
@@ -52,54 +53,6 @@ def _ensure_clients(region: str) -> None:
 
 class _ConfigError(Exception):
     """Raised when a required webhook config value is missing or malformed."""
-
-
-def _get_signing_secret(secret_name: str) -> str:
-    """Return the signing secret, refreshing the cache every TTL seconds."""
-    cached = _secret_cache.get(secret_name)
-    now = time.time()
-    if cached and (now - cached[1]) < SECRET_CACHE_TTL_SECONDS:
-        return cached[0]
-    assert _secrets_client is not None
-    response = _secrets_client.get_secret_value(SecretId=secret_name)
-    raw = response.get("SecretString", "")
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise _ConfigError("hubspot webhook secret is not valid JSON") from exc
-    secret = parsed.get("client_secret") or parsed.get("clientSecret")
-    if not isinstance(secret, str) or not secret:
-        raise _ConfigError("hubspot webhook secret missing client_secret")
-    _secret_cache[secret_name] = (secret, now)
-    return secret
-
-
-def _validate_signature(
-    method: str,
-    url: str,
-    raw_body: bytes,
-    signature_header: str,
-    timestamp_header: str,
-    secret: str,
-    max_age_seconds: int,
-) -> bool:
-    """Constant-time validation of an X-HubSpot-Signature-v3 header."""
-    try:
-        ts_ms = int(timestamp_header)
-    except (TypeError, ValueError):
-        return False
-    if ts_ms <= 0:
-        return False
-    # Reject anything older than the policy window. Mild future-tolerance for
-    # clock skew across HubSpot edge nodes.
-    age_ms = time.time() * 1000 - ts_ms
-    if age_ms > max_age_seconds * 1000 or age_ms < -max_age_seconds * 1000:
-        return False
-    raw = method.encode() + url.encode() + raw_body + timestamp_header.encode()
-    expected = base64.b64encode(
-        hmac.new(secret.encode(), raw, hashlib.sha256).digest()
-    ).decode()
-    return hmac.compare_digest(expected, signature_header)
 
 
 def _lower(headers: dict[str, Any] | None) -> dict[str, str]:
@@ -201,15 +154,15 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     try:
         target_url = _required_target_url()
-        secret = _get_signing_secret(config.aws.hubspot_webhook_secret_name)
-    except _ConfigError as exc:
+        secret = get_signing_secret(_secrets_client, config.aws.hubspot_webhook_secret_name)
+    except (_ConfigError, SignatureConfigError) as exc:
         logger.error("hubspot webhook config error: %s", exc)
         return {"statusCode": 500, "body": "misconfigured"}
     except ClientError as exc:
         logger.error("Failed to fetch webhook signing secret: %s", exc)
         return {"statusCode": 500, "body": "secret unavailable"}
 
-    if not _validate_signature(
+    if not validate_signature(
         method=method,
         url=target_url,
         raw_body=raw_body,

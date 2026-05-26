@@ -44,9 +44,11 @@ def _api_event(method: str, body: str, headers: dict[str, str]) -> dict:
 
 @pytest.fixture(autouse=True)
 def _reset_secret_cache():
-    receiver._secret_cache.clear()
+    from src.hubspot import signature as _sig
+
+    _sig.clear_secret_cache()
     yield
-    receiver._secret_cache.clear()
+    _sig.clear_secret_cache()
 
 
 @pytest.fixture
@@ -265,7 +267,9 @@ def test_secret_cache_refreshes_after_ttl(mock_secrets, mock_sqs) -> None:
     assert mock_secrets.get_secret_value.call_count == 1
 
     # Expire cache and call again: must refetch
-    receiver._secret_cache["test/hubspot-webhook"] = (SECRET, time.time() - 600)
+    from src.hubspot import signature as _sig
+
+    _sig._secret_cache["test/hubspot-webhook"] = (SECRET, time.time() - 600)
     headers3 = _signed_headers("POST", TARGET_URL, body.encode())
     receiver.handler(_api_event("POST", body, headers3), context=None)
     assert mock_secrets.get_secret_value.call_count == 2

@@ -1,17 +1,17 @@
-"""Verify the offline signature fixture matches the receiver's validator.
+"""Verify the offline signature fixture matches the shared validator.
 
 The fixture in ``tests/fixtures/hubspot_signature.py`` produces signatures
-that ``src/lambdas/hubspot_webhook_receiver.py:_validate_signature`` must
-accept. If the fixture and the validator ever drift apart (e.g. body
-encoding, timestamp format), every test that relies on the fixture breaks
-quietly — these tests are the canary.
+that :func:`src.hubspot.signature.validate_signature` must accept. If the
+fixture and the validator ever drift apart (e.g. body encoding, timestamp
+format), every test that relies on the fixture breaks quietly. These tests
+are the canary.
 """
 
 from __future__ import annotations
 
 import time
 
-from src.lambdas.hubspot_webhook_receiver import _validate_signature
+from src.hubspot.signature import validate_signature as _validate_signature
 from tests.fixtures.hubspot_signature import (
     SIGNATURE_HEADER,
     TIMESTAMP_HEADER,
