@@ -1,79 +1,3083 @@
 {
   "version": "2026-05-26",
-  "source": "Curated subset of AWS Partner Central AwsProducts catalog focused on Pandora Cloud federal book. Refresh by exporting the canonical CSV from Partner Central > ACE Pipeline Manager > Import.",
+  "source": "Exported from AWS Partner Central > AWS Products on 2026-05-26 via Export_products.xlsx. Refresh by re-exporting and running scripts/refresh_aws_products.py.",
   "products": [
-    {"Identifier": "AmazonEC2Linux", "Name": "Amazon EC2 (Linux)", "Family": "Compute"},
-    {"Identifier": "AmazonEC2Windows", "Name": "Amazon EC2 (Windows)", "Family": "Compute"},
-    {"Identifier": "AWSLambda", "Name": "AWS Lambda", "Family": "Compute"},
-    {"Identifier": "AmazonECS", "Name": "Amazon ECS", "Family": "Containers"},
-    {"Identifier": "AmazonEKS", "Name": "Amazon EKS", "Family": "Containers"},
-    {"Identifier": "AmazonFargate", "Name": "AWS Fargate", "Family": "Containers"},
-
-    {"Identifier": "AmazonS3", "Name": "Amazon S3", "Family": "Storage"},
-    {"Identifier": "AmazonEBS", "Name": "Amazon EBS", "Family": "Storage"},
-    {"Identifier": "AmazonEFS", "Name": "Amazon EFS", "Family": "Storage"},
-    {"Identifier": "AWSBackup", "Name": "AWS Backup", "Family": "Storage"},
-
-    {"Identifier": "AmazonRDS", "Name": "Amazon RDS", "Family": "Database"},
-    {"Identifier": "AmazonAurora", "Name": "Amazon Aurora", "Family": "Database"},
-    {"Identifier": "AmazonDynamoDB", "Name": "Amazon DynamoDB", "Family": "Database"},
-    {"Identifier": "AmazonRedshift", "Name": "Amazon Redshift", "Family": "Database"},
-    {"Identifier": "AmazonElastiCache", "Name": "Amazon ElastiCache", "Family": "Database"},
-
-    {"Identifier": "AmazonVPC", "Name": "Amazon VPC", "Family": "Networking"},
-    {"Identifier": "AmazonCloudFront", "Name": "Amazon CloudFront", "Family": "Networking"},
-    {"Identifier": "AmazonRoute53", "Name": "Amazon Route 53", "Family": "Networking"},
-    {"Identifier": "AWSDirectConnect", "Name": "AWS Direct Connect", "Family": "Networking"},
-    {"Identifier": "AWSTransitGateway", "Name": "AWS Transit Gateway", "Family": "Networking"},
-
-    {"Identifier": "AWSIAM", "Name": "AWS IAM", "Family": "Security"},
-    {"Identifier": "AWSIAMIdentityCenter", "Name": "AWS IAM Identity Center", "Family": "Security"},
-    {"Identifier": "AmazonCognito", "Name": "Amazon Cognito", "Family": "Security"},
-    {"Identifier": "AWSKMS", "Name": "AWS KMS", "Family": "Security"},
-    {"Identifier": "AWSSecretsManager", "Name": "AWS Secrets Manager", "Family": "Security"},
-    {"Identifier": "AWSCertificateManager", "Name": "AWS Certificate Manager", "Family": "Security"},
-    {"Identifier": "AmazonGuardDuty", "Name": "Amazon GuardDuty", "Family": "Security"},
-    {"Identifier": "AmazonMacie", "Name": "Amazon Macie", "Family": "Security"},
-    {"Identifier": "AWSSecurityHub", "Name": "AWS Security Hub", "Family": "Security"},
-    {"Identifier": "AWSConfig", "Name": "AWS Config", "Family": "Security"},
-    {"Identifier": "AWSWAF", "Name": "AWS WAF", "Family": "Security"},
-    {"Identifier": "AWSShield", "Name": "AWS Shield", "Family": "Security"},
-    {"Identifier": "AWSAuditManager", "Name": "AWS Audit Manager", "Family": "Security"},
-
-    {"Identifier": "AmazonAPIGateway", "Name": "Amazon API Gateway", "Family": "Application Integration"},
-    {"Identifier": "AmazonSNS", "Name": "Amazon SNS", "Family": "Application Integration"},
-    {"Identifier": "AmazonSQS", "Name": "Amazon SQS", "Family": "Application Integration"},
-    {"Identifier": "AmazonEventBridge", "Name": "Amazon EventBridge", "Family": "Application Integration"},
-    {"Identifier": "AWSStepFunctions", "Name": "AWS Step Functions", "Family": "Application Integration"},
-
-    {"Identifier": "AmazonCloudWatch", "Name": "Amazon CloudWatch", "Family": "Management"},
-    {"Identifier": "AWSCloudTrail", "Name": "AWS CloudTrail", "Family": "Management"},
-    {"Identifier": "AWSCloudFormation", "Name": "AWS CloudFormation", "Family": "Management"},
-    {"Identifier": "AWSSystemsManager", "Name": "AWS Systems Manager", "Family": "Management"},
-    {"Identifier": "AWSOrganizations", "Name": "AWS Organizations", "Family": "Management"},
-    {"Identifier": "AWSControlTower", "Name": "AWS Control Tower", "Family": "Management"},
-
-    {"Identifier": "AmazonSageMaker", "Name": "Amazon SageMaker", "Family": "AI/ML"},
-    {"Identifier": "AmazonBedrock", "Name": "Amazon Bedrock", "Family": "AI/ML"},
-    {"Identifier": "AmazonRekognition", "Name": "Amazon Rekognition", "Family": "AI/ML"},
-    {"Identifier": "AmazonComprehend", "Name": "Amazon Comprehend", "Family": "AI/ML"},
-    {"Identifier": "AmazonTextract", "Name": "Amazon Textract", "Family": "AI/ML"},
-    {"Identifier": "AmazonTranscribe", "Name": "Amazon Transcribe", "Family": "AI/ML"},
-    {"Identifier": "AmazonPolly", "Name": "Amazon Polly", "Family": "AI/ML"},
-
-    {"Identifier": "AmazonAthena", "Name": "Amazon Athena", "Family": "Analytics"},
-    {"Identifier": "AmazonEMR", "Name": "Amazon EMR", "Family": "Analytics"},
-    {"Identifier": "AmazonKinesis", "Name": "Amazon Kinesis", "Family": "Analytics"},
-    {"Identifier": "AWSGlue", "Name": "AWS Glue", "Family": "Analytics"},
-    {"Identifier": "AmazonQuickSight", "Name": "Amazon QuickSight", "Family": "Analytics"},
-
-    {"Identifier": "AWSWorkSpaces", "Name": "Amazon WorkSpaces", "Family": "End User Computing"},
-    {"Identifier": "AmazonAppStream2", "Name": "Amazon AppStream 2.0", "Family": "End User Computing"},
-
-    {"Identifier": "AWSGovCloud", "Name": "AWS GovCloud (US)", "Family": "GovCloud"},
-    {"Identifier": "AWSOutposts", "Name": "AWS Outposts", "Family": "Hybrid"},
-    {"Identifier": "AWSSnowball", "Name": "AWS Snow Family", "Family": "Edge"},
-
-    {"Identifier": "Other", "Name": "Other AWS Service (specify in description)", "Family": "Other"}
+    {
+      "Identifier": "AmazonConnectTalent",
+      "Name": "Amazon Connect - Talent",
+      "Family": "Customer Engagement",
+      "Description": "Amazon Connect Talent is an agentic AI hiring solution built for talent acquisition leaders managing scaled hiring."
+    },
+    {
+      "Identifier": "AWSProgramManagementOffice",
+      "Name": "AWS Program Management Office",
+      "Family": "Support",
+      "Description": "Dedicated program management support for government agencies contracting directly with AWS to meet unique requirements"
+    },
+    {
+      "Identifier": "AgentCorepayments",
+      "Name": "AgentCore payments",
+      "Family": "Compute",
+      "Description": "Enable AI agents to autonomously discover, authorize, and execute payments with a few lines of code"
+    },
+    {
+      "Identifier": "CloudWatchOmni",
+      "Name": "CloudWatch Omni",
+      "Family": "Management & Governance",
+      "Description": "See, understand, and act on application and infrastructure health across AWS, Azure, GCP, and on-premises"
+    },
+    {
+      "Identifier": "CloudWatchOmniforAgents",
+      "Name": "CloudWatch Omni for Agents",
+      "Family": "Management & Governance",
+      "Description": "Monitor, evaluate, and optimize AI agents from development to production at scale, wherever you run them."
+    },
+    {
+      "Identifier": "AWSAssurance",
+      "Name": "AWS Assurance",
+      "Family": "Security, Identity & Compliance",
+      "Description": "AI-powered continuous assurance \u2014 discover, prioritize, remediate, and report automatically."
+    },
+    {
+      "Identifier": "AmazonSageMakerManagedMLFLow",
+      "Name": "Amazon SageMaker Managed MLFLow",
+      "Family": "Compute",
+      "Description": "Accelerate GenAI by making it easier to track experiments and monitor performance of models using a single tool"
+    },
+    {
+      "Identifier": "Route53ResolverDNSFirewall",
+      "Name": "Route 53 Resolver DNS Firewall",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Block DNS queries to malicious domains and allow queries to trusted domains."
+    },
+    {
+      "Identifier": "AmazonBedrockAnthropicClaudeCode",
+      "Name": "Amazon Bedrock - Anthropic Claude Code",
+      "Family": "AI/ML",
+      "Description": "Anthropic's autonomous AI coding agent running natively on Bedrock with full AWS enterprise security controls."
+    },
+    {
+      "Identifier": "AmazonBedrockOpenAICodex",
+      "Name": "Amazon Bedrock - OpenAI Codex",
+      "Family": "AI/ML",
+      "Description": "OpenAI's AI coding agent running natively on Bedrock with AWS enterprise security and governance."
+    },
+    {
+      "Identifier": "AmazonEVSWindowsServerLicensing",
+      "Name": "Amazon EVS Windows Server Licensing",
+      "Family": "Compute",
+      "Description": "Provides supported Windows Server entitlements to run your VMware workloads on Amazon Elastic VMware Service (EVS), enabled on demand per Virtual Machine and billed per vCPU-hour."
+    },
+    {
+      "Identifier": "S3Files",
+      "Name": "S3 Files",
+      "Family": "Storage",
+      "Description": "S3 Files is a shared file system that connects any AWS compute directly with your data in Amazon S3."
+    },
+    {
+      "Identifier": "AmazonBedrockManagedAgents",
+      "Name": "Amazon Bedrock - Managed Agents",
+      "Family": "AI/ML",
+      "Description": "Deploy and operate AI agents powered by OpenAI frontier models on AWS infrastructure"
+    },
+    {
+      "Identifier": "AmazonQuick",
+      "Name": "Amazon Quick",
+      "Family": "AI/ML",
+      "Description": "Agentic AI-powered digital workspace"
+    },
+    {
+      "Identifier": "AmazonConnectDecisions",
+      "Name": "Amazon Connect Decisions",
+      "Family": "AI/ML",
+      "Description": "The Amazon Connect Decisions is an agentic supply chain planning and intelligence solution."
+    },
+    {
+      "Identifier": "AmazonBedrockUndisclosedModelProvider",
+      "Name": "Amazon Bedrock - Undisclosed Model Provider",
+      "Family": "AI/ML",
+      "Description": "Select this only when the customer chooses not to disclose which model provider they are using or testing"
+    },
+    {
+      "Identifier": "AWSAgentRegistry",
+      "Name": "AWS Agent Registry",
+      "Family": "AI/ML",
+      "Description": "A single place to discover, share, and reuse AI agents, tools, and agent skills across your enterprise"
+    },
+    {
+      "Identifier": "AmazonBioDiscovery",
+      "Name": "Amazon Bio Discovery",
+      "Family": "Healthcare AI",
+      "Description": "Amazon Bio Discovery is an agentic AI application that provides AI-guided drug design integrated_x000d_\nwith physical lab testing, creating lab-in-the-loop experimentation."
+    },
+    {
+      "Identifier": "AmazonConnectHealthPatientEngagement",
+      "Name": "Amazon Connect Health - Patient Engagement",
+      "Family": "Business Applications",
+      "Description": "A complete AI-powered solution for delivering personalized customer experiences at scale"
+    },
+    {
+      "Identifier": "SAPonAWSLOB",
+      "Name": "SAP on AWS \u2013 LOB",
+      "Family": "Compute",
+      "Description": "SAP structures its enterprise software portfolio around specific Lines of Business (LOB) Applications to address key functional areas within an organization._x000d_\nProduct Category: Compute"
+    },
+    {
+      "Identifier": "SAPonAWSGROW",
+      "Name": "SAP on AWS \u2013 GROW",
+      "Family": "Compute",
+      "Description": "SSAP GROW provides a predictable, trusted path to SAP S4/HANA Cloud (Public Edition) on a highly scalable and flexible cloud computing environments."
+    },
+    {
+      "Identifier": "SAPonAWSBDC",
+      "Name": "SAP on AWS \u2013 BDC",
+      "Family": "Compute",
+      "Description": "SAP BDC brings together applications, data and AI in a SaaS experience"
+    },
+    {
+      "Identifier": "SAPonAWSBTP",
+      "Name": "SAP on AWS \u2013 BTP",
+      "Family": "Compute",
+      "Description": "SAP Business Technology Platform (BTP) on AWS is the innovation layer for SAP, enabling customers to extend, integrate, and innovate while keeping their core clean"
+    },
+    {
+      "Identifier": "AmazonConnectHealthPointofCare",
+      "Name": "Amazon Connect Health - Point of Care",
+      "Family": "Healthcare AI",
+      "Description": "Point-of-care agents integrate directly into existing clinical workflows, reducing administrative overhead so clinicians can focus on patient care"
+    },
+    {
+      "Identifier": "AmazonEC2P6eGB300",
+      "Name": "Amazon EC2 P6e-GB300",
+      "Family": "Compute",
+      "Description": "NVIDIA GB300-based GPU platform in EC2 for AI/ML training and inference"
+    },
+    {
+      "Identifier": "AWSAIFactories",
+      "Name": "AWS AI Factories",
+      "Family": "Compute",
+      "Description": "Managed AI infrastructure in your data centers"
+    },
+    {
+      "Identifier": "AWSRTBFabric",
+      "Name": "AWS RTB Fabric",
+      "Family": "Networking & Content Delivery",
+      "Description": "Run real-time bidding workloads with your AdTech partners on a dedicated network in the cloud"
+    },
+    {
+      "Identifier": "AmazonEC2F2",
+      "Name": "Amazon EC2 - F2",
+      "Family": "Compute",
+      "Description": "Amazon EC2 F2 instances, the second-generation FPGA-powered instances"
+    },
+    {
+      "Identifier": "AWSShieldnetworksecuritydirector",
+      "Name": "AWS Shield network security director",
+      "Family": "Security, Identity & Compliance",
+      "Description": "AWS Shield network security director (in preview) performs an analysis of your resources to help you visualize your network topology, identify configuration issues, and receive actionable remediation recommendations."
+    },
+    {
+      "Identifier": "AmazonEC2HPC8a",
+      "Name": "Amazon EC2 - HPC8a",
+      "Family": "Compute",
+      "Description": "For tightly coupled HPC workloads, providing up to 25% better price performance compared to previous-generation Hpc7a instances"
+    },
+    {
+      "Identifier": "SecurityHubExtended",
+      "Name": "Security Hub Extended",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Delivers curated enterprise security solutions from AWS and partners with simplified purchasing."
+    },
+    {
+      "Identifier": "AWSElementalInference",
+      "Name": "AWS Elemental Inference",
+      "Family": "Media Services"
+    },
+    {
+      "Identifier": "S3ExpressOneZone",
+      "Name": "S3 Express One Zone",
+      "Family": "Storage",
+      "Description": "Fastest cloud object storage for latency sensitive, performance-critical applications"
+    },
+    {
+      "Identifier": "AWSDedicatedLocalZones",
+      "Name": "AWS Dedicated Local Zones",
+      "Family": "Compute",
+      "Description": "Cloud infrastructure built specifically for you to help address regulatory and digital sovereignty needs"
+    },
+    {
+      "Identifier": "AmazonOpenSearchforlogsAnalytics",
+      "Name": "Amazon OpenSearch for logs/Analytics",
+      "Family": "Analytics",
+      "Description": "Centralized log aggregation and real-time monitoring by ingesting and analyzing data at petabyte scale"
+    },
+    {
+      "Identifier": "AmazonOpenSearchforSearchvectors",
+      "Name": "Amazon OpenSearch for Search/vectors",
+      "Family": "Analytics",
+      "Description": "Build contextual AI experiences \u2014 from vector search and RAG to agentic workflows with Agentic memory and native agents"
+    },
+    {
+      "Identifier": "AmazonSageMakerServerlessModelCustomization",
+      "Name": "Amazon SageMaker Serverless Model Customization",
+      "Family": "AI/ML",
+      "Description": "Accelerate AI model customization with serverless tuning (RFT, SFT, DPO) and an agent-guided workflow"
+    },
+    {
+      "Identifier": "AgentCorePolicy",
+      "Name": "AgentCore Policy",
+      "Family": "AI/ML",
+      "Description": "Provides comprehensive control over actions agents take"
+    },
+    {
+      "Identifier": "AmazonEC2Trn3",
+      "Name": "Amazon EC2 - Trn3",
+      "Family": "Compute",
+      "Description": "Purpose-built to deliver the best token economics for next gen agentic, reasoning, and video generation applications"
+    },
+    {
+      "Identifier": "AmazonS3Tables",
+      "Name": "Amazon S3 Tables",
+      "Family": "Storage",
+      "Description": "Provides fully managed storage for Apache Iceberg Tables, optimized for analytics and machine learning workloads"
+    },
+    {
+      "Identifier": "AmazonS3Vectors",
+      "Name": "Amazon S3 Vectors",
+      "Family": "Storage",
+      "Description": "Provides cost-optimized native support to store and query vectors at scale"
+    },
+    {
+      "Identifier": "AmazonBedrockNVIDIAModels",
+      "Name": "Amazon Bedrock - NVIDIA Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by NVIDIA"
+    },
+    {
+      "Identifier": "AmazonBedrockMiniMaxAIModels",
+      "Name": "Amazon Bedrock - MiniMax AI Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by MiniMax AI"
+    },
+    {
+      "Identifier": "AmazonBedrockMoonshotAIModels",
+      "Name": "Amazon Bedrock - Moonshot AI Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by Moonshot AI"
+    },
+    {
+      "Identifier": "AmazonBedrockGoogleModels",
+      "Name": "Amazon Bedrock - Google Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by Google"
+    },
+    {
+      "Identifier": "AWSLambdaManagedInstances",
+      "Name": "AWS Lambda Managed Instances",
+      "Family": "Compute",
+      "Description": "Extend Lambda\u2019s operational simplicity on EC2 compute"
+    },
+    {
+      "Identifier": "AWSDevOpsAgent",
+      "Name": "AWS DevOps Agent",
+      "Family": "Developer Tools",
+      "Description": "Frontier agent that resolves and proactively prevents incidents, continuously improving reliability and performance of applications in AWS, multicloud, and hybrid environments"
+    },
+    {
+      "Identifier": "AgentCoreEvaluations",
+      "Name": "AgentCore Evaluations",
+      "Family": "AI/ML",
+      "Description": "Helps continuously inspect agent quality based on real-world behavior"
+    },
+    {
+      "Identifier": "AgentCoreBrowser",
+      "Name": "AgentCore Browser",
+      "Family": "AI/ML",
+      "Description": "Provides a fast, secure, cloud-based browser runtime to enable AI agents to interact with websites at scale"
+    },
+    {
+      "Identifier": "AgentCoreRuntime",
+      "Name": "AgentCore Runtime",
+      "Family": "AI/ML",
+      "Description": "A secure, serverless runtime purpose-built for deploying and scaling dynamic AI agents and tools"
+    },
+    {
+      "Identifier": "AgentCoreCodeInterpreter",
+      "Name": "AgentCore Code Interpreter",
+      "Family": "AI/ML",
+      "Description": "Enables AI agents to write and execute code securely in sandbox environments, enhancing their accuracy and expanding their ability to solve complex end-to-end tasks"
+    },
+    {
+      "Identifier": "AgentCoreGateway",
+      "Name": "AgentCore Gateway",
+      "Family": "AI/ML",
+      "Description": "Provides a secure way for agents to discover and use tools along with easy transformation of APIs, Lambda functions, and existing services into agent-compatible tools"
+    },
+    {
+      "Identifier": "AgentCoreObservability",
+      "Name": "AgentCore Observability",
+      "Family": "AI/ML",
+      "Description": "Gives complete visibility into agent workflows to trace, debug, and monitor AI agents' performance in production environments"
+    },
+    {
+      "Identifier": "AgentCoreMemory",
+      "Name": "AgentCore Memory",
+      "Family": "AI/ML",
+      "Description": "Build context-aware agents by eliminating complex memory infrastructure management while providing full control over what the AI agent remembers"
+    },
+    {
+      "Identifier": "AgentCoreIdentity",
+      "Name": "AgentCore Identity",
+      "Family": "AI/ML",
+      "Description": "Allows agents to securely access AWS resources and third-party tools and services on behalf of users or by themselves with pre-authorized user consent"
+    },
+    {
+      "Identifier": "AgentCore",
+      "Name": "AgentCore",
+      "Family": "AI/ML",
+      "Description": "Deploy and operate AI agents securely at scale - using any framework and model"
+    },
+    {
+      "Identifier": "AWSSecurityAgent",
+      "Name": "AWS Security Agent",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Proactively secure your applications throughout the development lifecycle with a frontier agent"
+    },
+    {
+      "Identifier": "AmazonNovaForge",
+      "Name": "Amazon Nova Forge",
+      "Family": "AI/ML",
+      "Description": "Easiest and most cost-effective way for companies to build their own frontier model"
+    },
+    {
+      "Identifier": "AWSUnifiedOperations",
+      "Name": "AWS Unified Operations",
+      "Family": "Support"
+    },
+    {
+      "Identifier": "AWSBusinessSupport",
+      "Name": "AWS Business Support+",
+      "Family": "Support",
+      "Description": "For developers and growing organizations, BS+ transforms cloud support by combining contextual AI-powered troubleshooting with expert guidance within 30 min for business-critical problems."
+    },
+    {
+      "Identifier": "AWSEnterpriseSupport",
+      "Name": "AWS Enterprise Support",
+      "Family": "Support"
+    },
+    {
+      "Identifier": "AmazonEC2G7e",
+      "Name": "Amazon EC2 - G7e",
+      "Family": "Compute",
+      "Description": "High performance GPU-based instance for AI inference, scientific computing and spatial computing workloads"
+    },
+    {
+      "Identifier": "AWSTransformCustom",
+      "Name": "AWS Transform Custom",
+      "Family": "Developer Tools",
+      "Description": "Convert code from any programming language, to any programming language"
+    },
+    {
+      "Identifier": "AWSTransformforSQL",
+      "Name": "AWS Transform for SQL",
+      "Family": "Developer Tools",
+      "Description": "Accelerate SQL database migrations to modern DB services"
+    },
+    {
+      "Identifier": "AmazonEC2HPC6id",
+      "Name": "Amazon EC2 - HPC6id",
+      "Family": "Compute",
+      "Description": "High performance for memory-bound and data-intensive HPC workloads powered by 3rd Generation Intel Xeon processors"
+    },
+    {
+      "Identifier": "AmazonEC2HPC7a",
+      "Name": "Amazon EC2 - HPC7a",
+      "Family": "Compute",
+      "Description": "High performance for compute-intensive, latency-sensitive HPC workloads powered by 4th Gen AMD EPYC processors"
+    },
+    {
+      "Identifier": "AmazonEC2HPC7g",
+      "Name": "Amazon EC2 - HPC7g",
+      "Family": "Compute",
+      "Description": "High performance for tightly coupled workloads that require highly parallelized, clustered compute resources powered by AWS Graviton 3E processors"
+    },
+    {
+      "Identifier": "AmazonEC2HPC6a",
+      "Name": "Amazon EC2 - HPC6a",
+      "Family": "Compute",
+      "Description": "High performance for tightly coupled, compute-intensive HPC workloads powered by 3rd Gen AMD EPYC processors"
+    },
+    {
+      "Identifier": "AmazonConnectAIAgents",
+      "Name": "Amazon Connect AI Agents",
+      "Family": "Customer Engagement",
+      "Description": "Transform customer service with agentic AI"
+    },
+    {
+      "Identifier": "AmazonNovaAct",
+      "Name": "Amazon Nova Act",
+      "Family": "AI/ML",
+      "Description": "Enables customers to build, deploy, and run reliable agents for autonomous workflows"
+    },
+    {
+      "Identifier": "AmazonEC2P6B300",
+      "Name": "Amazon EC2 P6-B300",
+      "Family": "Compute",
+      "Description": "High performance for ML training and inference applications in the cloud powered by latest Blackwell Ultra GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonECSManagedInstances",
+      "Name": "Amazon ECS Managed Instances",
+      "Family": "Compute",
+      "Description": "AWS-managed compute option for containerized workloads"
+    },
+    {
+      "Identifier": "AmazonBedrockDataAutomationDocuments",
+      "Name": "Amazon Bedrock - Data Automation Documents",
+      "Family": "AI/ML",
+      "Description": "Automate the generation of useful insights from documents for your AI-powered applications"
+    },
+    {
+      "Identifier": "AmazonBedrockDataAutomationImages",
+      "Name": "Amazon Bedrock - Data Automation Images",
+      "Family": "AI/ML",
+      "Description": "Automate the generation of useful insights from images for your AI-powered applications"
+    },
+    {
+      "Identifier": "AmazonBedrockDataAutomationVideo",
+      "Name": "Amazon Bedrock - Data Automation Video",
+      "Family": "AI/ML",
+      "Description": "Automate the generation of useful insights from video content for your AI-powered applications"
+    },
+    {
+      "Identifier": "AmazonBedrockDataAutomationAudio",
+      "Name": "Amazon Bedrock - Data Automation Audio",
+      "Family": "AI/ML",
+      "Description": "Automate the generation of useful insights from audio content for your AI-powered applications"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesSecureBrowser",
+      "Name": "Amazon WorkSpaces Secure Browser",
+      "Family": "End User Computing",
+      "Description": "Provides a protected environment for users to access private websites, software-as-a-service (SaaS) applications, and the public internet"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesCoreManagedInstances",
+      "Name": "Amazon WorkSpaces Core Managed Instances",
+      "Family": "End User Computing",
+      "Description": "Offers managed virtual desktop infrastructure (VDI) designed to work with third-party VDI service from Citrix, Omnissa, Workspot, and Leostream"
+    },
+    {
+      "Identifier": "AmazonBedrockQwenModels",
+      "Name": "Amazon Bedrock - Qwen Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by Qwen"
+    },
+    {
+      "Identifier": "AmazonSagemakerNovaCustomization",
+      "Name": "Amazon Sagemaker - Nova Customization",
+      "Family": "AI/ML",
+      "Description": "Optimize AI responses and power intelligent agents with a comprehensive suite of customization techniques"
+    },
+    {
+      "Identifier": "AmazonConnectContactLensforexternalvoice",
+      "Name": "Amazon Connect Contact Lens for external voice",
+      "Family": "Customer Engagement",
+      "Description": "Amazon Connect integration with other voice systems for real-time and post-call analytics, and agent performance evaluation"
+    },
+    {
+      "Identifier": "AmazonQDeveloper",
+      "Name": "Amazon Q Developer",
+      "Family": "Developer Tools",
+      "Description": "GenAI-powered development tools to build, operate, and maintain applications"
+    },
+    {
+      "Identifier": "Kiro",
+      "Name": "Kiro",
+      "Family": "Developer Tools",
+      "Description": "AI Integrated Development Environment (IDE) for prototype to production"
+    },
+    {
+      "Identifier": "AmazonBedrockOpenAIModels",
+      "Name": "Amazon Bedrock - OpenAI Models",
+      "Family": "AI/ML",
+      "Description": "Amazon Bedrock models provided by OpenAI"
+    },
+    {
+      "Identifier": "AmazonEC2P6eGB200",
+      "Name": "Amazon EC2 P6e-GB200",
+      "Family": "Compute",
+      "Description": "Provides the highest GPU performance for AI training and inference"
+    },
+    {
+      "Identifier": "AmazonGameLiftServersFlexMatch",
+      "Name": "Amazon GameLift Servers FlexMatch",
+      "Family": "Game Tech",
+      "Description": "Customizable matchmaking service for multiplayer games"
+    },
+    {
+      "Identifier": "AmazonGameLiftServersFleetIQ",
+      "Name": "Amazon GameLift Servers FleetIQ",
+      "Family": "Game Tech",
+      "Description": "Optimizes the use of low-cost Spot Instances for cloud-based game hosting with Amazon EC2"
+    },
+    {
+      "Identifier": "AmazonGameLiftServers",
+      "Name": "Amazon GameLift Servers",
+      "Family": "Game Tech",
+      "Description": "Deploy and Scale Session-based Multiplayer Games"
+    },
+    {
+      "Identifier": "AmazonGameLiftStreams",
+      "Name": "Amazon GameLift Streams",
+      "Family": "Game Tech",
+      "Description": "Enables customers to build low-latency streaming services for 3D games/experiences"
+    },
+    {
+      "Identifier": "AmazonEC2P6B200",
+      "Name": "Amazon EC2 P6-B200",
+      "Family": "Compute",
+      "Description": "High performance for AI training, inference, and HPC workloads"
+    },
+    {
+      "Identifier": "AmazonConnectUnlimitedAIVoice",
+      "Name": "Amazon Connect - Unlimited AI Voice",
+      "Family": "Customer Engagement",
+      "Description": "Provides unlimited use of Amazon Connect AI Voice capabilities and is charged per the voice channel"
+    },
+    {
+      "Identifier": "AmazonConnectUnlimitedAIEmail",
+      "Name": "Amazon Connect - Unlimited AI Email",
+      "Family": "Customer Engagement",
+      "Description": "Provides unlimited use of Amazon Connect AI Email capabilities and is charged per the Email channel"
+    },
+    {
+      "Identifier": "AmazonConnectUnlimitedAIChat",
+      "Name": "Amazon Connect - Unlimited AI Chat",
+      "Family": "Customer Engagement",
+      "Description": "Provides unlimited use of Amazon Connect AI Chat capabilities and is charged per the Chat channel"
+    },
+    {
+      "Identifier": "AmazonConnectUnlimitedAIMessaging",
+      "Name": "Amazon Connect - Unlimited AI Messaging",
+      "Family": "Customer Engagement",
+      "Description": "Provides unlimited use of Amazon Connect AI Messaging capabilities and is charged per the messaging channel"
+    },
+    {
+      "Identifier": "AmazonManagedBlockchain",
+      "Name": "Amazon Managed Blockchain",
+      "Family": "Blockchain",
+      "Description": "Easily create and manage scalable blockchain networks"
+    },
+    {
+      "Identifier": "AWSTransformformainframe",
+      "Name": "AWS Transform for mainframe",
+      "Family": "Developer Tools",
+      "Description": "Accelerate mainframe application modernization"
+    },
+    {
+      "Identifier": "AWSTransformforNET",
+      "Name": "AWS Transform for .NET",
+      "Family": "Developer Tools",
+      "Description": "Accelerate .NET application porting from Windows to Linux"
+    },
+    {
+      "Identifier": "AWSTransformforVMware",
+      "Name": "AWS Transform for VMware",
+      "Family": "Developer Tools",
+      "Description": "Accelerate migration and modernization of VMware workloads"
+    },
+    {
+      "Identifier": "AWSIncidentDetectionandResponse",
+      "Name": "AWS Incident Detection and Response",
+      "Family": "Support",
+      "Description": "Add-on service offering 24/7 monitoring and rapid response for critical workloads. Includes proactive issue detection, accelerated troubleshooting, and coordinated incident management to minimize downtime and maintain business continuity."
+    },
+    {
+      "Identifier": "AmazonSageMaker",
+      "Name": "Amazon SageMaker",
+      "Family": "Private Rate Card"
+    },
+    {
+      "Identifier": "AWSCountdownPremium",
+      "Name": "AWS Countdown Premium",
+      "Family": "Support"
+    },
+    {
+      "Identifier": "AmazonComprehend",
+      "Name": "Amazon Comprehend",
+      "Family": "Machine Learning",
+      "Description": "Analyze Unstructured Text"
+    },
+    {
+      "Identifier": "AmazonBedrockWriterModels",
+      "Name": "Amazon Bedrock - Writer Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Writer"
+    },
+    {
+      "Identifier": "AmazonBedrockTwelveLabsModels",
+      "Name": "Amazon Bedrock - TwelveLabs Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by TwelveLabs"
+    },
+    {
+      "Identifier": "AmazonOne",
+      "Name": "Amazon One",
+      "Family": "Business Applications",
+      "Description": "Amazon One uses palm biometrics to securely authenticate payments and access, offering fast, contactless convenience"
+    },
+    {
+      "Identifier": "AWSParallelComputingService",
+      "Name": "AWS Parallel Computing Service",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Easily run HPC workloads at virtually any scale"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesThinClient",
+      "Name": "Amazon WorkSpaces Thin Client",
+      "Family": "End User Computing",
+      "Description": "Reduce costs, simplify logistics, and accelerate deployment using virtual desktops"
+    },
+    {
+      "Identifier": "AmazonBedrockLumaAIModels",
+      "Name": "Amazon Bedrock - Luma AI Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Luma AI"
+    },
+    {
+      "Identifier": "AmazonBedrockpoolsideModels",
+      "Name": "Amazon Bedrock - poolside Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by poolside"
+    },
+    {
+      "Identifier": "AmazonBedrockDeepSeekModels",
+      "Name": "Amazon Bedrock - DeepSeek Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by DeepSeek"
+    },
+    {
+      "Identifier": "AWSElementalMediaLiveAnywhere",
+      "Name": "AWS Elemental MediaLive Anywhere",
+      "Family": "Media Services",
+      "Description": "Cloud-controlled live video encoding on your own infrastructure"
+    },
+    {
+      "Identifier": "CloudEndureDisasterRecovery",
+      "Name": "CloudEndure Disaster Recovery",
+      "Family": "Migration & Transfer",
+      "Description": "Scalable, cost-effective business continuity for physical, virtual, and cloud servers"
+    },
+    {
+      "Identifier": "AWSInfrastructureEventManagement",
+      "Name": "AWS Infrastructure Event Management",
+      "Family": "Support",
+      "Description": "Support for planning and running business critical events"
+    },
+    {
+      "Identifier": "AWSEnterpriseSupportPublicPricing",
+      "Name": "AWS Enterprise Support - Public Pricing",
+      "Family": "Support",
+      "Description": "Recommended if you have business and/or mission critical workloads in AWS"
+    },
+    {
+      "Identifier": "AmazonQuantumLedgerDatabaseQLDB",
+      "Name": "Amazon Quantum Ledger Database (QLDB)",
+      "Family": "Blockchain",
+      "Description": "Fully managed ledger database"
+    },
+    {
+      "Identifier": "AWSRoboMaker",
+      "Name": "AWS RoboMaker",
+      "Family": "Robotics",
+      "Description": "Develop, test, and deploy intelligent robotics applications"
+    },
+    {
+      "Identifier": "AmazonLookoutforMetrics",
+      "Name": "Amazon Lookout for Metrics",
+      "Family": "Machine Learning",
+      "Description": "Accurately detect anomalies in your business metrics and quickly understand why"
+    },
+    {
+      "Identifier": "AmazonWorkDocs",
+      "Name": "Amazon WorkDocs",
+      "Family": "End User Computing",
+      "Description": "Secure Enterprise Storage and Sharing Service"
+    },
+    {
+      "Identifier": "AmazonCloudWatchEvidently",
+      "Name": "Amazon CloudWatch Evidently",
+      "Family": "Management & Governance",
+      "Description": "Application developers conduct experiments and identify unintended consequences of new features before rolling them out, thereby reducing risk"
+    },
+    {
+      "Identifier": "AWSDeepLens",
+      "Name": "AWS DeepLens",
+      "Family": "Machine Learning",
+      "Description": "Deep Learning Enabled Video Camera"
+    },
+    {
+      "Identifier": "AWSCloud9",
+      "Name": "AWS Cloud9",
+      "Family": "Developer Tools",
+      "Description": "A cloud IDE for writing, running, and debugging code"
+    },
+    {
+      "Identifier": "AWSElementalMediaStore",
+      "Name": "AWS Elemental MediaStore",
+      "Family": "Media Services",
+      "Description": "Store and deliver video assets for live or on-demand media workflows"
+    },
+    {
+      "Identifier": "AmazonElasticInference",
+      "Name": "Amazon Elastic Inference",
+      "Family": "Machine Learning",
+      "Description": "Lower machine learning inference costs by up to 75%"
+    },
+    {
+      "Identifier": "AmazonMonitron",
+      "Name": "Amazon Monitron",
+      "Family": "Machine Learning",
+      "Description": "End-to-end system for equipment monitoring"
+    },
+    {
+      "Identifier": "AWSAppMesh",
+      "Name": "AWS App Mesh",
+      "Family": "Networking & Content Delivery",
+      "Description": "Easily monitor and control microservices"
+    },
+    {
+      "Identifier": "AWSSnowmobile",
+      "Name": "AWS Snowmobile",
+      "Family": "Storage",
+      "Description": "Migrate or transport exabyte-scale data sets into and out of AWS"
+    },
+    {
+      "Identifier": "AmazonLookoutforEquipment",
+      "Name": "Amazon Lookout for Equipment",
+      "Family": "Machine Learning",
+      "Description": "Detect abnormal equipment behavior by analyzing sensor data"
+    },
+    {
+      "Identifier": "AWSCodeStar",
+      "Name": "AWS CodeStar",
+      "Family": "Developer Tools",
+      "Description": "Quickly develop, build, and deploy applications on AWS"
+    },
+    {
+      "Identifier": "AmazonLookoutforVision",
+      "Name": "Amazon Lookout for Vision",
+      "Family": "Machine Learning",
+      "Description": "Identify defects using computer vision to automate quality inspection."
+    },
+    {
+      "Identifier": "AmazonEC2G6",
+      "Name": "Amazon EC2 - G6",
+      "Family": "Compute",
+      "Description": "High performance for ML inference and Graphic applications in the cloud powered by GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonEC2P5",
+      "Name": "Amazon EC2 - P5",
+      "Family": "Compute",
+      "Description": "High performance for ML training and HPC applications in the cloud powered by H100 GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonQBusiness",
+      "Name": "Amazon Q Business",
+      "Family": "Machine Learning",
+      "Description": "The most capable generative AI-powered assistant for finding information, gaining insight, and taking action at work"
+    },
+    {
+      "Identifier": "AmazonKendra",
+      "Name": "Amazon Kendra",
+      "Family": "Machine Learning",
+      "Description": "A highly accurate managed Index for intelligent search and retrieval-augmented generation (RAG) digital assistants"
+    },
+    {
+      "Identifier": "AmazonBedrockAnthropicModels",
+      "Name": "Amazon Bedrock - Anthropic Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Anthropic (Claude)"
+    },
+    {
+      "Identifier": "AmazonBedrockMetaModels",
+      "Name": "Amazon Bedrock - Meta Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Meta (Llama)"
+    },
+    {
+      "Identifier": "AmazonBedrockAmazonModels",
+      "Name": "Amazon Bedrock - Amazon Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Amazon (Nova, Titan)"
+    },
+    {
+      "Identifier": "AmazonDevOpsGuru",
+      "Name": "Amazon DevOps Guru",
+      "Family": "Management & Governance",
+      "Description": "ML-powered cloud operations service to improve application availability."
+    },
+    {
+      "Identifier": "AmazonCodeGuruProfiler",
+      "Name": "Amazon CodeGuru Profiler",
+      "Family": "Developer Tools",
+      "Description": "Profile your applications in the cloud from a single, centralized dashboard"
+    },
+    {
+      "Identifier": "AmazonEC2G6e",
+      "Name": "Amazon EC2 - G6e",
+      "Family": "Compute",
+      "Description": "High performance for ML inference and Graphic applications in the cloud powered by GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonEC2P5en",
+      "Name": "Amazon EC2 - P5en",
+      "Family": "Compute",
+      "Description": "High performance for ML training and HPC applications in the cloud powered by H200 GPUs from NVIDIA, and latest PCIe version"
+    },
+    {
+      "Identifier": "AmazonEC2P5e",
+      "Name": "Amazon EC2 - P5e",
+      "Family": "Compute",
+      "Description": "High performance for ML training and HPC applications in the cloud powered by H200 GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonEC2P4de",
+      "Name": "Amazon EC2 - P4de",
+      "Family": "Compute",
+      "Description": "High performance for ML training and HPC applications in the cloud powered by A100-80G GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AWSAppStudio",
+      "Name": "AWS App Studio",
+      "Family": "Machine Learning",
+      "Description": "Low-code application building service powered by Gen AI"
+    },
+    {
+      "Identifier": "AmazonBedrockKnowledgeBases",
+      "Name": "Amazon Bedrock - Knowledge Bases",
+      "Family": "Machine Learning",
+      "Description": "Adds contextual information from your data sources to deliver more relevant, accurate, and customized responses"
+    },
+    {
+      "Identifier": "GitLabDuowithAmazonQ",
+      "Name": "GitLab Duo with Amazon Q",
+      "Family": "Developer Tools",
+      "Description": "Development teams using GitLab can enable advanced AI agent capabilities from Amazon Q Developer to accelerate GitLab workflows"
+    },
+    {
+      "Identifier": "AmazonConnectAppleMessagesforBusiness",
+      "Name": "Amazon Connect - Apple Messages for Business",
+      "Family": "Customer Engagement",
+      "Description": "Enables you to deliver personalized customer experiences on Apple Messages, the default messaging application on all iOS devices"
+    },
+    {
+      "Identifier": "AWSEndUserMessagingSocial",
+      "Name": "AWS End User Messaging Social",
+      "Family": "Business Applications",
+      "Description": "Send captivating multimedia content and interactive messages with WhatsApp messaging"
+    },
+    {
+      "Identifier": "AWSPartnerLedSupport",
+      "Name": "AWS Partner-Led Support",
+      "Family": "Support",
+      "Description": "AWS Partner-Led Support (PLS) empowers you to offer high quality support, leveraging specialized tooling and knowledge built on the experience of AWS Support"
+    },
+    {
+      "Identifier": "AmazonElasticVMwareServiceAmazonEVS",
+      "Name": "Amazon Elastic VMware Service (Amazon EVS)",
+      "Family": "Compute",
+      "Description": "A new, native AWS service for customers to run VMware Cloud Foundation (VCF) within their Amazon VPC"
+    },
+    {
+      "Identifier": "AmazonConnectforWhatsAppBusinessMessaging",
+      "Name": "Amazon Connect for WhatsApp Business Messaging",
+      "Family": "Customer Engagement",
+      "Description": "Customers can initiate a conversation by simply tapping on WhatsApp-enabled phone numbers or chat buttons"
+    },
+    {
+      "Identifier": "AWSIoTGreengrassnucleuslite",
+      "Name": "AWS IoT Greengrass nucleus lite",
+      "Family": "Internet of Things",
+      "Description": "A lightweight runtime for AWS IoT Greengrass"
+    },
+    {
+      "Identifier": "AWSDataTransferTerminal",
+      "Name": "AWS Data Transfer Terminal",
+      "Family": "Networking & Content Delivery",
+      "Description": "Secure, physical locations for quick transfer of data to AWS"
+    },
+    {
+      "Identifier": "AmazonEKSHybridNodes",
+      "Name": "Amazon EKS Hybrid Nodes",
+      "Family": "Compute",
+      "Description": "Bring the power of Amazon EKS to your on premises applications"
+    },
+    {
+      "Identifier": "AmazonConnectExternalVoiceTransfers",
+      "Name": "Amazon Connect - External Voice Transfers",
+      "Family": "Customer Engagement",
+      "Description": "Integrates with other voice systems to directly transfer voice calls and metadata without using the public telephone network"
+    },
+    {
+      "Identifier": "AWSBillingConductor",
+      "Name": "AWS Billing Conductor",
+      "Family": "Management & Governance",
+      "Description": "Simplify billing and reporting with customizable pricing and cost visibility"
+    },
+    {
+      "Identifier": "AmazonAuroraDSQL",
+      "Name": "Amazon Aurora DSQL",
+      "Family": "Database",
+      "Description": "Fastest serverless distributed SQL database for always available applications"
+    },
+    {
+      "Identifier": "AWSSecurityIncidentResponse",
+      "Name": "AWS Security Incident Response",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Prepare for, respond to, and recover from security events"
+    },
+    {
+      "Identifier": "AmazonConnectIVR",
+      "Name": "Amazon Connect - IVR",
+      "Family": "Customer Engagement",
+      "Description": "Delivers natural, conversational interactive voice response experiences by leveraging high-quality TTS, ASR, NLU, and passive voice authentication"
+    },
+    {
+      "Identifier": "AmazonConnectEmail",
+      "Name": "Amazon Connect - Email",
+      "Family": "Customer Engagement",
+      "Description": "Effortlessly prioritize, assign, and resolve customer service emails"
+    },
+    {
+      "Identifier": "AmazonEKSAutoMode",
+      "Name": "Amazon EKS Auto Mode",
+      "Family": "Compute",
+      "Description": "Fully automate your Kubernetes clusters"
+    },
+    {
+      "Identifier": "AmazonSageMakerCatalog",
+      "Name": "Amazon SageMaker Catalog",
+      "Family": "Machine Learning",
+      "Description": "Discover, govern, and collaborate on data and AI securely"
+    },
+    {
+      "Identifier": "AmazonSageMakerLakehouse",
+      "Name": "Amazon SageMaker Lakehouse",
+      "Family": "Machine Learning",
+      "Description": "Unify data access across Amazon S3 data lakes, Amazon Redshift, and other data sources"
+    },
+    {
+      "Identifier": "AmazonSageMakerUnifiedStudio",
+      "Name": "Amazon SageMaker Unified Studio",
+      "Family": "Machine Learning",
+      "Description": "Build with all your data and tools for analytics and AI in a single development environment"
+    },
+    {
+      "Identifier": "AmazonBedrockGuardrails",
+      "Name": "Amazon Bedrock - Guardrails",
+      "Family": "Machine Learning",
+      "Description": "Implement safeguards customized to application requirements and responsible AI policies"
+    },
+    {
+      "Identifier": "AmazonBedrockMistralAIModels",
+      "Name": "Amazon Bedrock - Mistral AI Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Mistral AI"
+    },
+    {
+      "Identifier": "AmazonBedrockStabilityAIModels",
+      "Name": "Amazon Bedrock - Stability AI Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Stability AI"
+    },
+    {
+      "Identifier": "AmazonBedrockCohereModels",
+      "Name": "Amazon Bedrock - Cohere Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by Cohere"
+    },
+    {
+      "Identifier": "AmazonBedrockAI21LabsModels",
+      "Name": "Amazon Bedrock - AI21 Labs Models",
+      "Family": "Machine Learning",
+      "Description": "Amazon Bedrock models provided by AI21 Labs"
+    },
+    {
+      "Identifier": "AmazonEC2Trn2",
+      "Name": "Amazon EC2 - Trn2",
+      "Family": "Compute",
+      "Description": "Trainium2-powered Trn2 instances are designed for training and deploying large GenAI models with up to trillion+ parameters"
+    },
+    {
+      "Identifier": "AmazonLibra",
+      "Name": "Amazon Libra",
+      "Family": "Customer Engagement",
+      "Description": "A complete teleconferencing system that keeps the conversation at the table, regardless of where participants are located"
+    },
+    {
+      "Identifier": "AmazonConnectOutboundCampaigns",
+      "Name": "Amazon Connect - Outbound Campaigns",
+      "Family": "Customer Engagement",
+      "Description": "Create high volume ML-powered outbound campaigns in just a few clicks"
+    },
+    {
+      "Identifier": "OracleDatabaseAWS",
+      "Name": "Oracle Database@AWS",
+      "Family": "Database",
+      "Description": "Allows customers to lift and shift Oracle Exadata workloads and rapidly innovate with the broad portfolio of AWS services"
+    },
+    {
+      "Identifier": "AmazonBedrock",
+      "Name": "Amazon Bedrock",
+      "Family": "Machine Learning",
+      "Description": "The easiest way to build and scale generative AI applications with foundation models (FMs)"
+    },
+    {
+      "Identifier": "AWSMissionNetworkingIPTunnel",
+      "Name": "AWS Mission Networking IP Tunnel",
+      "Family": "Networking & Content Delivery",
+      "Description": "Encrypted Network Connection to Amazon Dedicated Cloud(ADC) over the Internet"
+    },
+    {
+      "Identifier": "AWSMissionNetworkingDedicatedCircuit",
+      "Name": "AWS Mission Networking Dedicated Circuit",
+      "Family": "Networking & Content Delivery",
+      "Description": "Dedicated Encrypted Network Connection to Amazon Dedicated Cloud(ADC)"
+    },
+    {
+      "Identifier": "AWSEndUserMessaging",
+      "Name": "AWS End User Messaging",
+      "Family": "Business Applications",
+      "Description": "Dependable, cost-effective messaging without compromising safety, security, or results"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesPools",
+      "Name": "Amazon WorkSpaces Pools",
+      "Family": "End User Computing",
+      "Description": "Create pools of virtual desktops to simplify management and reduce cost"
+    },
+    {
+      "Identifier": "CloudTrailLake",
+      "Name": "CloudTrail Lake",
+      "Family": "Management & Governance",
+      "Description": "Track user activity and API usage on AWS and in hybrid and multicloud environments"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationPreciselyforIBMzOS",
+      "Name": "AWS Mainframe Modernization Precisely for IBM z/OS",
+      "Family": "Compute",
+      "Description": "Data replication toolchain for IBMz within AWS Mainframe Modernization service"
+    },
+    {
+      "Identifier": "AWSrePostPrivate",
+      "Name": "AWS re:Post Private",
+      "Family": "Support",
+      "Description": "Knowledge service to accelerate cloud adoption and increase developer productivity"
+    },
+    {
+      "Identifier": "AmazonConnectSMS",
+      "Name": "Amazon Connect - SMS",
+      "Family": "Customer Engagement",
+      "Description": "Amazon Connect two-way SMS capabilities, making it easy to resolve customer issues via text messaging"
+    },
+    {
+      "Identifier": "AWSDeadlineCloud",
+      "Name": "AWS Deadline Cloud",
+      "Family": "Media Services",
+      "Description": "Fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects"
+    },
+    {
+      "Identifier": "AWSCleanRoomsDifferentialPrivacy",
+      "Name": "AWS Clean Rooms Differential Privacy",
+      "Family": "Analytics",
+      "Description": "Protect the privacy of your users with mathematically-backed controls in a few clicks"
+    },
+    {
+      "Identifier": "AWSCleanRoomsML",
+      "Name": "AWS Clean Rooms ML",
+      "Family": "Analytics",
+      "Description": "Apply machine learning with your partners without sharing underlying data"
+    },
+    {
+      "Identifier": "TimestreamforInfluxDB",
+      "Name": "Timestream for InfluxDB",
+      "Family": "Database",
+      "Description": "Makes it easy to run InfluxDB databases on AWS for near real-time applications using open source APIs"
+    },
+    {
+      "Identifier": "AWSSupplyChainSustainability",
+      "Name": "AWS Supply Chain - Sustainability",
+      "Family": "Business Applications",
+      "Description": "Provides a secure and efficient way for sustainability professionals to obtain the documents and datasets from supplier network"
+    },
+    {
+      "Identifier": "AWSSupplyChainNtierVisibility",
+      "Name": "AWS Supply Chain - N-tier Visibility",
+      "Family": "Business Applications",
+      "Description": "Extends visibility and insights beyond your organization to your external trading partners"
+    },
+    {
+      "Identifier": "AWSSupplyChainSupplyPlanning",
+      "Name": "AWS Supply Chain - Supply Planning",
+      "Family": "Business Applications",
+      "Description": "Forecasts and plans purchases of raw materials, components, and finished goods"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationSPARCStromasys",
+      "Name": "AWS Mainframe Modernization SPARC Stromasys",
+      "Family": "Compute",
+      "Description": "Virtualization for SPARC toolchain within AWS Mainframe Modernization service powered by Stromasys"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationFileTransferBMC",
+      "Name": "AWS Mainframe Modernization File Transfer BMC",
+      "Family": "Compute",
+      "Description": "File transfer toolchain within AWS Mainframe Modernization service powered by BMC"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationPreciselyforIBMi",
+      "Name": "AWS Mainframe Modernization Precisely for IBM i",
+      "Family": "Compute",
+      "Description": "Data replication toolchain for IBMi within AWS Mainframe Modernization service"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationReplatformNTTDATAUniKix",
+      "Name": "AWS Mainframe Modernization Replatform NTT DATA UniKix",
+      "Family": "Compute",
+      "Description": "Replatform toolchain capability with AWS Mainframe Modernization service powered by NTT Data UniKix"
+    },
+    {
+      "Identifier": "AmazonIVSChat",
+      "Name": "Amazon IVS Chat",
+      "Family": "Media Services",
+      "Description": "Scalable stream chat feature with a built-in moderation option designed to accompany live streaming videos"
+    },
+    {
+      "Identifier": "AmazonConnectVideocalling",
+      "Name": "Amazon Connect Video calling",
+      "Family": "Customer Engagement",
+      "Description": "Video calling capabilities make it easy to deliver video experiences for your contact center"
+    },
+    {
+      "Identifier": "AmazonConnectInappandwebcalling",
+      "Name": "Amazon Connect In-app and web calling",
+      "Family": "Customer Engagement",
+      "Description": "In-app and web calling capabilities make it easy to deliver voice experiences in websites/mobile applications"
+    },
+    {
+      "Identifier": "AmazonSageMakerHyperPod",
+      "Name": "Amazon SageMaker HyperPod",
+      "Family": "Machine Learning",
+      "Description": "Reduce time to train foundation models by up to 40% with purpose-built infrastructure for distributed training at scale"
+    },
+    {
+      "Identifier": "AmazonDataFirehose",
+      "Name": "Amazon Data Firehose",
+      "Family": "Analytics",
+      "Description": "Process and deliver streaming data with data delivery stream"
+    },
+    {
+      "Identifier": "AmazonWorkLink",
+      "Name": "Amazon WorkLink",
+      "Family": "End User Computing",
+      "Description": "Enable secure mobile access to internal websites and web apps"
+    },
+    {
+      "Identifier": "S3GlacierDeepArchive",
+      "Name": "S3 Glacier Deep Archive",
+      "Family": "Storage",
+      "Description": "Long-term, secure, durable Amazon S3 object storage classes for data archiving"
+    },
+    {
+      "Identifier": "AWSIoTFleetWise",
+      "Name": "AWS IoT FleetWise",
+      "Family": "Internet of Things",
+      "Description": "Easily collect, transform, and transfer vehicle data to the cloud in near-real time"
+    },
+    {
+      "Identifier": "AWSSiteLink",
+      "Name": "AWS SiteLink",
+      "Family": "Networking & Content Delivery",
+      "Description": "AWS Direct Connect SiteLink creates private, end-to-end network connections between the offices, data centers, and colocation facilities in your global network"
+    },
+    {
+      "Identifier": "AWSCloudWAN",
+      "Name": "AWS Cloud WAN",
+      "Family": "Networking & Content Delivery"
+    },
+    {
+      "Identifier": "AmazonConnectTasks",
+      "Name": "Amazon Connect - Tasks",
+      "Family": "Customer Engagement",
+      "Description": "Easily automate, track, and manage tasks for contact center agents"
+    },
+    {
+      "Identifier": "AmazonLexwithAmazonConnect",
+      "Name": "Amazon Lex with Amazon Connect",
+      "Family": "Machine Learning",
+      "Description": "Easier for customers to build, deploy, and manage chatbots"
+    },
+    {
+      "Identifier": "AmazonManagedGrafana",
+      "Name": "Amazon Managed Grafana",
+      "Family": "Management & Governance",
+      "Description": "Scalable, secure, and highly available data visualization for your operational metrics, logs, and traces"
+    },
+    {
+      "Identifier": "AmazonEC2Mac",
+      "Name": "Amazon EC2 - Mac",
+      "Family": "Compute",
+      "Description": "Develop, build, test, and sign Apple apps on Amazon EC2"
+    },
+    {
+      "Identifier": "AWSNetworkFirewall",
+      "Name": "AWS Network Firewall",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Deploy network security across your Amazon VPCs with just a few clicks"
+    },
+    {
+      "Identifier": "AWSMarketplaceProfessionalServices",
+      "Name": "AWS Marketplace - Professional Services",
+      "Family": "Marketplace",
+      "Description": "Professional Services Marketplace Products"
+    },
+    {
+      "Identifier": "VMWareManagedCloudonAWS",
+      "Name": "VMWare Managed Cloud on AWS",
+      "Family": "Compute",
+      "Description": "Innovate faster, rapidly transition to the cloud, and work securely from any location with the full range of 200+ AWS services"
+    },
+    {
+      "Identifier": "AWSLocalZones",
+      "Name": "AWS Local Zones",
+      "Family": "Compute",
+      "Description": "Run latency sensitive applications closer to end users"
+    },
+    {
+      "Identifier": "AmazonManagedWorkflowsforApacheAirflowMWAA",
+      "Name": "Amazon Managed Workflows for Apache Airflow (MWAA)",
+      "Family": "Application Integration",
+      "Description": "Highly available, secure, and managed workflow orchestration for Apache Airflow"
+    },
+    {
+      "Identifier": "GatewayLoadBalancer",
+      "Name": "Gateway Load Balancer",
+      "Family": "Networking & Content Delivery",
+      "Description": "Deploy, scale, and run third-party virtual appliances"
+    },
+    {
+      "Identifier": "AmazonManagedServiceforPrometheus",
+      "Name": "Amazon Managed Service for Prometheus",
+      "Family": "Management & Governance",
+      "Description": "Highly available, secure, and managed monitoring for your containers"
+    },
+    {
+      "Identifier": "AmazonEKSAnywhere",
+      "Name": "Amazon EKS Anywhere",
+      "Family": "Containers",
+      "Description": "Create and operate Kubernetes clusters on your own infrastructure"
+    },
+    {
+      "Identifier": "AWSAuditManager",
+      "Name": "AWS Audit Manager",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Continuously assess controls for risk and compliance"
+    },
+    {
+      "Identifier": "AmazonEC2Linux",
+      "Name": "Amazon EC2 Linux",
+      "Family": "Compute",
+      "Description": "Run all your cloud and enterprise applications in a secure, stable, and high performance Linux environment"
+    },
+    {
+      "Identifier": "AmazonAppFlow",
+      "Name": "Amazon AppFlow",
+      "Family": "Application Integration",
+      "Description": "Amazon AppFlow integrates apps and automates data flows without code."
+    },
+    {
+      "Identifier": "AWSChatbot",
+      "Name": "AWS Chatbot",
+      "Family": "Management & Governance",
+      "Description": "ChatOps for AWS"
+    },
+    {
+      "Identifier": "SnowballwithTapeGateway",
+      "Name": "Snowball with Tape Gateway",
+      "Family": "Storage",
+      "Description": "Secure, offline tape data migration capability for AWS Snowball Edge"
+    },
+    {
+      "Identifier": "AWSMigrationHubStrategyRecommendations",
+      "Name": "AWS Migration Hub Strategy Recommendations",
+      "Family": "Migration & Transfer",
+      "Description": "Analyzes your applications to help you determine the optimal strategy and tools to migrate and modernize at scale."
+    },
+    {
+      "Identifier": "AmazonRoute53ApplicationRecoveryController",
+      "Name": "Amazon Route 53 Application Recovery Controller",
+      "Family": "Networking & Content Delivery",
+      "Description": "Simplify and automate recovery for highly available applications"
+    },
+    {
+      "Identifier": "AWSClientVPN",
+      "Name": "AWS Client VPN",
+      "Family": "Networking & Content Delivery",
+      "Description": "Extend your on-premises networks to the cloud and securely access them from anywhere"
+    },
+    {
+      "Identifier": "AWSStorageGatewayTapeGateway",
+      "Name": "AWS Storage Gateway (Tape Gateway)",
+      "Family": "Storage",
+      "Description": "Backup and archive on-premises data to virtual tapes in AWS"
+    },
+    {
+      "Identifier": "AWSParallelCluster",
+      "Name": "AWS ParallelCluster",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Quickly build HPC compute environments on AWS"
+    },
+    {
+      "Identifier": "AmazonAugmentedAIA2I",
+      "Name": "Amazon Augmented AI (A2I)",
+      "Family": "Machine Learning",
+      "Description": "Easily implement human review of machine learning predictions"
+    },
+    {
+      "Identifier": "AWSWavelength",
+      "Name": "AWS Wavelength",
+      "Family": "Compute",
+      "Description": "Deliver ultra-low-latency applications for 5G devices"
+    },
+    {
+      "Identifier": "AWSDeepComposer",
+      "Name": "AWS DeepComposer",
+      "Family": "Machine Learning",
+      "Description": "AWS DeepComposer allows developers of all skill levels to get started with Generative AI."
+    },
+    {
+      "Identifier": "AWSDataExchange",
+      "Name": "AWS Data Exchange",
+      "Family": "Analytics",
+      "Description": "Easily exchange data in the cloud"
+    },
+    {
+      "Identifier": "AmazonSageMakerGroundTruth",
+      "Name": "Amazon SageMaker Ground Truth",
+      "Family": "Machine Learning",
+      "Description": "Create high-quality datasets for training ML models"
+    },
+    {
+      "Identifier": "AWSSecurityHub",
+      "Name": "AWS Security Hub",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Automate AWS security checks and centralize security alerts"
+    },
+    {
+      "Identifier": "AWSOutposts",
+      "Name": "AWS Outposts",
+      "Family": "Compute",
+      "Description": "Run AWS Services On Premises"
+    },
+    {
+      "Identifier": "AWSTransitGateway",
+      "Name": "AWS Transit Gateway",
+      "Family": "Networking & Content Delivery",
+      "Description": "Easily connect Amazon VPCs, AWS accounts, and on-premises networks to a single gateway"
+    },
+    {
+      "Identifier": "AmazonTextract",
+      "Name": "Amazon Textract",
+      "Family": "Machine Learning",
+      "Description": "Easily extract text and data from virtually any document"
+    },
+    {
+      "Identifier": "AWSTransferFamilySFTPFTPSFTP",
+      "Name": "AWS Transfer Family (SFTP, FTPS, FTP)",
+      "Family": "Migration & Transfer",
+      "Description": "Easily manage and share data with simple, secure, and scalable file transfers"
+    },
+    {
+      "Identifier": "AWSDataSync",
+      "Name": "AWS DataSync",
+      "Family": "Migration & Transfer",
+      "Description": "Simplifies, automates, and accelerates moving data"
+    },
+    {
+      "Identifier": "AWSWellArchitectedTool",
+      "Name": "AWS Well-Architected Tool",
+      "Family": "Management & Governance",
+      "Description": "Use AWS Well-Architected Tool to learn best practices, measure, and improve your workloads"
+    },
+    {
+      "Identifier": "AWSElementalMediaConnect",
+      "Name": "AWS Elemental MediaConnect",
+      "Family": "Media Services",
+      "Description": "Reliable, secure, and flexible transport for live video"
+    },
+    {
+      "Identifier": "AWSSitetoSiteVPN",
+      "Name": "AWS Site-to-Site VPN",
+      "Family": "Networking & Content Delivery",
+      "Description": "Extend your on-premises networks to the cloud"
+    },
+    {
+      "Identifier": "AWSGameKit",
+      "Name": "AWS GameKit",
+      "Family": "Game Tech",
+      "Description": "GameKit enables game developers to deploy and customize game features from game engine"
+    },
+    {
+      "Identifier": "AmazonDocumentDB",
+      "Name": "Amazon DocumentDB",
+      "Family": "Database",
+      "Description": "Scale JSON workloads with ease using a fully managed document database service"
+    },
+    {
+      "Identifier": "SnowconeEdgeCompute",
+      "Name": "Snowcone - Edge Compute",
+      "Family": "Storage",
+      "Description": "Snowcone is a small, rugged edge compute and data storage product"
+    },
+    {
+      "Identifier": "SnowballDataTransfer",
+      "Name": "Snowball - Data Transfer",
+      "Family": "Storage",
+      "Description": "Petabyte-scale data transport with on-board storage and compute capabilities"
+    },
+    {
+      "Identifier": "SnowballEdgeCompute",
+      "Name": "Snowball - Edge Compute",
+      "Family": "Storage",
+      "Description": "Petabyte-scale data transport with on-board storage and compute capabilities"
+    },
+    {
+      "Identifier": "SnowconeDataTransfer",
+      "Name": "Snowcone - Data Transfer",
+      "Family": "Storage",
+      "Description": "Snowcone is a small, rugged edge compute and data storage product"
+    },
+    {
+      "Identifier": "AmazonECSAnywhere",
+      "Name": "Amazon ECS Anywhere",
+      "Family": "Containers",
+      "Description": "Easily run containers on customer-managed infrastructure with ECS Anywhere"
+    },
+    {
+      "Identifier": "AWSNeuron",
+      "Name": "AWS Neuron",
+      "Family": "Machine Learning",
+      "Description": "SDK to optimize machine learning inference on AWS Inferentia chips"
+    },
+    {
+      "Identifier": "AWSFirewallManager",
+      "Name": "AWS Firewall Manager",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Centrally configure and manage firewall rules across accounts and applications"
+    },
+    {
+      "Identifier": "AmazonEC2F1",
+      "Name": "Amazon EC2 - F1",
+      "Family": "Compute",
+      "Description": "Enable faster FPGA accelerator development and deployment in the cloud powered by Virtex UltraScale+ FPGAs from Xilinx"
+    },
+    {
+      "Identifier": "AWSResilienceHub",
+      "Name": "AWS Resilience Hub",
+      "Family": "Management & Governance",
+      "Description": "Prepare and protect your applications from disruptions"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesCore",
+      "Name": "Amazon WorkSpaces Core",
+      "Family": "End User Computing",
+      "Description": "Virtual desktop infrastructure APIs for customers\u2019 3rd party VDI software"
+    },
+    {
+      "Identifier": "AWSCleanRooms",
+      "Name": "AWS Clean Rooms",
+      "Family": "Analytics",
+      "Description": "Create clean rooms in minutes. Collaborate without sharing raw data."
+    },
+    {
+      "Identifier": "SAPonAWSGeneral",
+      "Name": "SAP on AWS - General",
+      "Family": "Compute",
+      "Description": "AWS infrastructure (EC2, Storage) to run SAP on AWS"
+    },
+    {
+      "Identifier": "OracleonAWSGeneral",
+      "Name": "Oracle on AWS- General",
+      "Family": "Compute",
+      "Description": "AWS infrastructure (EC2, Storage) to run Oracle on AWS"
+    },
+    {
+      "Identifier": "AWSCodePipeline",
+      "Name": "AWS CodePipeline",
+      "Family": "Developer Tools",
+      "Description": "Automate continuous delivery pipelines for fast and reliable updates"
+    },
+    {
+      "Identifier": "AWSCodeCommit",
+      "Name": "AWS CodeCommit",
+      "Family": "Developer Tools",
+      "Description": "Securely host highly scalable private Git repositories. Collaborate on code."
+    },
+    {
+      "Identifier": "AmazonElasticContainerServiceECS",
+      "Name": "Amazon Elastic Container Service (ECS)",
+      "Family": "Compute",
+      "Description": "Run highly secure, reliable, and scalable containers"
+    },
+    {
+      "Identifier": "AmazonWorkMail",
+      "Name": "Amazon WorkMail",
+      "Family": "End User Computing",
+      "Description": "Secure Email and Calendaring Service"
+    },
+    {
+      "Identifier": "AmazonWorkSpacesApplicationManagerWAM",
+      "Name": "Amazon WorkSpaces Application Manager (WAM)",
+      "Family": "End User Computing",
+      "Description": "Fast, flexible, and secure way for you to deploy and manage applications for Amazon WorkSpaces"
+    },
+    {
+      "Identifier": "AmazonElasticFileSystemEFS",
+      "Name": "Amazon Elastic File System (EFS)",
+      "Family": "Storage",
+      "Description": "Simple, serverless, set-and-forget, elastic file system"
+    },
+    {
+      "Identifier": "AWSDeviceFarm",
+      "Name": "AWS Device Farm",
+      "Family": "Front-End Web & Mobile",
+      "Description": "Test Android, iOS, and Web Apps on Real Devices in the Cloud"
+    },
+    {
+      "Identifier": "AmazonAPIGateway",
+      "Name": "Amazon API Gateway",
+      "Family": "Networking & Content Delivery",
+      "Description": "Create, maintain, and secure APIs at any scale"
+    },
+    {
+      "Identifier": "AmazonEC2Spot",
+      "Name": "Amazon EC2 Spot",
+      "Family": "Compute",
+      "Description": "Run fault-tolerant workloads for up to 90% off"
+    },
+    {
+      "Identifier": "VMwareCloudonAWS",
+      "Name": "VMware Cloud on AWS",
+      "Family": "Compute",
+      "Description": "Rapidly migrate, extend, modernize, and protect your VMware environment to the AWS Cloud"
+    },
+    {
+      "Identifier": "AWSSecretsManager",
+      "Name": "AWS Secrets Manager",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Easily rotate, manage, and retrieve database credentials, API keys, and other secrets through their lifecycle"
+    },
+    {
+      "Identifier": "AWSDirectoryService",
+      "Name": "AWS Directory Service",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Managed Microsoft Active Directory in AWS"
+    },
+    {
+      "Identifier": "AWSLambda",
+      "Name": "AWS Lambda",
+      "Family": "Compute",
+      "Description": "Run code without thinking about servers or clusters"
+    },
+    {
+      "Identifier": "AWSCodeDeploy",
+      "Name": "AWS CodeDeploy",
+      "Family": "Developer Tools",
+      "Description": "Automate code deployments to maintain application uptime"
+    },
+    {
+      "Identifier": "AWSKeyManagementServiceKMS",
+      "Name": "AWS Key Management Service (KMS)",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Easily create and control the keys used to encrypt or digitally sign your data"
+    },
+    {
+      "Identifier": "AWSConfig",
+      "Name": "AWS Config",
+      "Family": "Management & Governance",
+      "Description": "Track Resource Inventory and Changes"
+    },
+    {
+      "Identifier": "AmazonVPCLattice",
+      "Name": "Amazon VPC Lattice",
+      "Family": "Networking & Content Delivery",
+      "Description": "Simplify connecting, monitoring, and securing your application networks\nPricebook: Utility, Committed Contract, Private Pricing"
+    },
+    {
+      "Identifier": "AWSAppFabric",
+      "Name": "AWS AppFabric",
+      "Family": "Business Applications",
+      "Description": "AWS AppFabric connects multiple SaaS applications with no coding required for better productivity and security"
+    },
+    {
+      "Identifier": "AWSHealthImaging",
+      "Name": "AWS HealthImaging",
+      "Family": "Machine Learning",
+      "Description": "Store, access, and analyze medical images in the cloud at petabyte scale"
+    },
+    {
+      "Identifier": "AmazonCodeGuruSecurity",
+      "Name": "Amazon CodeGuru Security",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Scans application code and identifies vulnerabilities"
+    },
+    {
+      "Identifier": "AmazonDataZone",
+      "Name": "Amazon DataZone",
+      "Family": "Analytics",
+      "Description": "Unlock data across organizational boundaries with built-in governance"
+    },
+    {
+      "Identifier": "AWSVerifiedAccess",
+      "Name": "AWS Verified Access",
+      "Family": "Networking & Content Delivery",
+      "Description": "Provide secure access to corporate applications without a VPN"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationBluAge",
+      "Name": "AWS Mainframe Modernization Blu Age",
+      "Family": "Compute",
+      "Description": "Refactor toolchain within AWS Mainframe Modernization service"
+    },
+    {
+      "Identifier": "AmazonConnectGuides",
+      "Name": "Amazon Connect Guides",
+      "Family": "Business Applications",
+      "Description": "Help agents resolve issues quickly with programmatic step-by-step guidance"
+    },
+    {
+      "Identifier": "AWSDeepLearningContainers",
+      "Name": "AWS Deep Learning Containers",
+      "Family": "Machine Learning",
+      "Description": "Quickly set up deep learning environments with optimized, pre-packaged container images"
+    },
+    {
+      "Identifier": "AWSDistroforOpenTelemetryADOT",
+      "Name": "AWS Distro for OpenTelemetry (ADOT)",
+      "Family": "Management & Governance",
+      "Description": "Secure, production-ready open source distribution with predictable performance"
+    },
+    {
+      "Identifier": "AWSManagedServicesAccelerate",
+      "Name": "AWS Managed Services Accelerate",
+      "Family": "Management & Governance",
+      "Description": "Extends customers teams and capabilities to drive operational excellence with a flexible consumption model"
+    },
+    {
+      "Identifier": "AWSCloudShell",
+      "Name": "AWS CloudShell",
+      "Family": "Developer Tools",
+      "Description": "Command line access to AWS resources and tools directly from a browser"
+    },
+    {
+      "Identifier": "AmazonSimpleNotificationServiceSNSA2A",
+      "Name": "Amazon Simple Notification Service (SNS) A2A",
+      "Family": "Application Integration",
+      "Description": "Fully managed pub/sub messaging, SMS, email, and mobile push notifications for application-to-application (A2A) communication"
+    },
+    {
+      "Identifier": "AmazonNimbleStudio",
+      "Name": "Amazon Nimble Studio",
+      "Family": "Media Services",
+      "Description": "Accelerate building a cloud-based content creation studio"
+    },
+    {
+      "Identifier": "BabelfishforAuroraPostgreSQL",
+      "Name": "Babelfish for Aurora PostgreSQL",
+      "Family": "Database",
+      "Description": "Run Microsoft SQL Server applications on PostgreSQL with little to no code change"
+    },
+    {
+      "Identifier": "AWSOutpostsServers",
+      "Name": "AWS Outposts Servers",
+      "Family": "Compute",
+      "Description": "Run AWS Outposts in locations with limited space or smaller capacity requirements"
+    },
+    {
+      "Identifier": "AmazonSageMakerCanvas",
+      "Name": "Amazon SageMaker Canvas",
+      "Family": "Machine Learning",
+      "Description": "Provide business analysts with a UI that allows them to generate ML predictions"
+    },
+    {
+      "Identifier": "AmazonMQforActiveMQ",
+      "Name": "Amazon MQ for ActiveMQ",
+      "Family": "Application Integration",
+      "Description": "Fully managed service for open source message brokers for ActiveMQ"
+    },
+    {
+      "Identifier": "AmazonCloudWatchApplicationInsights",
+      "Name": "Amazon CloudWatch Application Insights",
+      "Family": "Management & Governance",
+      "Description": "Monitor Resources and Applications"
+    },
+    {
+      "Identifier": "AmazonEC2G4",
+      "Name": "Amazon EC2 - G4",
+      "Family": "Compute",
+      "Description": "The industry\u2019s most cost-effective GPU instances for machine learning inference and graphics-intensive applications powered by T4 GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonEC2VT1",
+      "Name": "Amazon EC2 - VT1",
+      "Family": "Compute",
+      "Description": "Low cost transcoding for live streams and video files powered by the U30 media accelerator from Xilinx"
+    },
+    {
+      "Identifier": "AmazonEC2Trn1",
+      "Name": "Amazon EC2 - Trn1",
+      "Family": "Compute",
+      "Description": "Best price performance for training deep learning models in the cloud powered by AWS Trainium chips"
+    },
+    {
+      "Identifier": "AmazonEC2DL1",
+      "Name": "Amazon EC2 - DL1",
+      "Family": "Compute",
+      "Description": "Low cost-to-train for deep learning models powered by Gaudi accelerators from Habana Labs (an Intel company)"
+    },
+    {
+      "Identifier": "AmazonEC2P4d",
+      "Name": "Amazon EC2 - P4d",
+      "Family": "Compute",
+      "Description": "Highest performance for ML training and HPC applications in the cloud powered by A100 GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "AmazonSageMakerNotebookInstances",
+      "Name": "Amazon SageMaker Notebook Instances",
+      "Family": "Machine Learning",
+      "Description": "Compute instances running the Jupyter notebook app, billed by the instance type chosen"
+    },
+    {
+      "Identifier": "AmazonCloudWatchSynthetics",
+      "Name": "Amazon CloudWatch Synthetics",
+      "Family": "Management & Governance",
+      "Description": "Monitor application endpoints more easily"
+    },
+    {
+      "Identifier": "AmazonFSxforOpenZFS",
+      "Name": "Amazon FSx for OpenZFS",
+      "Family": "Storage",
+      "Description": "Fully managed high-performance file storage powered OpenZFS"
+    },
+    {
+      "Identifier": "AmazonComprehendMedical",
+      "Name": "Amazon Comprehend Medical",
+      "Family": "Machine Learning",
+      "Description": "Extract information from unstructured medical text accurately and quickly"
+    },
+    {
+      "Identifier": "AmazonInspector",
+      "Name": "Amazon Inspector",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Automated security assessment service to help improve the security and compliance of applications deployed on AWS"
+    },
+    {
+      "Identifier": "AWSOpsHub",
+      "Name": "AWS OpsHub",
+      "Family": "Storage",
+      "Description": "Graphical user interface to manage your AWS Snowball devices"
+    },
+    {
+      "Identifier": "AmazonEC2Windows",
+      "Name": "Amazon EC2 Windows",
+      "Family": "Compute",
+      "Description": "Secure and resizable compute capacity to support virtually any workload"
+    },
+    {
+      "Identifier": "AmazonEC2WindowsBYOL",
+      "Name": "Amazon EC2 Windows-BYOL",
+      "Family": "Compute",
+      "Description": "Secure and resizable compute capacity to support virtually any workload"
+    },
+    {
+      "Identifier": "AmazonHealthLake",
+      "Name": "Amazon HealthLake",
+      "Family": "Machine Learning",
+      "Description": "Making sense of health data"
+    },
+    {
+      "Identifier": "AmazonSageMakerEdgeManager",
+      "Name": "Amazon SageMaker Edge Manager",
+      "Family": "Machine Learning",
+      "Description": "Easily operate ML models running on edge devices"
+    },
+    {
+      "Identifier": "AmazonConnectCustomerProfiles",
+      "Name": "Amazon Connect - Customer Profiles",
+      "Family": "Customer Engagement",
+      "Description": "Enable agents to deliver faster, more personalized customer service"
+    },
+    {
+      "Identifier": "AmazonConnectCases",
+      "Name": "Amazon Connect - Cases",
+      "Family": "Customer Engagement",
+      "Description": "Fast and easy way to manage your customer issues to resolution, even if they require multiple interactions, tasks, and teams"
+    },
+    {
+      "Identifier": "AWSApplicationMigrationServiceMGN",
+      "Name": "AWS Application Migration Service (MGN)",
+      "Family": "Migration & Transfer",
+      "Description": "AWS Application Migration Service (MGN) automates lift-and-shift migration"
+    },
+    {
+      "Identifier": "AWSSimSpaceWeaver",
+      "Name": "AWS SimSpace Weaver",
+      "Family": "Compute",
+      "Description": "Expand your spatial simulation workloads across multiple servers"
+    },
+    {
+      "Identifier": "AmazonWorkspaces",
+      "Name": "Amazon Workspaces",
+      "Family": "End User Computing",
+      "Description": "Secure, reliable, and scalable access to persistent desktops from any location"
+    },
+    {
+      "Identifier": "AmazonElasticMapReduceEMR",
+      "Name": "Amazon Elastic MapReduce (EMR)",
+      "Family": "Analytics",
+      "Description": "Managed Hadoop Framework"
+    },
+    {
+      "Identifier": "AmazonCloudSearch",
+      "Name": "Amazon CloudSearch",
+      "Family": "Analytics",
+      "Description": "Managed Search Service"
+    },
+    {
+      "Identifier": "AmazonElasticTranscoder",
+      "Name": "Amazon Elastic Transcoder",
+      "Family": "Media Services",
+      "Description": "Easy-to-Use Scalable Media Transcoding"
+    },
+    {
+      "Identifier": "AmazonSimpleEmailServiceSES",
+      "Name": "Amazon Simple Email Service (SES)",
+      "Family": "Customer Engagement",
+      "Description": "High-scale inbound and outbound cloud email service"
+    },
+    {
+      "Identifier": "AmazonSQS",
+      "Name": "Amazon SQS",
+      "Family": "Application Integration",
+      "Description": "Fully managed message queues for microservices, distributed systems, and serverless applications"
+    },
+    {
+      "Identifier": "AmazonCloudFront",
+      "Name": "Amazon CloudFront",
+      "Family": "Networking & Content Delivery",
+      "Description": "Securely deliver content with low latency and high transfer speeds"
+    },
+    {
+      "Identifier": "AmazonEC2AutoScaling",
+      "Name": "Amazon EC2 Auto Scaling",
+      "Family": "Compute",
+      "Description": "Add or remove compute capacity to meet changes in demand"
+    },
+    {
+      "Identifier": "ElasticLoadBalancingELB",
+      "Name": "Elastic Load Balancing (ELB)",
+      "Family": "Networking & Content Delivery",
+      "Description": "Distribute network traffic to improve application scalability"
+    },
+    {
+      "Identifier": "AmazonEKSonOutpost",
+      "Name": "Amazon EKS on Outpost",
+      "Family": "Containers",
+      "Description": "Deploy managed Amazon EKS clusters in on-premises environments"
+    },
+    {
+      "Identifier": "AmazonRekognitionImage",
+      "Name": "Amazon Rekognition Image",
+      "Family": "Machine Learning",
+      "Description": "Deep learning powered image recognition service"
+    },
+    {
+      "Identifier": "AmazonRekognitionCustomLabels",
+      "Name": "Amazon Rekognition Custom Labels",
+      "Family": "Machine Learning",
+      "Description": "Develop custom models to analyze images"
+    },
+    {
+      "Identifier": "AWSCertificateManager",
+      "Name": "AWS Certificate Manager",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Easily provision, manage, and deploy public and private SSL/TLS certificates for use with AWS services and your internal connected resources"
+    },
+    {
+      "Identifier": "AWSIoTDeviceDefender",
+      "Name": "AWS IoT Device Defender",
+      "Family": "Internet of Things",
+      "Description": "Security management for IoT devices"
+    },
+    {
+      "Identifier": "AWSIoTDeviceManagement",
+      "Name": "AWS IoT Device Management",
+      "Family": "Internet of Things",
+      "Description": "Register, organize, monitor, and remotely manage connected devices at scale"
+    },
+    {
+      "Identifier": "AWSAppSync",
+      "Name": "AWS AppSync",
+      "Family": "Front-End Web & Mobile",
+      "Description": "Real-Time Data Sync Using GraphQL for Mobile & Web Apps, Online or Offline"
+    },
+    {
+      "Identifier": "AmazonGuardDuty",
+      "Name": "Amazon GuardDuty",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Protect your AWS accounts with intelligent threat detection"
+    },
+    {
+      "Identifier": "AmazonSumerian",
+      "Name": "Amazon Sumerian",
+      "Family": "AR & VR",
+      "Description": "Build VR, AR, and 3D applications"
+    },
+    {
+      "Identifier": "AmazonKinesisVideoStreams",
+      "Name": "Amazon Kinesis Video Streams",
+      "Family": "Internet of Things",
+      "Description": "Capture, Process, and Store Video Streams for Analytics and Machine Learning"
+    },
+    {
+      "Identifier": "AWSSingleSignOn",
+      "Name": "AWS Single Sign-On",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Manage Single Sign-On (SSO) Access to AWS Accounts and Business Applications"
+    },
+    {
+      "Identifier": "AWSWAFWebApplicationFirewall",
+      "Name": "AWS WAF - Web Application Firewall",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Protect your web applications from common web exploits"
+    },
+    {
+      "Identifier": "AmazonCloudWatchRUM",
+      "Name": "Amazon CloudWatch RUM",
+      "Family": "Management & Governance",
+      "Description": "Gain visibility into applications\u2019 client-side performance and reduces MTTR"
+    },
+    {
+      "Identifier": "AmazonLumberyard",
+      "Name": "Amazon Lumberyard",
+      "Family": "Game Tech",
+      "Description": "Cross-platform AAA game engine deeply integrated with AWS and Twitch with full source code provided"
+    },
+    {
+      "Identifier": "AWSServiceCatalog",
+      "Name": "AWS Service Catalog",
+      "Family": "Management & Governance",
+      "Description": "Create, organize, and govern your curated catalog of AWS products"
+    },
+    {
+      "Identifier": "AmazonDynamoDB",
+      "Name": "Amazon DynamoDB",
+      "Family": "Database",
+      "Description": "Fast, flexible NoSQL database service for single-digit millisecond performance at any scale"
+    },
+    {
+      "Identifier": "AmazonElastiCache",
+      "Name": "Amazon ElastiCache",
+      "Family": "Database",
+      "Description": "Unlock microsecond latency and scale with in-memory caching"
+    },
+    {
+      "Identifier": "AmazonRDSforMySQL",
+      "Name": "Amazon RDS for MySQL",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale a relational database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "AmazonRDSforOracle",
+      "Name": "Amazon RDS for Oracle",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale an Oracle database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "AmazonRekognitionVideo",
+      "Name": "Amazon Rekognition Video",
+      "Family": "Machine Learning",
+      "Description": "Machine learning powered video analysis service"
+    },
+    {
+      "Identifier": "AmazonTranscribe",
+      "Name": "Amazon Transcribe",
+      "Family": "Machine Learning",
+      "Description": "Powerful Speech Recognition"
+    },
+    {
+      "Identifier": "AlexaforBusiness",
+      "Name": "Alexa for Business",
+      "Family": "Business Applications",
+      "Description": "Alexa for Business Provides Tools to Manage Alexa in Your Organization"
+    },
+    {
+      "Identifier": "AmazonElasticKubernetesServiceEKS",
+      "Name": "Amazon Elastic Kubernetes Service (EKS)",
+      "Family": "Containers",
+      "Description": "The most trusted way to start, run, and scale Kubernetes"
+    },
+    {
+      "Identifier": "AmazonECSonAWSFargate",
+      "Name": "Amazon ECS on AWS Fargate",
+      "Family": "Containers",
+      "Description": "Run containers without having to manage servers or clusters of Amazon EC2 instances"
+    },
+    {
+      "Identifier": "AWSServerlessApplicationRepository",
+      "Name": "AWS Serverless Application Repository",
+      "Family": "Compute",
+      "Description": "Discover, deploy, and publish serverless applications"
+    },
+    {
+      "Identifier": "AmazonRDSforPostgreSQL",
+      "Name": "Amazon RDS for PostgreSQL",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale a relational database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "AmazonRDSforSQLServer",
+      "Name": "Amazon RDS for SQL Server",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale a SQL Server database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "AmazonRedshift",
+      "Name": "Amazon Redshift",
+      "Family": "Analytics",
+      "Description": "Fast, Simple, Cost-Effective Data Warehousing"
+    },
+    {
+      "Identifier": "AWSCloudHSM",
+      "Name": "AWS CloudHSM",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Managed hardware security module (HSM) on the AWS Cloud"
+    },
+    {
+      "Identifier": "AWSCloudFormation",
+      "Name": "AWS CloudFormation",
+      "Family": "Management & Governance",
+      "Description": "Create and Manage Resources with Templates"
+    },
+    {
+      "Identifier": "AWSCloudTrail",
+      "Name": "AWS CloudTrail",
+      "Family": "Management & Governance",
+      "Description": "Track User Activity and API Usage"
+    },
+    {
+      "Identifier": "AmazonCloudWatch",
+      "Name": "Amazon CloudWatch",
+      "Family": "Management & Governance",
+      "Description": "Observability of your AWS resources and applications on AWS and on-premises"
+    },
+    {
+      "Identifier": "AWSElasticBeanstalk",
+      "Name": "AWS Elastic Beanstalk",
+      "Family": "Developer Tools",
+      "Description": "Easy to begin, Impossible to outgrow"
+    },
+    {
+      "Identifier": "AWSMarketplaceAMI",
+      "Name": "AWS Marketplace - AMI",
+      "Family": "Marketplace",
+      "Description": "Amazon Machine Image (AMI) Marketplace Products"
+    },
+    {
+      "Identifier": "AmazonCognito",
+      "Name": "Amazon Cognito",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Simple and Secure User Sign-Up, Sign-In, and Access Control"
+    },
+    {
+      "Identifier": "AWSDirectConnect",
+      "Name": "AWS Direct Connect",
+      "Family": "Networking & Content Delivery",
+      "Description": "Dedicated Network Connection to AWS"
+    },
+    {
+      "Identifier": "AmazonRoute53",
+      "Name": "Amazon Route 53",
+      "Family": "Networking & Content Delivery",
+      "Description": "Scalable DNS and Domain Name Registration"
+    },
+    {
+      "Identifier": "AmazonVirtualPrivateCloudVPC",
+      "Name": "Amazon Virtual Private Cloud (VPC)",
+      "Family": "Networking & Content Delivery",
+      "Description": "Define and launch AWS resources in a logically isolated virtual network"
+    },
+    {
+      "Identifier": "AmazonElasticBlockStoreEBS",
+      "Name": "Amazon Elastic Block Store (EBS)",
+      "Family": "Storage",
+      "Description": "Easy to use, high performance block storage at any scale"
+    },
+    {
+      "Identifier": "AmazonS3Glacier",
+      "Name": "Amazon S3 Glacier",
+      "Family": "Storage",
+      "Description": "Long-term, secure, durable Amazon S3 object storage classes for data archiving"
+    },
+    {
+      "Identifier": "AmazonNeptune",
+      "Name": "Amazon Neptune",
+      "Family": "Database",
+      "Description": "Build and run graph applications with highly connected datasets"
+    },
+    {
+      "Identifier": "FreeRTOSIoT",
+      "Name": "FreeRTOS (IoT)",
+      "Family": "Internet of Things",
+      "Description": "Real-time operating system for microcontrollers"
+    },
+    {
+      "Identifier": "AmazonS3",
+      "Name": "Amazon S3",
+      "Family": "Storage",
+      "Description": "Object storage built to store and retrieve any amount of data from anywhere"
+    },
+    {
+      "Identifier": "AWSElementalMediaConvert",
+      "Name": "AWS Elemental MediaConvert",
+      "Family": "Media Services",
+      "Description": "Convert file-based content for broadcast and multiscreen delivery"
+    },
+    {
+      "Identifier": "AWSElementalMediaLive",
+      "Name": "AWS Elemental MediaLive",
+      "Family": "Media Services",
+      "Description": "Convert video inputs into live outputs for broadcast and streaming delivery"
+    },
+    {
+      "Identifier": "AWSElementalMediaPackage",
+      "Name": "AWS Elemental MediaPackage",
+      "Family": "Media Services",
+      "Description": "Deliver video to many devices using just-in-time format conversion"
+    },
+    {
+      "Identifier": "AWSElementalMediaTailor",
+      "Name": "AWS Elemental MediaTailor",
+      "Family": "Media Services",
+      "Description": "Personalize and monetize multiscreen content with server-side ad insertion"
+    },
+    {
+      "Identifier": "AmazonMacie",
+      "Name": "Amazon Macie",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Discover and protect your sensitive data at scale"
+    },
+    {
+      "Identifier": "AmazonAppStream20",
+      "Name": "Amazon AppStream 2.0",
+      "Family": "End User Computing",
+      "Description": "Secure, reliable, and scalable access to applications and non-persistent desktops from any location"
+    },
+    {
+      "Identifier": "AmazonAthena",
+      "Name": "Amazon Athena",
+      "Family": "Analytics",
+      "Description": "Start querying data instantly. Get results in seconds. Pay only for the queries you run."
+    },
+    {
+      "Identifier": "AWSGlue",
+      "Name": "AWS Glue",
+      "Family": "Analytics",
+      "Description": "AWS Glue is a fully managed ETL (extract, transform, and load) service"
+    },
+    {
+      "Identifier": "AWSBatch",
+      "Name": "AWS Batch",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Fully managed batch processing at any scale"
+    },
+    {
+      "Identifier": "AWSCodeBuild",
+      "Name": "AWS CodeBuild",
+      "Family": "Developer Tools",
+      "Description": "Build and test code with continuous scaling. Pay only for the build time you use."
+    },
+    {
+      "Identifier": "AmazonSageMakerFeatureStore",
+      "Name": "Amazon SageMaker Feature Store",
+      "Family": "Machine Learning",
+      "Description": "A fully managed repository for machine learning features"
+    },
+    {
+      "Identifier": "AmazonSageMakerStudio",
+      "Name": "Amazon SageMaker Studio",
+      "Family": "Machine Learning",
+      "Description": "Provides a single, web-based visual interface where customers can perform all ML development steps"
+    },
+    {
+      "Identifier": "AmazonKinesisDataStreamsKDS",
+      "Name": "Amazon Kinesis Data Streams (KDS)",
+      "Family": "Analytics",
+      "Description": "Collect streaming data with a data stream"
+    },
+    {
+      "Identifier": "AmazonSecurityLake",
+      "Name": "Amazon Security Lake",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Automatically centralize your security data in a few steps"
+    },
+    {
+      "Identifier": "AmazonDetective",
+      "Name": "Amazon Detective",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Analyze and visualize security data to rapidly get to the root cause of potential security issues"
+    },
+    {
+      "Identifier": "AmazonKeyspaces",
+      "Name": "Amazon Keyspaces",
+      "Family": "Database",
+      "Description": "Serverless Cassandra-compatible database"
+    },
+    {
+      "Identifier": "AWSBackup",
+      "Name": "AWS Backup",
+      "Family": "Storage",
+      "Description": "Centrally manage and automate backups across AWS services"
+    },
+    {
+      "Identifier": "AmazonFraudDetector",
+      "Name": "Amazon Fraud Detector",
+      "Family": "Machine Learning",
+      "Description": "Detect more online fraud faster using machine learning"
+    },
+    {
+      "Identifier": "AWSManagedServicesOperationsonDemandOOD",
+      "Name": "AWS Managed Services Operations on Demand (OOD)",
+      "Family": "Management & Governance",
+      "Description": "Curated catalog of operational capabilities that augment the extensive scope provided by AMS Operations Plans"
+    },
+    {
+      "Identifier": "AmazonSageMakerAutopilot",
+      "Name": "Amazon SageMaker Autopilot",
+      "Family": "Machine Learning",
+      "Description": "Automatically create machine learning models with full visibility"
+    },
+    {
+      "Identifier": "AmazonSageMakerDataWrangler",
+      "Name": "Amazon SageMaker Data Wrangler",
+      "Family": "Machine Learning",
+      "Description": "The fastest and easiest way to prepare data for machine learning"
+    },
+    {
+      "Identifier": "AmazonEC2G5",
+      "Name": "Amazon EC2 - G5",
+      "Family": "Compute",
+      "Description": "High performance GPU-based instances for graphics-intensive applications and machine learning inference powered by A10G GPUs from NVIDIA"
+    },
+    {
+      "Identifier": "NICEDCV",
+      "Name": "NICE DCV",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Deliver high-performance remote desktop and application streaming"
+    },
+    {
+      "Identifier": "AWSManagedServicesAdvanced",
+      "Name": "AWS Managed Services Advanced",
+      "Family": "Management & Governance",
+      "Description": "Fully managed operational solution that trades some flexibility for increased operational rigor"
+    },
+    {
+      "Identifier": "AmazonFSxforNetAppONTAP",
+      "Name": "Amazon FSx for NetApp ONTAP",
+      "Family": "Storage",
+      "Description": "Fully managed storage built on NetApp's popular ONTAP file system"
+    },
+    {
+      "Identifier": "AWSStorageGatewayVolumeGateway",
+      "Name": "AWS Storage Gateway (Volume Gateway)",
+      "Family": "Storage",
+      "Description": "Hybrid cloud block storage with local caching"
+    },
+    {
+      "Identifier": "AWSElasticDisasterRecovery",
+      "Name": "AWS Elastic Disaster Recovery",
+      "Family": "Storage",
+      "Description": "Scalable, cost-effective application recovery to AWS"
+    },
+    {
+      "Identifier": "AWSMigrationHubRefactorSpaces",
+      "Name": "AWS Migration Hub Refactor Spaces",
+      "Family": "Migration & Transfer",
+      "Description": "Starting point for incremental application refactoring to microservices"
+    },
+    {
+      "Identifier": "AmazonMQforRabbitMQ",
+      "Name": "Amazon MQ for RabbitMQ",
+      "Family": "Application Integration",
+      "Description": "Fully managed service for open source message brokers for RabbitMQ"
+    },
+    {
+      "Identifier": "AmazonSageMakerTraining",
+      "Name": "Amazon SageMaker Training",
+      "Family": "Machine Learning",
+      "Description": "Reduces the time and cost to train and tune ML models"
+    },
+    {
+      "Identifier": "AWSCloudControlAPI",
+      "Name": "AWS Cloud Control API",
+      "Family": "Developer Tools",
+      "Description": "Manage AWS and third-party cloud infrastructure with consistent APIs"
+    },
+    {
+      "Identifier": "AmazonS3GlacierInstantRetrieval",
+      "Name": "Amazon S3 Glacier Instant Retrieval",
+      "Family": "Storage",
+      "Description": "Amazon S3 Glacier Instant Retrieval is durable, low-cost archive storage with milliseconds retrieval"
+    },
+    {
+      "Identifier": "AmazonEC2C5n",
+      "Name": "Amazon EC2 - C5n",
+      "Family": "Compute",
+      "Description": "Designed for compute-intensive workloads with cost-effective high performance"
+    },
+    {
+      "Identifier": "AWSIoTSiteWise",
+      "Name": "AWS IoT SiteWise",
+      "Family": "Internet of Things",
+      "Description": "Collect, organize, and analyze data from industrial equipment at scale"
+    },
+    {
+      "Identifier": "AWSIoTEvents",
+      "Name": "AWS IoT Events",
+      "Family": "Internet of Things",
+      "Description": "Easily detect and respond to events from IoT sensors and applications"
+    },
+    {
+      "Identifier": "AmazonEC2Inf1",
+      "Name": "Amazon EC2 - Inf1",
+      "Family": "Compute",
+      "Description": "High performance and the lowest cost machine learning inference in the cloud powered by AWS Inferentia chips"
+    },
+    {
+      "Identifier": "AWSLakeFormation",
+      "Name": "AWS Lake Formation",
+      "Family": "Analytics",
+      "Description": "AWS Lake Formation makes it easy to set up a secure data lake"
+    },
+    {
+      "Identifier": "AWSPartnerDeviceCatalog",
+      "Name": "AWS Partner Device Catalog",
+      "Family": "Internet of Things",
+      "Description": "Device Qualification Catalog"
+    },
+    {
+      "Identifier": "AmazonFSxforWindowsFileServer",
+      "Name": "Amazon FSx for Windows File Server",
+      "Family": "Storage",
+      "Description": "Fully managed file storage built on Windows Server"
+    },
+    {
+      "Identifier": "AWSControlTower",
+      "Name": "AWS Control Tower",
+      "Family": "Management & Governance",
+      "Description": "The easiest way to set up and govern a secure, compliant multi-account environment"
+    },
+    {
+      "Identifier": "AWSDeepRacer",
+      "Name": "AWS DeepRacer",
+      "Family": "Machine Learning",
+      "Description": "Fully autonomous 1/18th scale race car, driven by machine learning"
+    },
+    {
+      "Identifier": "AWSConsoleMobileApplication",
+      "Name": "AWS Console Mobile Application",
+      "Family": "Management & Governance",
+      "Description": "Stay connected to your AWS resources on-the-go"
+    },
+    {
+      "Identifier": "AWSAmplify",
+      "Name": "AWS Amplify",
+      "Family": "Front-End Web & Mobile",
+      "Description": "Build scalable mobile and web apps fast, with endless flexibility"
+    },
+    {
+      "Identifier": "AWSGlobalAccelerator",
+      "Name": "AWS Global Accelerator",
+      "Family": "Networking & Content Delivery",
+      "Description": "Improve global application availability and performance using the AWS global network"
+    },
+    {
+      "Identifier": "AWSGroundStation",
+      "Name": "AWS Ground Station",
+      "Family": "Satellite",
+      "Description": "Run, scale, and automate robotics simulation"
+    },
+    {
+      "Identifier": "AmazonMechanicalTurkMTurk",
+      "Name": "Amazon Mechanical Turk (MTurk)",
+      "Family": "Machine Learning",
+      "Description": "Access a global, on-demand, 24x7 workforce"
+    },
+    {
+      "Identifier": "AmazonFSxforLustre",
+      "Name": "Amazon FSx for Lustre",
+      "Family": "Storage",
+      "Description": "Fast and scalable shared storage to power your compute workloads"
+    },
+    {
+      "Identifier": "AmazonForecast",
+      "Name": "Amazon Forecast",
+      "Family": "Machine Learning",
+      "Description": "Amazon Forecast is a fully-managed service for accurate time-series forecasting"
+    },
+    {
+      "Identifier": "AmazonPersonalize",
+      "Name": "Amazon Personalize",
+      "Family": "Machine Learning",
+      "Description": "Amazon Personalize helps you easily add real-time recommendations to your apps"
+    },
+    {
+      "Identifier": "AWSCloudMap",
+      "Name": "AWS Cloud Map",
+      "Family": "Networking & Content Delivery",
+      "Description": "Build a dynamic map of your cloud"
+    },
+    {
+      "Identifier": "AmazonManagedStreamingforApacheKafkaMSK",
+      "Name": "Amazon Managed Streaming for Apache Kafka (MSK)",
+      "Family": "Analytics",
+      "Description": "Securely stream data with a fully managed, highly available Apache Kafka service"
+    },
+    {
+      "Identifier": "AmazonEC2P3dn",
+      "Name": "Amazon EC2 - P3dn",
+      "Family": "Compute",
+      "Description": "Accelerate machine learning and high performance computing applications with powerful GPUs"
+    },
+    {
+      "Identifier": "AWSLicenseManager",
+      "Name": "AWS License Manager",
+      "Family": "Management & Governance",
+      "Description": "Set rules to manage, discover, and report third-party license usage proactively"
+    },
+    {
+      "Identifier": "S3IntelligentTiering",
+      "Name": "S3 Intelligent-Tiering",
+      "Family": "Storage",
+      "Description": "Automates storage cost savings by moving data when access patterns change"
+    },
+    {
+      "Identifier": "AmazonChimeSDK",
+      "Name": "Amazon Chime SDK",
+      "Family": "Business Applications",
+      "Description": "Embed proven real-time communication capabilities in your applications"
+    },
+    {
+      "Identifier": "AmazonChimeVoiceConnector",
+      "Name": "Amazon Chime Voice Connector",
+      "Family": "Business Applications",
+      "Description": "Cost-effective SIP trunking and advanced telephony features powered by AWS"
+    },
+    {
+      "Identifier": "AmazonEventBridge",
+      "Name": "Amazon EventBridge",
+      "Family": "Application Integration",
+      "Description": "Serverless event bus that connects application data from your own apps, SaaS, and AWS services"
+    },
+    {
+      "Identifier": "PortingAssistantforNET",
+      "Name": "Porting Assistant for .NET",
+      "Family": "Containers",
+      "Description": "Insight and assistance for porting from .NET Framework to .NET Core"
+    },
+    {
+      "Identifier": "AmazonRDSProxy",
+      "Name": "Amazon RDS Proxy",
+      "Family": "Database",
+      "Description": "Make your applications more scalable, resilient, and secure"
+    },
+    {
+      "Identifier": "AmazonDatabaseMigrationAccelerator",
+      "Name": "Amazon Database Migration Accelerator",
+      "Family": "Database",
+      "Description": "Accelerate your database migrations to AWS"
+    },
+    {
+      "Identifier": "AmazonEC2Graviton",
+      "Name": "Amazon EC2 - Graviton",
+      "Family": "Compute",
+      "Description": "Enable the best price performance and improved sustainability in Amazon EC2"
+    },
+    {
+      "Identifier": "AWSPrivateLink",
+      "Name": "AWS PrivateLink",
+      "Family": "Networking & Content Delivery",
+      "Description": "Establish private connectivity between VPCs and services hosted on AWS or on-premises, without exposing data to the internet"
+    },
+    {
+      "Identifier": "AmazonTranscribeMedical",
+      "Name": "Amazon Transcribe Medical",
+      "Family": "Machine Learning",
+      "Description": "Automatically convert medical speech to text"
+    },
+    {
+      "Identifier": "AWSApp2Container",
+      "Name": "AWS App2Container",
+      "Family": "Compute",
+      "Description": "Containerize and migrate existing applications"
+    },
+    {
+      "Identifier": "AmazonHoneycode",
+      "Name": "Amazon Honeycode",
+      "Family": "Business Applications",
+      "Description": "Build mobile and web apps without programming"
+    },
+    {
+      "Identifier": "AmazonConnectGlobalResiliency",
+      "Name": "Amazon Connect - Global Resiliency",
+      "Family": "Customer Engagement",
+      "Description": "Make your contact center resilient and available across multiple regions to enhance business continuity plans"
+    },
+    {
+      "Identifier": "CloudEndureMigration",
+      "Name": "CloudEndure Migration",
+      "Family": "Migration & Transfer",
+      "Description": "Simplify, expedite, and automate migration to AWS with Continuous Data Replication technology, resulting in minimal cutover windows"
+    },
+    {
+      "Identifier": "AmazonCodeCatalyst",
+      "Name": "Amazon CodeCatalyst",
+      "Family": "Developer Tools",
+      "Description": "Unified software development service to quickly build and deliver applications on AWS."
+    },
+    {
+      "Identifier": "AmazonOmics",
+      "Name": "Amazon Omics",
+      "Family": "Machine Learning",
+      "Description": "Transform genomic, transcriptomic, and other omics data into insights"
+    },
+    {
+      "Identifier": "AWSSupplyChain",
+      "Name": "AWS Supply Chain",
+      "Family": "Business Applications",
+      "Description": "Mitigate risks and lower costs with an ML-powered supply chain application."
+    },
+    {
+      "Identifier": "AWSStepFunctions",
+      "Name": "AWS Step Functions",
+      "Family": "Application Integration",
+      "Description": "Coordinate Distributed Applications"
+    },
+    {
+      "Identifier": "AWSXRay",
+      "Name": "AWS X-Ray",
+      "Family": "Developer Tools",
+      "Description": "Analyze and debug production, distributed applications"
+    },
+    {
+      "Identifier": "AWSIoTGreengrass",
+      "Name": "AWS IoT Greengrass",
+      "Family": "Internet of Things",
+      "Description": "Deploy and run code on your devices"
+    },
+    {
+      "Identifier": "AWSDeepLearningAMIs",
+      "Name": "AWS Deep Learning AMIs",
+      "Family": "Machine Learning",
+      "Description": "Pre-configured environments to quickly build deep learning applications"
+    },
+    {
+      "Identifier": "ApacheMXNetonAWS",
+      "Name": "Apache MXNet on AWS",
+      "Family": "Machine Learning",
+      "Description": "Build machine learning applications that train quickly and run anywhere"
+    },
+    {
+      "Identifier": "AWSMarketplaceSaas",
+      "Name": "AWS Marketplace - Saas",
+      "Family": "Marketplace",
+      "Description": "Software as a service (Saas) Marketplace Products"
+    },
+    {
+      "Identifier": "AWSMarketplaceEC2",
+      "Name": "AWS Marketplace - EC2",
+      "Family": "Marketplace",
+      "Description": "EC2 Marketplace Products"
+    },
+    {
+      "Identifier": "AWSMigrationHub",
+      "Name": "AWS Migration Hub",
+      "Family": "Migration & Transfer",
+      "Description": "Simplify and accelerate the migration of your data centers to AWS"
+    },
+    {
+      "Identifier": "AmazonGameSparks",
+      "Name": "Amazon GameSparks",
+      "Family": "Game Tech",
+      "Description": "Managed service providing backend feature tools for building, running, and scaling games"
+    },
+    {
+      "Identifier": "AmazonRDSforMariaDB",
+      "Name": "Amazon RDS for MariaDB",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale a relational database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "AmazonQuickSight",
+      "Name": "Amazon QuickSight",
+      "Family": "Analytics",
+      "Description": "Scalable, serverless, embeddable, ML-powered BI service for the cloud"
+    },
+    {
+      "Identifier": "AWSIoTCore",
+      "Name": "AWS IoT Core",
+      "Family": "Internet of Things",
+      "Description": "Easily and securely connect devices to the cloud"
+    },
+    {
+      "Identifier": "AWSSystemsManager",
+      "Name": "AWS Systems Manager",
+      "Family": "Management & Governance",
+      "Description": "Gain operational insights and take action on AWS resources"
+    },
+    {
+      "Identifier": "AmazonLex",
+      "Name": "Amazon Lex",
+      "Family": "Machine Learning",
+      "Description": "Build Voice and Text Chatbots"
+    },
+    {
+      "Identifier": "AmazonLightsail",
+      "Name": "Amazon Lightsail",
+      "Family": "Compute",
+      "Description": "Launch and Manage Virtual Private Servers"
+    },
+    {
+      "Identifier": "AWSOpsWorks",
+      "Name": "AWS OpsWorks",
+      "Family": "Management & Governance",
+      "Description": "Automate Operations with Chef and Puppet"
+    },
+    {
+      "Identifier": "AmazonPolly",
+      "Name": "Amazon Polly",
+      "Family": "Machine Learning",
+      "Description": "Turn Text into Lifelike Speech"
+    },
+    {
+      "Identifier": "AmazonRDSAuroraforMySQL",
+      "Name": "Amazon RDS Aurora for MySQL",
+      "Family": "Database",
+      "Description": "MySQL-compatible relational database built for the cloud"
+    },
+    {
+      "Identifier": "AmazonRDSAuroraforPostgreSQL",
+      "Name": "Amazon RDS Aurora for PostgreSQL",
+      "Family": "Database",
+      "Description": "PostgreSQL-compatible relational database built for the cloud"
+    },
+    {
+      "Identifier": "AWSShield",
+      "Name": "AWS Shield",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Managed DDoS protection"
+    },
+    {
+      "Identifier": "MigrationEvaluatorTSOLogic",
+      "Name": "Migration Evaluator (TSO Logic)",
+      "Family": "Migration & Transfer",
+      "Description": "Build a data-driven business case for AWS"
+    },
+    {
+      "Identifier": "AmazonEC2Inf2",
+      "Name": "Amazon EC2 - Inf2",
+      "Family": "Compute",
+      "Description": "Inf2 instances are powered by AWS Inferentia2, the second-generation AWS Inferentia accelerator."
+    },
+    {
+      "Identifier": "AmazonRekognitionFaceLiveness",
+      "Name": "Amazon Rekognition Face Liveness",
+      "Family": "Machine Learning",
+      "Description": "Detect real users and deter bad actors using spoofs in seconds during facial verification"
+    },
+    {
+      "Identifier": "AmazonFileCache",
+      "Name": "Amazon File Cache",
+      "Family": "Storage",
+      "Description": "High-speed cache for datasets stored anywhere"
+    },
+    {
+      "Identifier": "AWSModularDataCenter",
+      "Name": "AWS Modular Data Center",
+      "Family": "Compute",
+      "Description": "Provides self-contained modular data centers, extending the use of AWS services to the tactical edge."
+    },
+    {
+      "Identifier": "AmazonQuickSightPaginatedReports",
+      "Name": "Amazon QuickSight Paginated Reports",
+      "Family": "Analytics",
+      "Description": "Create, schedule, and share reports and data exports"
+    },
+    {
+      "Identifier": "AWSMainframeModernizationMicroFocus",
+      "Name": "AWS Mainframe Modernization Micro Focus",
+      "Family": "Compute",
+      "Description": "Replatform toolchain within AWS Mainframe Modernization service"
+    },
+    {
+      "Identifier": "AmazonVerifiedPermissions",
+      "Name": "Amazon Verified Permissions",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Manage permissions and fine-grained authorization in applications that you build"
+    },
+    {
+      "Identifier": "AmazonConnectForecastPlanSchedule",
+      "Name": "Amazon Connect - Forecast Plan Schedule",
+      "Family": "Customer Engagement",
+      "Description": "Amazon Connect - Forecasting, Cap Planning, and Scheduling"
+    },
+    {
+      "Identifier": "AWSEntityResolution",
+      "Name": "AWS Entity Resolution",
+      "Family": "Analytics",
+      "Description": "Configurable, easy-to-use entity resolution workflows"
+    },
+    {
+      "Identifier": "AmazonElasticContainerRegistryECR",
+      "Name": "Amazon Elastic Container Registry (ECR)",
+      "Family": "Containers",
+      "Description": "Easily store, share, and deploy your container software anywhere"
+    },
+    {
+      "Identifier": "AmazonFinSpace",
+      "Name": "Amazon FinSpace",
+      "Family": "Analytics",
+      "Description": "Store, catalog, prepare, and analyze financial industry data"
+    },
+    {
+      "Identifier": "AWSDatabaseMigrationService",
+      "Name": "AWS Database Migration Service",
+      "Family": "Database",
+      "Description": "Migrate your databases to AWS with minimal downtime"
+    },
+    {
+      "Identifier": "AWSIoTCoreforLoRaWAN",
+      "Name": "AWS IoT Core for LoRaWAN",
+      "Family": "Internet of Things",
+      "Description": "Connect, manage, and secure LoRaWAN devices at scale"
+    },
+    {
+      "Identifier": "AWSSystemsManagerIncidentManager",
+      "Name": "AWS Systems Manager Incident Manager",
+      "Family": "Management & Governance",
+      "Description": "Enables faster resolution of critical application availability and performance issues"
+    },
+    {
+      "Identifier": "AWSAppRunner",
+      "Name": "AWS App Runner",
+      "Family": "Compute",
+      "Description": "Build and run production web applications at scale"
+    },
+    {
+      "Identifier": "AmazonLocationService",
+      "Name": "Amazon Location Service",
+      "Family": "Front-End Web & Mobile",
+      "Description": "Securely and easily add location data to applications."
+    },
+    {
+      "Identifier": "AWSEndofSupportMigrationProgramEMP",
+      "Name": "AWS End-of-Support Migration Program (EMP)",
+      "Family": "Migration & Transfer",
+      "Description": "Future-proof your legacy Windows Server applications on AWS"
+    },
+    {
+      "Identifier": "AmazonSimpleNotificationServiceSNSA2P",
+      "Name": "Amazon Simple Notification Service (SNS) A2P",
+      "Family": "Application Integration",
+      "Description": "Fully managed pub/sub messaging, SMS, email, and mobile push notifications for application-to-person (A2P) communication"
+    },
+    {
+      "Identifier": "VMwareCloudonAWSOutposts",
+      "Name": "VMware Cloud on AWS Outposts",
+      "Family": "Compute",
+      "Description": "VMware Cloud in your on-premises environments"
+    },
+    {
+      "Identifier": "AWSSystemsManagerFleetManager",
+      "Name": "AWS Systems Manager Fleet Manager",
+      "Family": "Management & Governance",
+      "Description": "Remotely manage server fleets running on AWS, or on premises"
+    },
+    {
+      "Identifier": "AmazonEC2RHEL",
+      "Name": "Amazon EC2 - RHEL",
+      "Family": "Compute",
+      "Description": "Secure, flexible, and easy to manage Linux workloads"
+    },
+    {
+      "Identifier": "AWSApplicationCostProfiler",
+      "Name": "AWS Application Cost Profiler",
+      "Family": "Management & Governance",
+      "Description": "Cost per tenant and workload"
+    },
+    {
+      "Identifier": "AWSDiode",
+      "Name": "AWS Diode",
+      "Family": "Networking & Content Delivery",
+      "Description": "Cloud-based CDS service that provides scalable and reliable delivery of data from one cloud security domain to another"
+    },
+    {
+      "Identifier": "AmazonInteractiveVideoService",
+      "Name": "Amazon Interactive Video Service",
+      "Family": "Media Services",
+      "Description": "Managed live video streaming service from ingest to playback"
+    },
+    {
+      "Identifier": "ContactLensforAmazonConnect",
+      "Name": "Contact Lens for Amazon Connect",
+      "Family": "Customer Engagement",
+      "Description": "Real-time contact center analytics powered by machine learning"
+    },
+    {
+      "Identifier": "AmazonEKSonAWSFargate",
+      "Name": "Amazon EKS on AWS Fargate",
+      "Family": "Containers",
+      "Description": "Run Kubernetes-based applications on AWS by removing the need to provision and manage infrastructure for pods"
+    },
+    {
+      "Identifier": "AmazonConnectTelephony",
+      "Name": "Amazon Connect - Telephony",
+      "Family": "Customer Engagement",
+      "Description": "Capabilities to host both toll-free and direct dial numbers (DID) in all AWS Regions"
+    },
+    {
+      "Identifier": "AWSCloudDevelopmentKitCDK",
+      "Name": "AWS Cloud Development Kit (CDK)",
+      "Family": "Developer Tools",
+      "Description": "Define cloud infrastructure using familiar programming languages"
+    },
+    {
+      "Identifier": "AWSSDKsandTools",
+      "Name": "AWS SDKs and Tools",
+      "Family": "Developer Tools",
+      "Description": "Access and manage AWS services with your preferred development language or platform"
+    },
+    {
+      "Identifier": "AmazonConnectChat",
+      "Name": "Amazon Connect - Chat",
+      "Family": "Customer Engagement",
+      "Description": "Enable customers to start chatting with contact center agents from any business application, web, or mobile"
+    },
+    {
+      "Identifier": "AmazonSageMakerJumpStart",
+      "Name": "Amazon SageMaker JumpStart",
+      "Family": "Machine Learning",
+      "Description": "Machine learning (ML) hub offering algorithms, models, and ML solutions."
+    },
+    {
+      "Identifier": "AmazonConnectVoice",
+      "Name": "Amazon Connect - Voice",
+      "Family": "Customer Engagement",
+      "Description": "Provide superior customer service at a lower cost with an easy-to-use omnichannel cloud contact center"
+    },
+    {
+      "Identifier": "AmazonBraket",
+      "Name": "Amazon Braket",
+      "Family": "Quantum Technologies",
+      "Description": "Service for exploring, evaluating, and experimenting with quantum computing."
+    },
+    {
+      "Identifier": "AmazonRDSonOutposts",
+      "Name": "Amazon RDS on Outposts",
+      "Family": "Database",
+      "Description": "Deploy Amazon RDS managed Databases in on-premises environments"
+    },
+    {
+      "Identifier": "AWSIoTTwinMaker",
+      "Name": "AWS IoT TwinMaker",
+      "Family": "Internet of Things",
+      "Description": "Optimize operations by easily creating digital twins of real-world systems"
+    },
+    {
+      "Identifier": "AWSStorageGatewayS3FileGateway",
+      "Name": "AWS Storage Gateway (S3 File Gateway)",
+      "Family": "Storage",
+      "Description": "Store and access objects in Amazon S3 from NFS or SMB file data with local caching"
+    },
+    {
+      "Identifier": "AmazonRDSCustomforSQLServer",
+      "Name": "Amazon RDS Custom for SQL Server",
+      "Family": "Database",
+      "Description": "Managed database services for applications that require operating system and database customization"
+    },
+    {
+      "Identifier": "AmazonSageMakerProcessing",
+      "Name": "Amazon SageMaker Processing",
+      "Family": "Machine Learning",
+      "Description": "Easily run pre-processing, post-processing, and model evaluation workloads on fully managed infrastructure"
+    },
+    {
+      "Identifier": "AWSBugBust",
+      "Name": "AWS BugBust",
+      "Family": "Machine Learning",
+      "Description": "Bug bashing events"
+    },
+    {
+      "Identifier": "ElasticFabricAdapterEFA",
+      "Name": "Elastic Fabric Adapter (EFA)",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Run HPC and ML applications at scale"
+    },
+    {
+      "Identifier": "AmazonConnectHighVolumeOutboundCommunications",
+      "Name": "Amazon Connect - High-Volume Outbound Communications",
+      "Family": "Customer Engagement",
+      "Description": "Reach customers at scale with proactive omnichannel communications"
+    },
+    {
+      "Identifier": "AmazonConnectScreenRecording",
+      "Name": "Amazon Connect - Screen Recording",
+      "Family": "Customer Engagement",
+      "Description": "Review agent interactions with customer for quality standards, compliance requirements and best practices to effectively evaluate agent performance"
+    },
+    {
+      "Identifier": "AmazonSageMakerInference",
+      "Name": "Amazon SageMaker Inference",
+      "Family": "Machine Learning",
+      "Description": "Easily deploy and manage ML models at scale"
+    },
+    {
+      "Identifier": "Wickr",
+      "Name": "Wickr",
+      "Family": "Business Applications",
+      "Description": "Provide secure, unified communications solutions for messaging, video conferencing, file and location sharing using end-to-end encryption (E2EE)"
+    },
+    {
+      "Identifier": "CrossRegionDataTransfer",
+      "Name": "Cross-Region Data Transfer",
+      "Family": "Migration & Transfer",
+      "Description": "Cross-region data transfer costs"
+    },
+    {
+      "Identifier": "AmazonQuickSightQ",
+      "Name": "Amazon QuickSight Q",
+      "Family": "Analytics",
+      "Description": "Ask questions of your data and receive answers with relevant visualizations"
+    },
+    {
+      "Identifier": "AWSPaymentCryptography",
+      "Name": "AWS Payment Cryptography",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Simplify cryptography operations in your cloud-hosted payment application"
+    },
+    {
+      "Identifier": "AmplifyAdminUIimportexistingCognitoUserPoolandIdentityPools",
+      "Name": "Amplify Admin UI import existing Cognito User Pool and Identity Pools",
+      "Family": "Front-End Web & Mobile",
+      "Description": "Programmatic interface for configuring and managing app backends"
+    },
+    {
+      "Identifier": "AmazonMemoryDB",
+      "Name": "Amazon MemoryDB",
+      "Family": "Database",
+      "Description": "Redis-compatible, durable, in-memory database service for ultra-fast performance"
+    },
+    {
+      "Identifier": "AWSCodeArtifact",
+      "Name": "AWS CodeArtifact",
+      "Family": "Developer Tools",
+      "Description": "Secure, scalable, and cost-effective artifact management for software development"
+    },
+    {
+      "Identifier": "AWSGlueDataBrew",
+      "Name": "AWS Glue DataBrew",
+      "Family": "Analytics",
+      "Description": "Visual data preparation tool to clean and normalize data for analytics and machine learning"
+    },
+    {
+      "Identifier": "RedHatOpenShiftServiceonAWSROSA",
+      "Name": "Red Hat OpenShift Service on AWS (ROSA)",
+      "Family": "Containers",
+      "Description": "Managed OpenShift in the cloud"
+    },
+    {
+      "Identifier": "AWSSupplyChainDemandPlanning",
+      "Name": "AWS Supply Chain Demand Planning",
+      "Family": "Business Applications",
+      "Description": "Use ML algorithms built with user, macroeconomic data and retailer history to generate forecasts for capacity planning"
+    },
+    {
+      "Identifier": "AmazonConnectPerformanceEvaluation",
+      "Name": "Amazon Connect - Performance Evaluation",
+      "Family": "Customer Engagement",
+      "Description": "Enables businesses to review customer conversations and use conversational analytics to automate evaluation to identify agents' coaching needs"
+    },
+    {
+      "Identifier": "AWSPrivateCA",
+      "Name": "AWS Private CA",
+      "Family": "Security, Identity & Compliance",
+      "Description": "Create private certificates to identify resources and protect data"
+    },
+    {
+      "Identifier": "AmazonManagedServiceforApacheFlink",
+      "Name": "Amazon Managed Service for Apache Flink",
+      "Family": "Analytics",
+      "Description": "Build and run fully managed Apache Flink applications"
+    },
+    {
+      "Identifier": "ResearchandEngineeringStudioRES",
+      "Name": "Research and Engineering Studio (RES)",
+      "Family": "High Performance Computing (HPC)",
+      "Description": "Open-source product that helps research and engineering orgs create and manage virtual desktops on AWS"
+    },
+    {
+      "Identifier": "AWSB2BDataInterchange",
+      "Name": "AWS B2B Data Interchange",
+      "Family": "Application Integration",
+      "Description": "Service for automating the transformation of Electronic Data Interchange (EDI) documents into common data representations"
+    },
+    {
+      "Identifier": "AWSSupplyChainInsights",
+      "Name": "AWS Supply Chain - Insights",
+      "Family": "Application Integration",
+      "Description": "Extract inventory, supply, and demand related data from existing systems into a single data model"
+    },
+    {
+      "Identifier": "AWSFaultInjectionServiceFIS",
+      "Name": "AWS Fault Injection Service (FIS)",
+      "Family": "Developer Tools",
+      "Description": "Improve resiliency and performance with controlled experiments"
+    },
+    {
+      "Identifier": "AWSIAMAccessAnalyzer",
+      "Name": "AWS IAM Access Analyzer",
+      "Family": "Security, Identity & Compliance",
+      "Description": "IAM Access Analyzer guides you towards least-privilege permissions"
+    },
+    {
+      "Identifier": "AWSHealthScribe",
+      "Name": "AWS HealthScribe",
+      "Family": "Machine Learning",
+      "Description": "Automatically generate clinical notes from patient-clinician conversations"
+    },
+    {
+      "Identifier": "AmazonRDSforDb2",
+      "Name": "Amazon RDS for Db2",
+      "Family": "Database",
+      "Description": "Set up, operate, and scale a Db2 database in the cloud with just a few clicks"
+    },
+    {
+      "Identifier": "Other",
+      "Name": "Other AWS Service (specify in description)",
+      "Family": "Other"
+    }
   ]
 }
