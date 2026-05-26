@@ -16,11 +16,25 @@ import {
   EmptyState,
   Flex,
   LoadingSpinner,
+  ModalDialog,
   Text,
   hubspot,
 } from "@hubspot/ui-extensions";
 
 import { CardStatus, StatusBadge, classifyStatus } from "./StatusBadge";
+import { SubmitForm } from "./SubmitForm";
+
+// API Gateway base URL for the UI-extension callback endpoints. The
+// HubSpot ui-extensions runtime restricts hubspot.fetch to URLs listed
+// in app-hsmeta.json -> permittedUrls.fetch, so the value here must
+// match that allowlist.
+const API_BASE_URL = "https://np1hq84j21.execute-api.us-east-1.amazonaws.com";
+
+// Sandbox vs AWS catalog. Mirrors the ACE_CATALOG env var on the backend.
+// When in Sandbox, the SolutionPicker hides itself and the mapper falls
+// back to OtherSolutionDescription. Hardcoded here because the UI
+// Extension can't read Lambda env vars.
+const ACE_CATALOG = "Sandbox";
 
 // Wire the card up as a HubSpot CRM extension. Per HubSpot's UI Extensions
 // docs, the file must call hubspot.extend(...) instead of exporting a
@@ -35,14 +49,19 @@ hubspot.extend(({ context, runServerlessFunction, actions }) => (
 // will still render the right state from govwin_aws_cosell_status.
 const TRIGGER_STAGE_ID = "3590200042";
 
-// HubSpot deal properties the card reads for its status display.
+// HubSpot deal properties the card reads for its status display + form pre-fill.
 const READ_PROPERTIES: string[] = [
   "dealstage",
   "govwin_aws_cosell_id",
   "govwin_aws_cosell_status",
   "govwin_ace_next_steps",
   "govwin_opp_id",
+  "govwin_agency",
+  "govwin_industry",
   "dealname",
+  "amount",
+  "closedate",
+  "description",
 ];
 
 interface DealSnapshot {
@@ -53,6 +72,11 @@ interface DealSnapshot {
   awsCosellStatus: string | null;
   govwinOppId: string | null;
   aceNextSteps: string | null;
+  companyName: string | null;
+  industry: string | null;
+  amount: number | null;
+  closeDate: string | null;
+  description: string | null;
 }
 
 const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
@@ -63,6 +87,8 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
   const [status, setStatus] = useState<CardStatus>("not_submitted");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Load deal properties on mount and after a submission. The card polls
   // every 30 seconds once a submission is in flight (status = queued or
@@ -90,6 +116,12 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
           awsCosellStatus: props.govwin_aws_cosell_status ?? null,
           govwinOppId: props.govwin_opp_id ?? null,
           aceNextSteps: props.govwin_ace_next_steps ?? null,
+          companyName: props.govwin_agency ?? null,
+          industry: props.govwin_industry ?? null,
+          amount: props.amount != null ? Number(props.amount) : null,
+          closeDate:
+            typeof props.closedate === "string" ? props.closedate.slice(0, 10) : null,
+          description: props.description ?? null,
         };
         setSnapshot(snap);
         setStatus(
@@ -110,11 +142,25 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
     return () => {
       cancelled = true;
     };
-  }, [context]);
+  }, [context, reloadKey]);
 
-  const openSubmitForm = () => {
-    // SubmitForm is wired in the next iteration. For now we wire the click
-    // through to a placeholder so the card structure is reviewable.
+  // Poll for AWS-side state changes once a submission is in flight. The
+  // handle_ace_event Lambda writes govwin_aws_cosell_status back to the
+  // deal whenever AWS emits an EventBridge state change, so polling the
+  // deal properties is enough to see In review -> Approved transitions.
+  useEffect(() => {
+    if (status !== "queued" && status !== "submitted" && status !== "in_review") {
+      return;
+    }
+    const tick = setInterval(() => setReloadKey((k) => k + 1), 30_000);
+    return () => clearInterval(tick);
+  }, [status]);
+
+  const openSubmitForm = () => setFormOpen(true);
+  const closeSubmitForm = () => setFormOpen(false);
+  const onSubmissionQueued = () => {
+    setFormOpen(false);
+    setReloadKey((k) => k + 1);
     actions?.refreshObjectProperties?.();
   };
 
@@ -155,6 +201,25 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
             : "Submission in flight. The card will update when AWS responds."}
         </Text>
       )}
+
+      {formOpen && snapshot ? (
+        <ModalDialog onClose={closeSubmitForm} title="Submit to AWS Partner Central">
+          <SubmitForm
+            apiBaseUrl={API_BASE_URL}
+            catalog={ACE_CATALOG}
+            dealId={snapshot.dealId}
+            defaultDealName={snapshot.dealName ?? ""}
+            defaultCompanyName={snapshot.companyName ?? ""}
+            defaultIndustry={snapshot.industry}
+            defaultAmount={snapshot.amount}
+            defaultCloseDate={snapshot.closeDate}
+            defaultDescription={snapshot.description}
+            existingGovwinOppId={snapshot.govwinOppId}
+            onSubmissionQueued={onSubmissionQueued}
+            onCancel={closeSubmitForm}
+          />
+        </ModalDialog>
+      ) : null}
     </Flex>
   );
 };

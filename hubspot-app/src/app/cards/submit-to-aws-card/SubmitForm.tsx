@@ -1,0 +1,556 @@
+// SubmitForm: the modal form BD fills out to submit a deal to AWS Partner
+// Central. Composes the three pickers (SyntheticIdHelper, SolutionPicker,
+// AwsProductsPicker) plus inline inputs for the rest of the
+// CreateOpportunity payload. Posts to POST /ui-extension/submit.
+
+import React, { useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  Flex,
+  Form,
+  Heading,
+  Input,
+  MultiSelect,
+  NumberInput,
+  Select,
+  Text,
+  TextArea,
+  ToggleGroup,
+  hubspot,
+} from "@hubspot/ui-extensions";
+
+import { SyntheticIdHelper, SyntheticIdValue } from "./SyntheticIdHelper";
+import { SolutionPicker } from "./SolutionPicker";
+import { AwsProductsPicker } from "./AwsProductsPicker";
+import {
+  COMPETITORS,
+  DELIVERY_MODELS,
+  MARKETING_CHANNELS,
+  MARKETING_SOURCES,
+  OPPORTUNITY_TYPES,
+  PARTNER_NEED_OPTIONS,
+  SALES_ACTIVITIES,
+  USE_CASES,
+} from "./enums";
+
+interface Props {
+  apiBaseUrl: string;
+  catalog: string;
+  dealId: string;
+  defaultDealName: string;
+  defaultCompanyName: string;
+  defaultIndustry: string | null;
+  defaultAmount: number | null;
+  defaultCloseDate: string | null;
+  defaultDescription: string | null;
+  existingGovwinOppId: string | null;
+  onSubmissionQueued: (response: { ace_opportunity_id?: string | null }) => void;
+  onCancel: () => void;
+}
+
+interface FormState {
+  fromGovWin: boolean;
+  govwinOppId: string;
+  syntheticParts: SyntheticIdValue | null;
+  // ACE classification
+  partnerNeed: string[];
+  deliveryModel: string[];
+  useCase: string;
+  opportunityType: string;
+  salesActivities: string[];
+  competitor: string;
+  otherCompetitorNames: string;
+  // Customer
+  industry: string;
+  awsAccountId: string;
+  nationalSecurity: string;
+  awsAccountUnknown: boolean;
+  // Project
+  dealName: string;
+  description: string;
+  amount: string;
+  closeDate: string;
+  // Solutions / products
+  solutionId: string;
+  awsProducts: string[];
+  // Marketing
+  marketingEnabled: boolean;
+  marketingSource: string;
+  marketingChannels: string[];
+  marketingCampaign: string;
+  marketingFundingUsed: string;
+  // Notes
+  additionalComments: string;
+  nextSteps: string;
+}
+
+interface FieldError {
+  field: string;
+  message: string;
+}
+
+const TODAY_PLUS_180 = (): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + 180);
+  return d.toISOString().slice(0, 10);
+};
+
+export const SubmitForm: React.FC<Props> = ({
+  apiBaseUrl,
+  catalog,
+  dealId,
+  defaultDealName,
+  defaultCompanyName,
+  defaultIndustry,
+  defaultAmount,
+  defaultCloseDate,
+  defaultDescription,
+  existingGovwinOppId,
+  onSubmissionQueued,
+  onCancel,
+}) => {
+  const [state, setState] = useState<FormState>({
+    fromGovWin: Boolean(existingGovwinOppId),
+    govwinOppId: existingGovwinOppId ?? "",
+    syntheticParts: null,
+    partnerNeed: ["Deal Support"],
+    deliveryModel: [],
+    useCase: "",
+    opportunityType: "Net New Business",
+    salesActivities: ["Initialized discussions with customer"],
+    competitor: "",
+    otherCompetitorNames: "",
+    industry: defaultIndustry ?? "Government",
+    awsAccountId: "",
+    nationalSecurity: "",
+    awsAccountUnknown: false,
+    dealName: defaultDealName ?? "",
+    description: defaultDescription ?? "",
+    amount: defaultAmount != null ? String(defaultAmount) : "",
+    closeDate: defaultCloseDate ?? TODAY_PLUS_180(),
+    solutionId: "",
+    awsProducts: [],
+    marketingEnabled: false,
+    marketingSource: "None",
+    marketingChannels: [],
+    marketingCampaign: "",
+    marketingFundingUsed: "",
+    additionalComments: "",
+    nextSteps: "",
+  });
+  const [errors, setErrors] = useState<FieldError[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setState((s) => ({ ...s, [key]: value }));
+  };
+
+  const validate = (): FieldError[] => {
+    const errs: FieldError[] = [];
+    if (!state.fromGovWin && (!state.syntheticParts || !state.syntheticParts.customer)) {
+      errs.push({ field: "govwin_opp_id", message: "Provide a synthetic GovWin ID." });
+    }
+    if (state.fromGovWin && !state.govwinOppId) {
+      errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
+    }
+    if (state.partnerNeed.length === 0) {
+      errs.push({ field: "partner_need", message: "Pick at least one Partner Need." });
+    }
+    if (state.deliveryModel.length === 0) {
+      errs.push({ field: "delivery_model", message: "Pick at least one Delivery Model." });
+    }
+    if (!state.useCase) {
+      errs.push({ field: "use_case", message: "Pick a Customer Use Case." });
+    }
+    if (!state.awsAccountUnknown && state.awsAccountId && !/^\d{12}$/.test(state.awsAccountId)) {
+      errs.push({ field: "aws_account_id", message: "Must be exactly 12 digits." });
+    }
+    if (!state.awsAccountUnknown && !state.awsAccountId) {
+      errs.push({
+        field: "aws_account_id",
+        message: "Required for AWS launch attribution. Toggle 'Not provided yet' to skip.",
+      });
+    }
+    if (state.nationalSecurity === "Yes" && state.industry !== "Government") {
+      errs.push({
+        field: "national_security",
+        message: "NationalSecurity=Yes is only valid when Industry=Government.",
+      });
+    }
+    if (state.description && state.description.length < 20) {
+      errs.push({
+        field: "description",
+        message: "Description must be at least 20 characters when provided.",
+      });
+    }
+    if (state.competitor === "*Other" && !state.otherCompetitorNames) {
+      errs.push({
+        field: "other_competitor_names",
+        message: "Specify the competitor when Competitor is *Other.",
+      });
+    }
+    if (state.marketingEnabled && state.marketingSource !== "Marketing Activity") {
+      errs.push({
+        field: "marketing_source",
+        message:
+          "Set Source to Marketing Activity to include marketing data, or disable the Marketing section.",
+      });
+    }
+    return errs;
+  };
+
+  const submit = async () => {
+    setSubmitError(null);
+    const errs = validate();
+    setErrors(errs);
+    if (errs.length > 0) return;
+
+    setSubmitting(true);
+    const govwin_opp_id = state.fromGovWin
+      ? state.govwinOppId.trim()
+      : state.syntheticParts
+        ? [
+            state.syntheticParts.source,
+            state.syntheticParts.customer,
+            state.syntheticParts.project,
+            state.syntheticParts.sequence,
+          ]
+            .filter(Boolean)
+            .join("-")
+        : "";
+
+    const payload: Record<string, unknown> = {
+      deal_id: dealId,
+      govwin_opp_id,
+      govwin_agency: defaultCompanyName,
+      govwin_industry: state.industry,
+      dealname: state.dealName,
+      description: state.description,
+      amount: state.amount ? parseFloat(state.amount) : null,
+      closedate: state.closeDate,
+      ace_partner_need: state.partnerNeed,
+      ace_delivery_model: state.deliveryModel,
+      ace_use_case: state.useCase,
+      ace_opportunity_type: state.opportunityType,
+      ace_sales_activities: state.salesActivities,
+      ace_competitor_name: state.competitor || null,
+      ace_other_competitor_names: state.otherCompetitorNames || null,
+      ace_aws_account_id: state.awsAccountUnknown ? null : state.awsAccountId || null,
+      ace_national_security: state.nationalSecurity || null,
+      ace_solution_id: state.solutionId || null,
+      ace_aws_products: state.awsProducts,
+      ace_additional_comments: state.additionalComments || null,
+      ace_next_steps: state.nextSteps || null,
+    };
+    if (state.marketingEnabled) {
+      payload.marketing = {
+        Source: state.marketingSource,
+        Channels: state.marketingChannels,
+        CampaignName: state.marketingCampaign || null,
+        AwsFundingUsed: state.marketingFundingUsed || null,
+      };
+    }
+
+    try {
+      const response = await hubspot.fetch(`${apiBaseUrl}/ui-extension/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (response.status === 202) {
+        onSubmissionQueued({ ace_opportunity_id: body.ace_opportunity_id ?? null });
+        return;
+      }
+      if (response.status === 409) {
+        setSubmitError(
+          `This deal already has an opportunity in AWS Partner Central (${body.ace_opportunity_id}). Refresh the card to see its current state.`
+        );
+        return;
+      }
+      if (response.status === 400) {
+        setErrors(
+          (body.errors ?? []).map((e: any) => ({
+            field: String(e.field ?? "form"),
+            message: String(e.message ?? "validation failed"),
+          }))
+        );
+        return;
+      }
+      setSubmitError(body.message ?? `Submission failed with status ${response.status}`);
+    } catch (err) {
+      setSubmitError(String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const errorFor = (field: string): string | undefined => {
+    const e = errors.find((err) => err.field === field || err.field === `ace_${field}`);
+    return e?.message;
+  };
+
+  return (
+    <Form>
+      <Flex direction="column" gap="md">
+        <Heading>Submit deal to AWS Partner Central</Heading>
+
+        {submitError ? <Alert variant="error" title="Submission error">{submitError}</Alert> : null}
+
+        <Divider />
+
+        {/* Section 1: Source */}
+        <Box>
+          <ToggleGroup
+            label="Did this deal come from GovWin?"
+            value={state.fromGovWin ? "yes" : "no"}
+            onChange={(v) => update("fromGovWin", v === "yes")}
+            options={[
+              { label: "Yes (GovWin IQ)", value: "yes" },
+              { label: "No (synthetic ID)", value: "no" },
+            ]}
+          />
+          {state.fromGovWin ? (
+            <Input
+              label="GovWin Opportunity ID"
+              value={state.govwinOppId}
+              onChange={(v) => update("govwinOppId", String(v ?? ""))}
+              error={errorFor("govwin_opp_id")}
+              readOnly={Boolean(existingGovwinOppId)}
+            />
+          ) : (
+            <SyntheticIdHelper
+              defaultCompanyName={defaultCompanyName}
+              onChange={(_id, parts) => update("syntheticParts", parts)}
+            />
+          )}
+        </Box>
+
+        <Divider />
+
+        {/* Section 2: ACE classification */}
+        <Heading>ACE classification</Heading>
+        <MultiSelect
+          label="Partner Need from AWS"
+          value={state.partnerNeed}
+          onChange={(v) => update("partnerNeed", (v ?? []) as string[])}
+          options={PARTNER_NEED_OPTIONS}
+          error={errorFor("partner_need")}
+        />
+        <MultiSelect
+          label="Delivery Model"
+          value={state.deliveryModel}
+          onChange={(v) => update("deliveryModel", (v ?? []) as string[])}
+          options={DELIVERY_MODELS.map((m) => ({ label: m, value: m }))}
+          error={errorFor("delivery_model")}
+        />
+        <Select
+          label="Customer Use Case"
+          value={state.useCase}
+          onChange={(v) => update("useCase", String(v ?? ""))}
+          options={USE_CASES.map((u) => ({ label: u, value: u }))}
+          error={errorFor("use_case")}
+        />
+        <Select
+          label="Opportunity Type"
+          value={state.opportunityType}
+          onChange={(v) => update("opportunityType", String(v ?? ""))}
+          options={OPPORTUNITY_TYPES.map((t) => ({ label: t, value: t }))}
+        />
+        <MultiSelect
+          label="Sales Activities"
+          description="AWS requires non-empty SalesActivities to advance ReviewStatus past Pending Submission."
+          value={state.salesActivities}
+          onChange={(v) => update("salesActivities", (v ?? []) as string[])}
+          options={SALES_ACTIVITIES.map((a) => ({ label: a, value: a }))}
+        />
+        <Select
+          label="Competitor (optional)"
+          value={state.competitor}
+          onChange={(v) => update("competitor", String(v ?? ""))}
+          options={[{ label: "(none)", value: "" }, ...COMPETITORS.map((c) => ({ label: c, value: c }))]}
+        />
+        {state.competitor === "*Other" ? (
+          <Input
+            label="Other competitor name(s)"
+            value={state.otherCompetitorNames}
+            onChange={(v) => update("otherCompetitorNames", String(v ?? ""))}
+            error={errorFor("other_competitor_names")}
+          />
+        ) : null}
+
+        <Divider />
+
+        {/* Section 3: Customer */}
+        <Heading>Customer</Heading>
+        <Text variant="microcopy">
+          Company: <strong>{defaultCompanyName || "(not associated)"}</strong>. To change,
+          edit the deal's associated company in HubSpot.
+        </Text>
+        <Input
+          label="Industry"
+          description="Maps to Customer.Account.Industry. Use Government for federal/state/local."
+          value={state.industry}
+          onChange={(v) => update("industry", String(v ?? ""))}
+        />
+        <Flex direction="row" gap="sm">
+          <Box flex={2}>
+            <Input
+              label="Customer AWS Account ID"
+              description="12 digits. Required for AWS to attribute launched spend to this opportunity."
+              value={state.awsAccountId}
+              onChange={(v) => update("awsAccountId", String(v ?? "").replace(/\D/g, ""))}
+              error={errorFor("aws_account_id")}
+              readOnly={state.awsAccountUnknown}
+            />
+          </Box>
+          <Box>
+            <Checkbox
+              checked={state.awsAccountUnknown}
+              onChange={(v) => update("awsAccountUnknown", Boolean(v))}
+            >
+              Not provided yet
+            </Checkbox>
+          </Box>
+        </Flex>
+        {state.industry === "Government" ? (
+          <Select
+            label="National Security"
+            description="Set Yes only when the opportunity contains classified information."
+            value={state.nationalSecurity}
+            onChange={(v) => update("nationalSecurity", String(v ?? ""))}
+            options={[
+              { label: "No", value: "No" },
+              { label: "Yes", value: "Yes" },
+            ]}
+            error={errorFor("national_security")}
+          />
+        ) : null}
+
+        <Divider />
+
+        {/* Section 4: Project */}
+        <Heading>Project</Heading>
+        <Input
+          label="Deal Name"
+          value={state.dealName}
+          onChange={(v) => update("dealName", String(v ?? ""))}
+        />
+        <TextArea
+          label="Description"
+          description="Customer's business problem. Min 20 chars; AWS reviewers see this."
+          value={state.description}
+          onChange={(v) => update("description", String(v ?? ""))}
+          error={errorFor("description")}
+        />
+        <Flex direction="row" gap="sm">
+          <Box flex={1}>
+            <NumberInput
+              label="Amount (annualized USD)"
+              description="HubSpot stores total annualized; AWS sees Amount / 12 as monthly ExpectedCustomerSpend."
+              value={state.amount ? parseFloat(state.amount) : undefined}
+              onChange={(v) => update("amount", v != null ? String(v) : "")}
+            />
+          </Box>
+          <Box flex={1}>
+            <Input
+              label="Close date (YYYY-MM-DD)"
+              value={state.closeDate}
+              onChange={(v) => update("closeDate", String(v ?? ""))}
+            />
+          </Box>
+        </Flex>
+
+        <Divider />
+
+        {/* Section 5: Solutions and products */}
+        <Heading>AWS Solutions and Products</Heading>
+        <SolutionPicker
+          apiBaseUrl={apiBaseUrl}
+          catalog={catalog}
+          value={state.solutionId}
+          onChange={(v) => update("solutionId", v)}
+          required={catalog === "AWS"}
+        />
+        <AwsProductsPicker
+          apiBaseUrl={apiBaseUrl}
+          value={state.awsProducts}
+          onChange={(v) => update("awsProducts", v)}
+        />
+
+        <Divider />
+
+        {/* Section 6: Marketing (collapsible-ish via toggle) */}
+        <Checkbox
+          checked={state.marketingEnabled}
+          onChange={(v) => update("marketingEnabled", Boolean(v))}
+        >
+          Include marketing attribution
+        </Checkbox>
+        {state.marketingEnabled ? (
+          <Flex direction="column" gap="sm">
+            <Select
+              label="Marketing Source"
+              value={state.marketingSource}
+              onChange={(v) => update("marketingSource", String(v ?? ""))}
+              options={MARKETING_SOURCES.map((s) => ({ label: s, value: s }))}
+              error={errorFor("marketing_source")}
+            />
+            <MultiSelect
+              label="Channels"
+              value={state.marketingChannels}
+              onChange={(v) => update("marketingChannels", (v ?? []) as string[])}
+              options={MARKETING_CHANNELS.map((c) => ({ label: c, value: c }))}
+            />
+            <Input
+              label="Campaign Name"
+              value={state.marketingCampaign}
+              onChange={(v) => update("marketingCampaign", String(v ?? ""))}
+            />
+            <Select
+              label="AWS Funding Used"
+              value={state.marketingFundingUsed}
+              onChange={(v) => update("marketingFundingUsed", String(v ?? ""))}
+              options={[
+                { label: "(unspecified)", value: "" },
+                { label: "Yes", value: "Yes" },
+                { label: "No", value: "No" },
+              ]}
+            />
+          </Flex>
+        ) : null}
+
+        <Divider />
+
+        {/* Section 7: Notes */}
+        <Heading>Notes</Heading>
+        <TextArea
+          label="Additional comments"
+          value={state.additionalComments}
+          onChange={(v) => update("additionalComments", String(v ?? ""))}
+        />
+        <TextArea
+          label="Next steps"
+          value={state.nextSteps}
+          onChange={(v) => update("nextSteps", String(v ?? ""))}
+        />
+
+        <Divider />
+
+        <Flex direction="row" gap="sm" justify="end">
+          <Button variant="secondary" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={submit} disabled={submitting}>
+            {submitting ? "Submitting..." : "Submit to AWS"}
+          </Button>
+        </Flex>
+      </Flex>
+    </Form>
+  );
+};
