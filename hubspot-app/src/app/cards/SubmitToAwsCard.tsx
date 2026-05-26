@@ -38,8 +38,12 @@ const ACE_CATALOG = "Sandbox";
 // Wire the card up as a HubSpot CRM extension. Per HubSpot's UI Extensions
 // docs, the file must call hubspot.extend(...) instead of exporting a
 // default component.
-hubspot.extend(({ context, runServerlessFunction, actions }) => (
-  <SubmitToAwsCard context={context} actions={actions} />
+hubspot.extend<"crm.record.tab">(({ context, actions }) => (
+  <SubmitToAwsCard
+    context={context}
+    actions={actions}
+    fetchCrmObjectProperties={actions.fetchCrmObjectProperties}
+  />
 ));
 
 // Trigger stage id the backend listens for to fire submit_to_ace. Mirrors
@@ -78,9 +82,16 @@ interface DealSnapshot {
   description: string | null;
 }
 
-const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
+interface CardProps {
+  context: any;
+  actions: any;
+  fetchCrmObjectProperties: (props: string[]) => Promise<Record<string, any>>;
+}
+
+const SubmitToAwsCard: React.FC<CardProps> = ({
   context,
   actions,
+  fetchCrmObjectProperties,
 }) => {
   const [snapshot, setSnapshot] = useState<DealSnapshot | null>(null);
   const [status, setStatus] = useState<CardStatus>("not_submitted");
@@ -102,22 +113,15 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
     let cancelled = false;
     const fetchSnapshot = async () => {
       try {
-        // Read deal properties directly via the HubSpot CRM API. The UI
-        // Extensions sandbox runs hubspot.fetch with auth attached, so no
-        // serverless function is required for a simple read.
-        const propsQs = READ_PROPERTIES.join(",");
-        const response = await hubspot.fetch(
-          `https://api.hubapi.com/crm/v3/objects/deals/${encodeURIComponent(
-            dealId
-          )}?properties=${encodeURIComponent(propsQs)}`,
-          { method: "GET" }
-        );
+        // Use HubSpot's built-in CRM SDK helper (signature:
+        // fetchCrmObjectProperties(properties: string[] | '*') =>
+        // Promise<Record<string, string>>; from @hubspot/ui-extensions
+        // 0.14.0 shared/types/actions.d.ts). Passing '*' fetches every
+        // property on the deal, which avoids "property does not exist"
+        // failures if a property name has drifted. Filter what we care
+        // about client-side.
+        const props = (await fetchCrmObjectProperties("*")) ?? {};
         if (cancelled) return;
-        if (!response.ok) {
-          throw new Error(`HubSpot CRM API returned ${response.status}`);
-        }
-        const body = await response.json();
-        const props = (body?.properties as Record<string, any>) ?? {};
         const snap: DealSnapshot = {
           dealId,
           dealName: props.dealname ?? null,
