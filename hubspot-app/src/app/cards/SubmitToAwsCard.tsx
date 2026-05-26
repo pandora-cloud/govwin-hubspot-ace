@@ -133,8 +133,26 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
           companyName: props.govwin_agency ?? null,
           industry: props.govwin_industry ?? null,
           amount: props.amount != null ? Number(props.amount) : null,
-          closeDate:
-            typeof props.closedate === "string" ? props.closedate.slice(0, 10) : null,
+          // HubSpot returns closedate as an epoch numeric string. The unit
+          // varies (ms vs seconds) depending on the iframe transport, so
+          // sniff by magnitude: anything < 10^12 (i.e. <= 13 digits) we
+          // treat as seconds and multiply, otherwise as milliseconds.
+          // Slicing string was the original bug (took the first 10 chars
+          // of "1780261104000" and got "1780261104" back). Converts to
+          // YYYY-MM-DD for the date input; returns null on garbage so the
+          // form's default-of-today+180 fallback kicks in.
+          closeDate: (() => {
+            const raw = props.closedate;
+            if (!raw) return null;
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n <= 0) return null;
+            const ms = n < 1e12 ? n * 1000 : n;
+            try {
+              return new Date(ms).toISOString().slice(0, 10);
+            } catch {
+              return null;
+            }
+          })(),
           description: props.description ?? null,
         };
         setSnapshot(snap);

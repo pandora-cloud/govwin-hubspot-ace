@@ -11,7 +11,6 @@ import {
   Checkbox,
   Divider,
   Flex,
-  Form,
   Heading,
   Input,
   MultiSelect,
@@ -19,13 +18,21 @@ import {
   Select,
   Text,
   TextArea,
-  ToggleGroup,
   hubspot,
 } from "@hubspot/ui-extensions";
 
-import { SyntheticIdHelper, SyntheticIdValue } from "./SyntheticIdHelper";
 import { SolutionPicker } from "./SolutionPicker";
 import { AwsProductsPicker } from "./AwsProductsPicker";
+import {
+  COMPETITORS,
+  DELIVERY_MODELS,
+  MARKETING_CHANNELS,
+  MARKETING_SOURCES,
+  OPPORTUNITY_TYPES,
+  PARTNER_NEED_OPTIONS,
+  SALES_ACTIVITIES,
+  USE_CASES,
+} from "./enums";
 import {
   COMPETITORS,
   DELIVERY_MODELS,
@@ -295,295 +302,257 @@ export const SubmitForm: React.FC<Props> = ({
     return e?.message;
   };
 
+  // Bisection v1: Sections 1-4 active. SyntheticIdHelper / SolutionPicker /
+  // AwsProductsPicker child components + Marketing/Notes sections still
+  // stripped to narrow down the runtime crash.
   return (
-    <Form>
-      <Flex direction="column" gap="md">
-        <Heading>Submit deal to AWS Partner Central</Heading>
+    <Flex direction="column" gap="md">
+      <Heading>Submit deal to AWS Partner Central</Heading>
 
-        {submitError ? <Alert variant="error" title="Submission error">{submitError}</Alert> : null}
+      {submitError ? (
+        <Alert title="Submission error" variant="error">{submitError}</Alert>
+      ) : null}
 
-        <Divider />
+      <Divider />
 
-        {/* Section 1: Source */}
-        <Box>
-          <ToggleGroup
-            name="from_govwin"
-            toggleType="radioButtonList"
-            label="Did this deal come from GovWin?"
-            value={state.fromGovWin ? "yes" : "no"}
-            onChange={(v) => update("fromGovWin", v === "yes")}
-            options={[
-              { label: "Yes (GovWin IQ)", value: "yes" },
-              { label: "No (synthetic ID)", value: "no" },
-            ]}
-            inline
-          />
-          {state.fromGovWin ? (
-            <Input
-              name="govwin_opp_id"
-              label="GovWin Opportunity ID"
-              value={state.govwinOppId}
-              onChange={(v) => update("govwinOppId", String(v ?? ""))}
-              error={Boolean(errorFor("govwin_opp_id"))}
-              validationMessage={errorFor("govwin_opp_id")}
-              readOnly={Boolean(existingGovwinOppId)}
-            />
-          ) : (
-            <SyntheticIdHelper
-              defaultCompanyName={defaultCompanyName}
-              onChange={(_id, parts) => update("syntheticParts", parts)}
-            />
-          )}
-        </Box>
+      {/* Section 1: Source - simplified (no ToggleGroup, no SyntheticIdHelper) */}
+      <Input
+        name="govwin_opp_id"
+        label="GovWin Opportunity ID (use DIRECT-CUSTOMER-NNN if not from GovWin)"
+        value={state.govwinOppId}
+        onChange={(v) => update("govwinOppId", String(v ?? ""))}
+        error={Boolean(errorFor("govwin_opp_id"))}
+        validationMessage={errorFor("govwin_opp_id")}
+      />
 
-        <Divider />
+      <Divider />
 
-        {/* Section 2: ACE classification */}
-        <Heading>ACE classification</Heading>
-        <MultiSelect
-          name="ace_partner_need"
-          label="Partner Need from AWS"
-          value={state.partnerNeed}
-          onChange={(v) => update("partnerNeed", (v ?? []) as string[])}
-          options={PARTNER_NEED_OPTIONS}
-          error={Boolean(errorFor("partner_need"))}
-          validationMessage={errorFor("partner_need")}
-        />
-        <MultiSelect
-          name="ace_delivery_model"
-          label="Delivery Model"
-          value={state.deliveryModel}
-          onChange={(v) => update("deliveryModel", (v ?? []) as string[])}
-          options={DELIVERY_MODELS.map((m) => ({ label: m, value: m }))}
-          error={Boolean(errorFor("delivery_model"))}
-          validationMessage={errorFor("delivery_model")}
-        />
-        <Select
-          name="ace_use_case"
-          label="Customer Use Case"
-          value={state.useCase}
-          onChange={(v) => update("useCase", String(v ?? ""))}
-          options={USE_CASES.map((u) => ({ label: u, value: u }))}
-          error={Boolean(errorFor("use_case"))}
-          validationMessage={errorFor("use_case")}
-        />
-        <Select
-          name="ace_opportunity_type"
-          label="Opportunity Type"
-          value={state.opportunityType}
-          onChange={(v) => update("opportunityType", String(v ?? ""))}
-          options={OPPORTUNITY_TYPES.map((t) => ({ label: t, value: t }))}
-        />
-        <MultiSelect
-          name="ace_sales_activities"
-          label="Sales Activities"
-          description="AWS requires non-empty SalesActivities to advance ReviewStatus past Pending Submission."
-          value={state.salesActivities}
-          onChange={(v) => update("salesActivities", (v ?? []) as string[])}
-          options={SALES_ACTIVITIES.map((a) => ({ label: a, value: a }))}
-        />
-        <Select
-          name="ace_competitor_name"
-          label="Competitor (optional)"
-          value={state.competitor}
-          onChange={(v) => update("competitor", String(v ?? ""))}
-          options={[{ label: "(none)", value: "" }, ...COMPETITORS.map((c) => ({ label: c, value: c }))]}
-        />
-        {state.competitor === "*Other" ? (
+      {/* Section 2: ACE classification */}
+      <Heading>ACE classification</Heading>
+      <MultiSelect
+        name="ace_partner_need"
+        label="Partner Need from AWS"
+        value={state.partnerNeed}
+        onChange={(v) => update("partnerNeed", (v ?? []) as string[])}
+        options={PARTNER_NEED_OPTIONS}
+        error={Boolean(errorFor("partner_need"))}
+        validationMessage={errorFor("partner_need")}
+      />
+      <MultiSelect
+        name="ace_delivery_model"
+        label="Delivery Model"
+        value={state.deliveryModel}
+        onChange={(v) => update("deliveryModel", (v ?? []) as string[])}
+        options={DELIVERY_MODELS.map((m) => ({ label: m, value: m }))}
+        error={Boolean(errorFor("delivery_model"))}
+        validationMessage={errorFor("delivery_model")}
+      />
+      <Select
+        name="ace_use_case"
+        label="Customer Use Case"
+        value={state.useCase}
+        onChange={(v) => update("useCase", String(v ?? ""))}
+        options={USE_CASES.map((u) => ({ label: u, value: u }))}
+        error={Boolean(errorFor("use_case"))}
+        validationMessage={errorFor("use_case")}
+      />
+      <Select
+        name="ace_opportunity_type"
+        label="Opportunity Type"
+        value={state.opportunityType}
+        onChange={(v) => update("opportunityType", String(v ?? ""))}
+        options={OPPORTUNITY_TYPES.map((t) => ({ label: t, value: t }))}
+      />
+      <MultiSelect
+        name="ace_sales_activities"
+        label="Sales Activities"
+        value={state.salesActivities}
+        onChange={(v) => update("salesActivities", (v ?? []) as string[])}
+        options={SALES_ACTIVITIES.map((a) => ({ label: a, value: a }))}
+      />
+      <Select
+        name="ace_competitor_name"
+        label="Competitor (optional)"
+        value={state.competitor}
+        onChange={(v) => update("competitor", String(v ?? ""))}
+        options={[{ label: "(none)", value: "" }, ...COMPETITORS.map((c) => ({ label: c, value: c }))]}
+      />
+
+      <Divider />
+
+      {/* Section 3: Customer */}
+      <Heading>Customer</Heading>
+      <Text variant="microcopy">
+        Company: {defaultCompanyName || "(not associated)"}
+      </Text>
+      <Input
+        name="govwin_industry"
+        label="Industry"
+        value={state.industry}
+        onChange={(v) => update("industry", String(v ?? ""))}
+      />
+      <Flex direction="row" gap="sm">
+        <Box flex={2}>
           <Input
-            name="ace_other_competitor_names"
-            label="Other competitor name(s)"
-            value={state.otherCompetitorNames}
-            onChange={(v) => update("otherCompetitorNames", String(v ?? ""))}
-            error={Boolean(errorFor("other_competitor_names"))}
-            validationMessage={errorFor("other_competitor_names")}
+            name="ace_aws_account_id"
+            label="Customer AWS Account ID (12 digits)"
+            value={state.awsAccountId}
+            onChange={(v) => update("awsAccountId", String(v ?? "").replace(/\D/g, ""))}
+            error={Boolean(errorFor("aws_account_id"))}
+            validationMessage={errorFor("aws_account_id")}
+            readOnly={state.awsAccountUnknown}
           />
-        ) : null}
-
-        <Divider />
-
-        {/* Section 3: Customer */}
-        <Heading>Customer</Heading>
-        <Text variant="microcopy">
-          Company: <strong>{defaultCompanyName || "(not associated)"}</strong>. To change,
-          edit the deal's associated company in HubSpot.
-        </Text>
-        <Input
-          name="govwin_industry"
-          label="Industry"
-          description="Maps to Customer.Account.Industry. Use Government for federal/state/local."
-          value={state.industry}
-          onChange={(v) => update("industry", String(v ?? ""))}
-        />
-        <Flex direction="row" gap="sm">
-          <Box flex={2}>
-            <Input
-              name="ace_aws_account_id"
-              label="Customer AWS Account ID"
-              description="12 digits. Required for AWS to attribute launched spend to this opportunity."
-              value={state.awsAccountId}
-              onChange={(v) => update("awsAccountId", String(v ?? "").replace(/\D/g, ""))}
-              error={Boolean(errorFor("aws_account_id"))}
-              validationMessage={errorFor("aws_account_id")}
-              readOnly={state.awsAccountUnknown}
-            />
-          </Box>
-          <Box>
-            <Checkbox
-              name="aws_account_unknown"
-              checked={state.awsAccountUnknown}
-              onChange={(checked) => update("awsAccountUnknown", checked)}
-            >
-              Not provided yet
-            </Checkbox>
-          </Box>
-        </Flex>
-        {state.industry === "Government" ? (
-          <Select
-            name="ace_national_security"
-            label="National Security"
-            description="Set Yes only when the opportunity contains classified information."
-            value={state.nationalSecurity}
-            onChange={(v) => update("nationalSecurity", String(v ?? ""))}
-            options={[
-              { label: "No", value: "No" },
-              { label: "Yes", value: "Yes" },
-            ]}
-            error={Boolean(errorFor("national_security"))}
-            validationMessage={errorFor("national_security")}
-          />
-        ) : null}
-
-        <Divider />
-
-        {/* Section 4: Project */}
-        <Heading>Project</Heading>
-        <Input
-          name="dealname"
-          label="Deal Name"
-          value={state.dealName}
-          onChange={(v) => update("dealName", String(v ?? ""))}
-        />
-        <TextArea
-          name="description"
-          label="Description"
-          description="Customer's business problem. Min 20 chars; AWS reviewers see this."
-          value={state.description}
-          onChange={(v) => update("description", String(v ?? ""))}
-          error={Boolean(errorFor("description"))}
-          validationMessage={errorFor("description")}
-        />
-        <Flex direction="row" gap="sm">
-          <Box flex={1}>
-            <NumberInput
-              name="amount"
-              label="Amount (annualized USD)"
-              description="HubSpot stores total annualized; AWS sees Amount / 12 as monthly ExpectedCustomerSpend."
-              value={state.amount ? parseFloat(state.amount) : undefined}
-              onChange={(v) => update("amount", v != null ? String(v) : "")}
-            />
-          </Box>
-          <Box flex={1}>
-            <Input
-              name="closedate"
-              label="Close date (YYYY-MM-DD)"
-              value={state.closeDate}
-              onChange={(v) => update("closeDate", String(v ?? ""))}
-            />
-          </Box>
-        </Flex>
-
-        <Divider />
-
-        {/* Section 5: Solutions and products */}
-        <Heading>AWS Solutions and Products</Heading>
-        <SolutionPicker
-          apiBaseUrl={apiBaseUrl}
-          catalog={catalog}
-          value={state.solutionId}
-          onChange={(v) => update("solutionId", v)}
-          required={catalog === "AWS"}
-        />
-        <AwsProductsPicker
-          apiBaseUrl={apiBaseUrl}
-          value={state.awsProducts}
-          onChange={(v) => update("awsProducts", v)}
-        />
-
-        <Divider />
-
-        {/* Section 6: Marketing (collapsible-ish via toggle) */}
-        <Checkbox
-          name="marketing_enabled"
-          checked={state.marketingEnabled}
-          onChange={(checked) => update("marketingEnabled", checked)}
-        >
-          Include marketing attribution
-        </Checkbox>
-        {state.marketingEnabled ? (
-          <Flex direction="column" gap="sm">
-            <Select
-              name="marketing_source"
-              label="Marketing Source"
-              value={state.marketingSource}
-              onChange={(v) => update("marketingSource", String(v ?? ""))}
-              options={MARKETING_SOURCES.map((s) => ({ label: s, value: s }))}
-              error={Boolean(errorFor("marketing_source"))}
-              validationMessage={errorFor("marketing_source")}
-            />
-            <MultiSelect
-              name="marketing_channels"
-              label="Channels"
-              value={state.marketingChannels}
-              onChange={(v) => update("marketingChannels", (v ?? []) as string[])}
-              options={MARKETING_CHANNELS.map((c) => ({ label: c, value: c }))}
-            />
-            <Input
-              name="marketing_campaign"
-              label="Campaign Name"
-              value={state.marketingCampaign}
-              onChange={(v) => update("marketingCampaign", String(v ?? ""))}
-            />
-            <Select
-              name="marketing_funding_used"
-              label="AWS Funding Used"
-              value={state.marketingFundingUsed}
-              onChange={(v) => update("marketingFundingUsed", String(v ?? ""))}
-              options={[
-                { label: "(unspecified)", value: "" },
-                { label: "Yes", value: "Yes" },
-                { label: "No", value: "No" },
-              ]}
-            />
-          </Flex>
-        ) : null}
-
-        <Divider />
-
-        {/* Section 7: Notes */}
-        <Heading>Notes</Heading>
-        <TextArea
-          label="Additional comments"
-          value={state.additionalComments}
-          onChange={(v) => update("additionalComments", String(v ?? ""))}
-        />
-        <TextArea
-          label="Next steps"
-          value={state.nextSteps}
-          onChange={(v) => update("nextSteps", String(v ?? ""))}
-        />
-
-        <Divider />
-
-        <Flex direction="row" gap="sm" justify="end">
-          <Button variant="secondary" onClick={onCancel} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={submit} disabled={submitting}>
-            {submitting ? "Submitting..." : "Submit to AWS"}
-          </Button>
-        </Flex>
+        </Box>
+        <Box flex="initial">
+          <Checkbox
+            name="aws_account_unknown"
+            checked={state.awsAccountUnknown}
+            onChange={(checked) => update("awsAccountUnknown", checked)}
+          >
+            Not provided yet
+          </Checkbox>
+        </Box>
       </Flex>
-    </Form>
+      {state.industry === "Government" ? (
+        <Select
+          name="ace_national_security"
+          label="National Security"
+          value={state.nationalSecurity}
+          onChange={(v) => update("nationalSecurity", String(v ?? ""))}
+          options={[
+            { label: "No", value: "No" },
+            { label: "Yes", value: "Yes" },
+          ]}
+        />
+      ) : null}
+
+      <Divider />
+
+      {/* Section 4: Project */}
+      <Heading>Project</Heading>
+      <Input
+        name="dealname"
+        label="Deal Name"
+        value={state.dealName}
+        onChange={(v) => update("dealName", String(v ?? ""))}
+      />
+      <TextArea
+        name="description"
+        label="Description (min 20 chars)"
+        value={state.description}
+        onChange={(v) => update("description", String(v ?? ""))}
+        error={Boolean(errorFor("description"))}
+        validationMessage={errorFor("description")}
+      />
+      <Flex direction="row" gap="sm">
+        <Box flex={1}>
+          <NumberInput
+            name="amount"
+            label="Amount (annualized USD)"
+            value={state.amount ? parseFloat(state.amount) : undefined}
+            onChange={(v) => update("amount", v != null ? String(v) : "")}
+          />
+        </Box>
+        <Box flex={1}>
+          <Input
+            name="closedate"
+            label="Close date (YYYY-MM-DD)"
+            value={state.closeDate}
+            onChange={(v) => update("closeDate", String(v ?? ""))}
+          />
+        </Box>
+      </Flex>
+
+      <Divider />
+
+      {/* Section 5: Solutions and AWS Products */}
+      <Heading>AWS Solutions and Products</Heading>
+      <SolutionPicker
+        apiBaseUrl={apiBaseUrl}
+        catalog={catalog}
+        value={state.solutionId}
+        onChange={(v) => update("solutionId", v)}
+        required={catalog === "AWS"}
+      />
+      <AwsProductsPicker
+        apiBaseUrl={apiBaseUrl}
+        value={state.awsProducts}
+        onChange={(v) => update("awsProducts", v)}
+      />
+
+      <Divider />
+
+      {/* Section 6: Marketing (toggle-gated) */}
+      <Checkbox
+        name="marketing_enabled"
+        checked={state.marketingEnabled}
+        onChange={(checked) => update("marketingEnabled", checked)}
+      >
+        Include marketing attribution
+      </Checkbox>
+      {state.marketingEnabled ? (
+        <Flex direction="column" gap="sm">
+          <Select
+            name="marketing_source"
+            label="Marketing Source"
+            value={state.marketingSource}
+            onChange={(v) => update("marketingSource", String(v ?? ""))}
+            options={MARKETING_SOURCES.map((s) => ({ label: s, value: s }))}
+            error={Boolean(errorFor("marketing_source"))}
+            validationMessage={errorFor("marketing_source")}
+          />
+          <MultiSelect
+            name="marketing_channels"
+            label="Channels"
+            value={state.marketingChannels}
+            onChange={(v) => update("marketingChannels", (v ?? []) as string[])}
+            options={MARKETING_CHANNELS.map((c) => ({ label: c, value: c }))}
+          />
+          <Input
+            name="marketing_campaign"
+            label="Campaign Name"
+            value={state.marketingCampaign}
+            onChange={(v) => update("marketingCampaign", String(v ?? ""))}
+          />
+          <Select
+            name="marketing_funding_used"
+            label="AWS Funding Used"
+            value={state.marketingFundingUsed}
+            onChange={(v) => update("marketingFundingUsed", String(v ?? ""))}
+            options={[
+              { label: "(unspecified)", value: "" },
+              { label: "Yes", value: "Yes" },
+              { label: "No", value: "No" },
+            ]}
+          />
+        </Flex>
+      ) : null}
+
+      <Divider />
+
+      {/* Section 7: Notes */}
+      <Heading>Notes</Heading>
+      <TextArea
+        name="ace_additional_comments"
+        label="Additional comments"
+        value={state.additionalComments}
+        onChange={(v) => update("additionalComments", String(v ?? ""))}
+      />
+      <TextArea
+        name="ace_next_steps"
+        label="Next steps"
+        value={state.nextSteps}
+        onChange={(v) => update("nextSteps", String(v ?? ""))}
+      />
+
+      <Divider />
+
+      <Flex direction="row" gap="sm" justify="end">
+        <Button onClick={onCancel} disabled={submitting}>Cancel</Button>
+        <Button variant="primary" onClick={submit} disabled={submitting}>
+          {submitting ? "Submitting..." : "Submit to AWS"}
+        </Button>
+      </Flex>
+    </Flex>
   );
 };
