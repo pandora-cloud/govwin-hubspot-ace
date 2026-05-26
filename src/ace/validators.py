@@ -12,6 +12,7 @@ import re
 _HUBSPOT_OBJECT_ID = re.compile(r"^[0-9]+$")
 _GOVWIN_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 _AWS_OPPORTUNITY_ID = re.compile(r"^[A-Za-z0-9_-]+$")
+_AWS_ACCOUNT_ID = re.compile(r"^[0-9]{12}$")
 
 
 def is_valid_hubspot_object_id(value: str | None) -> bool:
@@ -36,3 +37,15 @@ def is_valid_govwin_id(value: str | None) -> bool:
 def is_valid_aws_opportunity_id(value: str | None) -> bool:
     """AWS opportunity ids match ``[A-Za-z0-9_-]+`` (typically O[0-9]{15})."""
     return bool(value) and bool(_AWS_OPPORTUNITY_ID.match(value or ""))
+
+
+def is_valid_aws_account_id(value: str | None) -> bool:
+    """AWS account ids are exactly 12 digits.
+
+    Used by submit_form_to_ace and the UI Extension form to validate
+    ``govwin_ace_aws_account_id`` before placing it on
+    ``Customer.Account.AwsAccountId`` in the CreateOpportunity payload.
+    AWS does not document an explicit regex on this field but rejects
+    anything that is not a 12-digit string.
+    """
+    return bool(value) and bool(_AWS_ACCOUNT_ID.match(value or ""))

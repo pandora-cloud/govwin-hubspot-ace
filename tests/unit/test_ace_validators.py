@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.ace.validators import (
+    is_valid_aws_account_id,
     is_valid_aws_opportunity_id,
     is_valid_govwin_id,
     is_valid_hubspot_object_id,
@@ -57,3 +58,22 @@ def test_govwin_id(value, expected) -> None:
 )
 def test_aws_opportunity_id(value, expected) -> None:
     assert is_valid_aws_opportunity_id(value) is expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("555049241846", True),
+        ("139720215713", True),
+        ("000000000000", True),
+        ("", False),
+        (None, False),
+        ("12345", False),  # too short
+        ("1234567890123", False),  # too long
+        ("12345678901a", False),  # non-digit
+        ("555-049-241846", False),  # dashes not allowed
+        (" 555049241846", False),  # leading whitespace
+    ],
+)
+def test_aws_account_id(value, expected) -> None:
+    assert is_valid_aws_account_id(value) is expected

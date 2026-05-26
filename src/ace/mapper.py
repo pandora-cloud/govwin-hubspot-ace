@@ -136,6 +136,129 @@ ALLOWED_SALES_ACTIVITIES: set[str] = {
 DEFAULT_SALES_ACTIVITIES = ["Initialized discussions with customer"]
 
 
+# The remaining closed enums below are sourced verbatim from the boto3
+# service model for partnercentral-selling (CreateOpportunity input shape)
+# at the date the audit doc was last updated. Their primary job is to drive
+# server-side payload validation in submit_form_to_ace AND to populate the
+# HubSpot custom-property option sets so BD's dropdowns can never produce a
+# value AWS would reject. A regression test (tests/unit/test_ace_enums.py)
+# diffs each constant against the live boto3 model so new enum members or
+# renames surface in CI rather than at submission time.
+
+# Project.CompetitorName (11 values). Note the literal asterisk in "*Other"
+# (when picked, populate Project.OtherCompetitorNames) and the missing
+# space in "Other- Cost Optimization".
+ALLOWED_COMPETITORS: frozenset[str] = frozenset({
+    "Oracle Cloud",
+    "On-Prem",
+    "Co-location",
+    "Akamai",
+    "AliCloud",
+    "Google Cloud Platform",
+    "IBM Softlayer",
+    "Microsoft Azure",
+    "Other- Cost Optimization",
+    "No Competition",
+    "*Other",
+})
+
+# Marketing.Channels[] (13 values; multi-select). Only allowed when
+# Marketing.Source == "Marketing Activity".
+ALLOWED_MARKETING_CHANNELS: frozenset[str] = frozenset({
+    "AWS Marketing Central",
+    "Content Syndication",
+    "Display",
+    "Email",
+    "Live Event",
+    "Out Of Home (OOH)",
+    "Print",
+    "Search",
+    "Social",
+    "Telemarketing",
+    "TV",
+    "Video",
+    "Virtual Event",
+})
+
+# OpportunityType (3 values). The default for net-new co-sell is "Net New Business".
+ALLOWED_OPPORTUNITY_TYPES: frozenset[str] = frozenset({
+    "Net New Business",
+    "Flat Renewal",
+    "Expansion",
+})
+
+# Origin (2 values). For Catalog == "AWS" the value MUST be "Partner Referral".
+# "AWS Referral" is only valid in Sandbox catalog for simulating AWS-originated flows.
+ALLOWED_ORIGINS: frozenset[str] = frozenset({"AWS Referral", "Partner Referral"})
+
+# NationalSecurity (2 values). AWS only accepts "Yes" when
+# Customer.Account.Industry == "Government"; we default to "No" when the
+# industry is Government and omit otherwise.
+ALLOWED_NATIONAL_SECURITY: frozenset[str] = frozenset({"Yes", "No"})
+
+# Marketing.Source (2 values). When "None", the entire Marketing block must
+# be omitted from the CreateOpportunity payload or AWS rejects with
+# ACTION_NOT_PERMITTED on the companion fields.
+ALLOWED_MARKETING_SOURCES: frozenset[str] = frozenset({"Marketing Activity", "None"})
+
+# Marketing.AwsFundingUsed (2 values).
+ALLOWED_FUNDING_USED: frozenset[str] = frozenset({"Yes", "No"})
+
+# LifeCycle.ClosedLostReason (19 values). Only meaningful when the
+# opportunity is being moved to LifeCycle.Stage == "Closed Lost".
+ALLOWED_CLOSED_LOST_REASONS: frozenset[str] = frozenset({
+    "Customer Deficiency",
+    "Delay / Cancellation of Project",
+    "Legal / Tax / Regulatory",
+    "Lost to Competitor - Google",
+    "Lost to Competitor - Microsoft",
+    "Lost to Competitor - SoftLayer",
+    "Lost to Competitor - VMWare",
+    "Lost to Competitor - Other",
+    "No Opportunity",
+    "On Premises Deployment",
+    "Partner Gap",
+    "Price",
+    "Security / Compliance",
+    "Technical Limitations",
+    "Customer Experience",
+    "Other",
+    "People/Relationship/Governance",
+    "Product/Technology",
+    "Financial/Commercial",
+})
+
+# LifeCycle.Stage (7 values). handle_ace_event maps HubSpot lifecyclestage
+# to one of these on the inbound AWS EventBridge writeback. "Launched" is
+# AWS-set after spend is verified; we never set it from this codebase.
+ALLOWED_LIFECYCLE_STAGES: frozenset[str] = frozenset({
+    "Prospect",
+    "Qualified",
+    "Technical Validation",
+    "Business Validation",
+    "Committed",
+    "Launched",
+    "Closed Lost",
+})
+
+# SoftwareRevenue.DeliveryModel (3 values). Only relevant for partners
+# carrying SoftwareRevenue commitments. Not currently emitted by the mapper.
+ALLOWED_SOFTWARE_REVENUE_DELIVERY_MODELS: frozenset[str] = frozenset({
+    "Contract",
+    "Pay-as-you-go",
+    "Subscription",
+})
+
+# OpportunityTeam[].BusinessTitle server-side enum (NOT in the boto3 model;
+# documented on the Contact API page). AWS rejects any other value with
+# INVALID_VALUE at CreateOpportunity time. OpportunityOwner is the right
+# fit for the HubSpot deal owner driving the engagement.
+ALLOWED_OPPORTUNITY_TEAM_BUSINESS_TITLES: frozenset[str] = frozenset({
+    "PartnerAccountManager",
+    "OpportunityOwner",
+})
+
+
 # AWS Customer.Account.Industry enum. Sourced from the boto3 service model
 # (partnercentral-selling 2022-07-26).
 ALLOWED_INDUSTRIES: frozenset[str] = frozenset({
