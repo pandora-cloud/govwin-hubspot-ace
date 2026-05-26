@@ -7,9 +7,8 @@
 // so BD gets immediate feedback rather than a 400 from the server. The
 // backend re-checks at submit time.
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Input,
   LoadingSpinner,
   MultiSelect,
   Text,
@@ -35,7 +34,6 @@ interface Props {
 export const AwsProductsPicker: React.FC<Props> = ({ apiBaseUrl, value, onChange }) => {
   const [products, setProducts] = useState<AwsProductSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -57,18 +55,6 @@ export const AwsProductsPicker: React.FC<Props> = ({ apiBaseUrl, value, onChange
     };
   }, [apiBaseUrl]);
 
-  const filtered = useMemo(() => {
-    if (!products) return [];
-    const needle = filter.trim().toLowerCase();
-    if (!needle) return products;
-    return products.filter(
-      (p) =>
-        p.Identifier.toLowerCase().includes(needle) ||
-        p.Name.toLowerCase().includes(needle) ||
-        p.Family.toLowerCase().includes(needle)
-    );
-  }, [products, filter]);
-
   if (products === null && !error) {
     return <LoadingSpinner label="Loading AWS products catalog..." />;
   }
@@ -80,7 +66,10 @@ export const AwsProductsPicker: React.FC<Props> = ({ apiBaseUrl, value, onChange
     );
   }
 
-  const options = filtered.map((p) => ({
+  // MultiSelect has its own typeahead search built in; rely on it instead
+  // of a separate filter Input (Input.onChange fires only on blur which
+  // makes a custom filter feel broken on every keystroke).
+  const options = (products ?? []).map((p) => ({
     label: p.Family && p.Family !== "Other" ? `${p.Name} (${p.Family})` : p.Name,
     value: p.Identifier,
   }));
@@ -89,17 +78,10 @@ export const AwsProductsPicker: React.FC<Props> = ({ apiBaseUrl, value, onChange
 
   return (
     <Flex direction="column" gap="sm">
-      <Input
-        name="aws_products_filter"
-        label="Filter products"
-        description="Type to filter by name, identifier, or family."
-        value={filter}
-        onChange={(v) => setFilter(String(v ?? ""))}
-      />
       <MultiSelect
         name="ace_aws_products"
         label={`AWS Products consumed (${value.length} / ${MAX_AWS_PRODUCTS_PER_OPPORTUNITY})`}
-        description="Each selected product creates an AssociateOpportunity call after CreateOpportunity. AWS limit is 20 per opportunity."
+        description="Type to search 513 AWS products. Each pick adds an AssociateOpportunity call after CreateOpportunity (AWS limit: 20 per opportunity)."
         value={value}
         onChange={(v) => {
           const next = (v ?? []) as string[];
