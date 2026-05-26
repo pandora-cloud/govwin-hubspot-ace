@@ -392,3 +392,124 @@ class ACEOpportunityMapping(BaseModel):
     model_config = {"extra": "ignore"}
 
 
+# ---------------------------------------------------------------------------
+# UI Extension Form Models
+# ---------------------------------------------------------------------------
+# Used by the submit_form_to_ace Lambda when the HubSpot UI Extension calls
+# /ui-extension/submit. The form collects fields client-side, signs the
+# request via hubspot.fetch (X-HubSpot-Signature-v3), and posts the JSON
+# body validated by these models. Server-side enum validation lives in
+# src.ace.mapper.ALLOWED_* sets imported by the Lambda; we keep the Pydantic
+# layer focused on shape and length so error messages remain crisp.
+
+
+class SubmitFormMarketing(BaseModel):
+    """Optional marketing block submitted from the form's Marketing section."""
+
+    source: str | None = Field(None, alias="Source")
+    campaign_name: str | None = Field(None, alias="CampaignName")
+    channels: list[str] | None = Field(None, alias="Channels")
+    use_cases: list[str] | None = Field(None, alias="UseCases")
+    aws_funding_used: str | None = Field(None, alias="AwsFundingUsed")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
+
+
+class SubmitFormRequest(BaseModel):
+    """Payload posted by the HubSpot UI Extension to /ui-extension/submit.
+
+    Fields are intentionally permissive at this layer; enum membership and
+    business-rule checks are enforced against ALLOWED_* in src.ace.mapper
+    inside the Lambda. Any unknown field is ignored so the form can
+    evolve without breaking deserialization.
+    """
+
+    deal_id: str
+    govwin_opp_id: str
+    govwin_agency: str | None = None
+    govwin_industry: str | None = None
+    description: str | None = None
+    dealname: str | None = None
+    amount: float | None = None
+    closedate: str | None = None
+
+    ace_partner_need: list[str] = Field(default_factory=list)
+    ace_delivery_model: list[str] = Field(default_factory=list)
+    ace_use_case: str | None = None
+    ace_opportunity_type: str | None = None
+    ace_sales_activities: list[str] = Field(default_factory=list)
+    ace_competitor_name: str | None = None
+    ace_other_competitor_names: str | None = None
+    ace_aws_account_id: str | None = None
+    ace_national_security: str | None = None
+
+    ace_solution_id: str | None = None
+    ace_aws_products: list[str] = Field(default_factory=list)
+
+    ace_additional_comments: str | None = None
+    ace_next_steps: str | None = None
+    ace_related_opportunity_id: str | None = None
+
+    marketing: SubmitFormMarketing | None = None
+
+    model_config = {"extra": "ignore"}
+
+
+class SubmitFormResponse(BaseModel):
+    """Response shape for /ui-extension/submit."""
+
+    deal_id: str
+    govwin_opp_id: str
+    status: str  # "queued" | "already_submitted" | "rejected"
+    ace_opportunity_id: str | None = None
+    message: str | None = None
+
+
+class FormFieldError(BaseModel):
+    """One field-level validation error returned to the form."""
+
+    field: str
+    message: str
+
+
+class SubmitFormErrorResponse(BaseModel):
+    """4xx response body. The form renders errors inline against fields."""
+
+    status: str  # "validation_failed" | "conflict" | "unauthorized"
+    errors: list[FormFieldError] = Field(default_factory=list)
+    message: str | None = None
+
+
+class SolutionSummary(BaseModel):
+    """One row in the GET /ui-extension/solutions response."""
+
+    identifier: str = Field(..., alias="Id")
+    name: str = Field(..., alias="Name")
+    category: str = Field(..., alias="Category")
+    status: str = Field(..., alias="Status")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
+
+
+class SolutionListResponse(BaseModel):
+    """GET /ui-extension/solutions response body."""
+
+    catalog: str
+    solutions: list[SolutionSummary] = Field(default_factory=list)
+
+
+class AwsProductSummary(BaseModel):
+    """One row in the GET /ui-extension/aws-products response."""
+
+    identifier: str = Field(..., alias="Identifier")
+    name: str = Field(..., alias="Name")
+    family: str = Field(..., alias="Family")
+    description: str | None = Field(None, alias="Description")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
+
+
+class AwsProductListResponse(BaseModel):
+    """GET /ui-extension/aws-products response body."""
+
+    products: list[AwsProductSummary] = Field(default_factory=list)
