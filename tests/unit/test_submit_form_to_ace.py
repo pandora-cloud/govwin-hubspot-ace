@@ -22,7 +22,7 @@ from src.lambdas import submit_form_to_ace as lambda_mod
 
 # Reuse the same secret across tests so signature math stays consistent.
 SECRET = "0xCAFEBABE-not-a-real-hubspot-client-secret"
-TARGET_URL = "https://np1hq84j21.execute-api.us-east-1.amazonaws.com/hubspot"
+BASE_URL = "https://np1hq84j21.execute-api.us-east-1.amazonaws.com"
 
 
 def _sign(method: str, url: str, body: bytes, ts_ms: int) -> str:
@@ -38,7 +38,7 @@ def _event(
 ) -> dict[str, Any]:
     raw = body.encode("utf-8") if body else b""
     ts_ms = int(time.time() * 1000)
-    sig = _sign(method, TARGET_URL, raw, ts_ms)
+    sig = _sign(method, BASE_URL + path, raw, ts_ms)
     return {
         "requestContext": {"http": {"method": method, "path": path}},
         "rawPath": path,
@@ -61,7 +61,7 @@ def _reset_module_state(monkeypatch: pytest.MonkeyPatch) -> None:
     lambda_mod._solutions_cache.clear()
     lambda_mod._secrets_client = None
 
-    monkeypatch.setenv("UI_EXTENSION_TARGET_URL", TARGET_URL)
+    monkeypatch.setenv("UI_EXTENSION_BASE_URL", BASE_URL)
     monkeypatch.setenv("HUBSPOT_WEBHOOK_SECRET_NAME", "govwin-hubspot/hubspot-webhook")
     monkeypatch.setenv("ACE_TRIGGER_STAGES", "3590200042")
     monkeypatch.setenv("ACE_CATALOG", "Sandbox")

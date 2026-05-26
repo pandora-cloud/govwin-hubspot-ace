@@ -3,6 +3,27 @@ output "webhook_target_url" {
   value       = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com/hubspot"
 }
 
+output "ui_extension_base_url" {
+  description = "Base URL for the HubSpot UI Extension callback endpoints. Add to app-hsmeta.json permittedUrls.fetch."
+  value       = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com"
+}
+
+output "ui_extension_submit_url" {
+  value = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com/ui-extension/submit"
+}
+
+output "ui_extension_solutions_url" {
+  value = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com/ui-extension/solutions"
+}
+
+output "ui_extension_aws_products_url" {
+  value = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com/ui-extension/aws-products"
+}
+
+output "submit_form_to_ace_arn" {
+  value = aws_lambda_function.submit_form_to_ace.arn
+}
+
 output "submit_queue_url" {
   value = aws_sqs_queue.submit.url
 }
@@ -58,6 +79,7 @@ output "lambda_function_names" {
     aws_lambda_function.update_in_ace.function_name,
     aws_lambda_function.handle_ace_event.function_name,
     aws_lambda_function.setup_hubspot_webhooks.function_name,
+    aws_lambda_function.submit_form_to_ace.function_name,
   ]
 }
 

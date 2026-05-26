@@ -98,11 +98,21 @@ class _ConfigError(Exception):
 #------HTTP helpers------
 
 
-def _required_target_url() -> str:
-    url = os.environ.get("UI_EXTENSION_TARGET_URL", "").strip()
-    if not url:
-        raise _ConfigError("UI_EXTENSION_TARGET_URL is not configured")
-    return url
+def _required_target_url(path: str) -> str:
+    """Return the full URL HubSpot signed against for this request.
+
+    HubSpot's signature scheme covers ``method || url || raw_body || timestamp``
+    so the validator needs the exact URL the UI Extension called via
+    ``hubspot.fetch()``. We compose it from the API Gateway base URL (env
+    var; same value for all three routes on this Lambda) and the request
+    path observed by API Gateway.
+    """
+    base = os.environ.get("UI_EXTENSION_BASE_URL", "").strip().rstrip("/")
+    if not base:
+        raise _ConfigError("UI_EXTENSION_BASE_URL is not configured")
+    if not path.startswith("/"):
+        path = "/" + path
+    return base + path
 
 
 def _lower(headers: dict[str, Any] | None) -> dict[str, str]:
@@ -572,7 +582,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return _err(413, "validation_failed", message="payload too large")
 
     try:
-        target_url = _required_target_url()
+        target_url = _required_target_url(path)
     except _ConfigError as exc:
         logger.error("ui-extension config error: %s", exc)
         return _err(500, "validation_failed", message="misconfigured")
