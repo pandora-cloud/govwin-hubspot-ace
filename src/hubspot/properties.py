@@ -452,12 +452,98 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
     HubSpotProperty(
         name="govwin_ace_competitor_name",
         label="ACE Competitor Name",
+        type="enumeration",
+        fieldType="select",
+        description=(
+            "Competitor on this deal. AWS-published enum; when *Other is "
+            "selected, free-form text goes in govwin_ace_other_competitor_names. "
+            "Maps to Project.CompetitorName. Note the literal asterisk in *Other "
+            "and the missing space in 'Other- Cost Optimization' (both AWS quirks)."
+        ),
+        # Sourced from src/ace/mapper.py:ALLOWED_COMPETITORS. Keep in sync.
+        options=[
+            {"label": v, "value": v}
+            for v in [
+                "Oracle Cloud",
+                "On-Prem",
+                "Co-location",
+                "Akamai",
+                "AliCloud",
+                "Google Cloud Platform",
+                "IBM Softlayer",
+                "Microsoft Azure",
+                "Other- Cost Optimization",
+                "No Competition",
+                "*Other",
+            ]
+        ],
+    ),
+    HubSpotProperty(
+        name="govwin_ace_other_competitor_names",
+        label="ACE Other Competitor Names",
         type="string",
         fieldType="text",
         description=(
-            "Competitor on this deal (e.g. 'Microsoft Azure'). Maps to "
-            "Project.CompetitorName for AWS reviewer context."
+            "Free-form competitor name(s) when ACE Competitor Name is "
+            "*Other. Maps to Project.OtherCompetitorNames (max 255 chars)."
         ),
+    ),
+    HubSpotProperty(
+        name="govwin_ace_sales_activities",
+        label="ACE Sales Activities",
+        type="enumeration",
+        # Multi-select; AWS requires non-empty SalesActivities to advance
+        # past Pending Submission. See src/ace/mapper.py:ALLOWED_SALES_ACTIVITIES.
+        fieldType="checkbox",
+        description=(
+            "BD-curated sales activities completed on this deal. AWS requires "
+            "a non-empty list to advance ReviewStatus past Pending Submission. "
+            "Maps to Project.SalesActivities."
+        ),
+        options=[
+            {"label": v, "value": v}
+            for v in [
+                "Initialized discussions with customer",
+                "Customer has shown interest in solution",
+                "Conducted POC / Demo",
+                "In evaluation / planning stage",
+                "Agreed on solution to Business Problem",
+                "Completed Action Plan",
+                "Finalized Deployment Need",
+                "SOW Signed",
+            ]
+        ],
+    ),
+    HubSpotProperty(
+        name="govwin_ace_national_security",
+        label="ACE National Security",
+        type="enumeration",
+        fieldType="select",
+        description=(
+            "Whether the opportunity contains classified National Security "
+            "information. AWS only accepts Yes when Customer.Account.Industry "
+            "is Government. Maps to NationalSecurity."
+        ),
+        options=[
+            {"label": "No", "value": "No"},
+            {"label": "Yes", "value": "Yes"},
+        ],
+    ),
+    HubSpotProperty(
+        name="govwin_ace_solution_id",
+        label="ACE Solution Offered",
+        type="enumeration",
+        # Options are seeded at runtime by setup_hubspot.py via ListSolutions
+        # because the catalog of registered Pandora Cloud Solutions changes
+        # outside this repo (Partner Central UI). Empty default list; the
+        # setup pass PATCHes options in.
+        fieldType="select",
+        description=(
+            "AWS Partner Central Solution ID to associate with the "
+            "opportunity (S-NNNNNNN). Options are seeded at deploy time "
+            "from ListSolutions; refresh by re-running setup_hubspot."
+        ),
+        options=[],
     ),
     HubSpotProperty(
         name="govwin_ace_additional_comments",
@@ -503,15 +589,21 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
     HubSpotProperty(
         name="govwin_ace_aws_products",
         label="ACE AWS Products",
-        type="string",
-        fieldType="text",
+        type="enumeration",
+        # Multi-select; AWS allows up to 20 AwsProducts per opportunity. The
+        # canonical 513-entry option set is seeded at runtime by setup_hubspot
+        # from resources/aws_products.json so this file stays small. See
+        # src/ace/mapper.py:MAX_AWS_PRODUCTS_PER_OPPORTUNITY.
+        fieldType="checkbox",
         description=(
-            "Semicolon-separated AWS product Identifiers from "
-            "github.com/aws-samples/partner-crm-integration-samples/"
-            "resources/aws_products.json (e.g. 'AmazonEC2Linux;AmazonS3;"
-            "AWSLambda'). Each is associated to the opportunity via "
-            "AssociateOpportunity at submit time."
+            "AWS product Identifiers consumed by this opportunity. Options "
+            "are seeded at deploy time from resources/aws_products.json "
+            "(sourced from github.com/aws-samples/partner-crm-integration-"
+            "samples). AWS limit: 20 products per opportunity. Each is "
+            "associated to the opportunity via AssociateOpportunity at "
+            "submit time."
         ),
+        options=[],
     ),
 ]
 
