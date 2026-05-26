@@ -1,29 +1,38 @@
-"""Refresh ``resources/aws_products.json`` from the authoritative Partner Central catalog.
+"""Refresh ``resources/aws_products.json`` from AWS's canonical catalog.
 
-The AwsProducts catalog used by ``AssociateOpportunity(RelatedEntityType=AwsProducts)``
-is published only inside an authenticated AWS Partner Central session. There is
-no public URL and no ``ListAwsProducts`` API in the partnercentral-selling SDK
-(as of May 2026). To refresh the local JSON:
+AWS Partner Central publishes the AwsProducts catalog used by
+``AssociateOpportunity(RelatedEntityType=AwsProducts)`` at a public GitHub
+URL, linked from the AssociateOpportunity API reference page itself:
 
-1. Log in to https://partnercentral.awspartner.com
-2. Navigate to ACE Pipeline Manager → Bulk operations → Import (legacy URL:
-   https://partnercentral.awspartner.com/partnercentral2/s/import-export).
-3. Download the **AWS Products** reference CSV.
-4. Save it as ``/tmp/aws_products.csv`` (or pass ``--csv <path>``).
-5. Run this script. It rewrites ``resources/aws_products.json`` from the CSV,
-   preserving the manual "Other" escape-hatch entry the form depends on.
+    https://github.com/aws-samples/partner-crm-integration-samples
+                                /blob/main/resources/aws_products.json
 
-The script is idempotent and prints a diff of added / removed identifiers so
+This script downloads the raw JSON, wraps it in the local schema (version
+date + source attribution + the manual "Other" escape-hatch entry the form
+depends on), and writes ``resources/aws_products.json``. The schema wrapper
+is what the backend Lambda and HubSpot setup script consume.
+
+Two source modes are supported:
+
+* ``--source github`` (default): fetch from the canonical raw GitHub URL.
+  Idempotent; safe to run on every release.
+* ``--source csv --csv <path>``: parse a CSV exported from Partner Central
+  (ACE Pipeline Manager > Bulk operations > Import). Useful when GitHub is
+  blocked from the operator's network or when the GitHub copy lags the
+  authenticated Partner Central catalog.
+
+In both modes the script prints a diff of added / removed identifiers so
 reviewers can see exactly what AWS changed since the last refresh.
 
 Usage:
-    uv run scripts/refresh_aws_products.py            # /tmp/aws_products.csv
-    uv run scripts/refresh_aws_products.py --csv path/to/file.csv
+    uv run scripts/refresh_aws_products.py                    # GitHub fetch
+    uv run scripts/refresh_aws_products.py --source csv \\
+                              --csv ~/Downloads/aws_products.csv
 
 Exit codes:
     0  resources/aws_products.json updated (or already in sync)
-    1  CSV missing or unreadable
-    2  CSV header does not match expected columns
+    1  source unreachable or unreadable
+    2  source schema does not match expected columns/fields
 """
 
 from __future__ import annotations
@@ -32,11 +41,16 @@ import argparse
 import csv
 import json
 import sys
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 JSON_PATH = ROOT / "resources" / "aws_products.json"
 DEFAULT_CSV = Path("/tmp/aws_products.csv")
+CANONICAL_URL = (
+    "https://raw.githubusercontent.com/aws-samples/"
+    "partner-crm-integration-samples/main/resources/aws_products.json"
+)
 
 # CSV columns the Partner Central export ships (as of May 2026). Keep in sync
 # with what the bulk-import page actually downloads; AWS has changed column
@@ -99,21 +113,69 @@ def _diff(old: list[dict[str, str]], new: list[dict[str, str]]) -> tuple[set[str
     return new_ids - old_ids, old_ids - new_ids
 
 
+def _load_github() -> list[dict[str, str]]:
+    """Fetch the canonical JSON list from the public aws-samples repo."""
+    try:
+        with urllib.request.urlopen(CANONICAL_URL, timeout=30) as resp:
+            raw = resp.read().decode("utf-8")
+    except (urllib.error.URLError, TimeoutError) as exc:
+        print(f"ERROR: failed to fetch {CANONICAL_URL}: {exc}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: canonical JSON did not parse: {exc}", file=sys.stderr)
+        sys.exit(2)
+    if not isinstance(data, list):
+        print("ERROR: canonical JSON top-level is not a list", file=sys.stderr)
+        sys.exit(2)
+    out: list[dict[str, str]] = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        identifier = str(entry.get("Identifier", "")).strip()
+        if not identifier or identifier == "Other":
+            continue
+        normalized = {
+            "Identifier": identifier,
+            "Name": str(entry.get("Name", "")).strip(),
+            "Family": str(entry.get("Family", "")).strip(),
+        }
+        desc = entry.get("Description")
+        if desc:
+            desc_str = str(desc).strip()
+            if 0 < len(desc_str) <= 250:
+                normalized["Description"] = desc_str
+        out.append(normalized)
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--source",
+        choices=("github", "csv"),
+        default="github",
+        help="Where to read the catalog from (default: github canonical raw JSON)",
+    )
     parser.add_argument(
         "--csv",
         type=Path,
         default=DEFAULT_CSV,
-        help=f"Path to the Partner Central AWS Products CSV (default: {DEFAULT_CSV})",
+        help=(
+            "Path to the Partner Central AWS Products CSV (only with "
+            f"--source csv; default: {DEFAULT_CSV})"
+        ),
     )
     args = parser.parse_args()
 
-    if not args.csv.exists():
-        print(f"ERROR: CSV not found at {args.csv}", file=sys.stderr)
-        sys.exit(1)
-
-    new_products = _load_csv(args.csv)
+    if args.source == "github":
+        new_products = _load_github()
+    else:
+        if not args.csv.exists():
+            print(f"ERROR: CSV not found at {args.csv}", file=sys.stderr)
+            sys.exit(1)
+        new_products = _load_csv(args.csv)
     new_products.append(OTHER_ENTRY)
 
     existing = json.loads(JSON_PATH.read_text()) if JSON_PATH.exists() else {"products": []}

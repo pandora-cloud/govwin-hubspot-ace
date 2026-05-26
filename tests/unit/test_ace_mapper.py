@@ -468,6 +468,35 @@ class TestExtendedFieldMapping:
         from src.ace.mapper import aws_products_for_deal
         assert aws_products_for_deal(deal) == []
 
+    def test_aws_products_for_deal_drops_other_escape_hatch(
+        self, deal: dict[str, object]
+    ) -> None:
+        """The local Other entry must never go to AWS; AssociateOpportunity
+        rejects unknown Identifiers."""
+        from src.ace.mapper import aws_products_for_deal
+        deal["properties"]["govwin_ace_aws_products"] = "AWSLambda;Other;AmazonS3"  # type: ignore[index]
+        assert aws_products_for_deal(deal) == ["AWSLambda", "AmazonS3"]
+
+    def test_aws_products_for_deal_deduplicates_preserving_order(
+        self, deal: dict[str, object]
+    ) -> None:
+        from src.ace.mapper import aws_products_for_deal
+        deal["properties"]["govwin_ace_aws_products"] = "AWSLambda;AmazonS3;AWSLambda"  # type: ignore[index]
+        assert aws_products_for_deal(deal) == ["AWSLambda", "AmazonS3"]
+
+    def test_aws_products_for_deal_truncates_to_aws_quota(
+        self, deal: dict[str, object]
+    ) -> None:
+        """AWS enforces a max of 20 AwsProducts associations per opportunity.
+        See src.ace.mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY."""
+        from src.ace.mapper import MAX_AWS_PRODUCTS_PER_OPPORTUNITY, aws_products_for_deal
+        # Build 25 unique identifiers and confirm we get exactly 20 back.
+        ids = [f"AmazonService{i:02d}" for i in range(25)]
+        deal["properties"]["govwin_ace_aws_products"] = ";".join(ids)  # type: ignore[index]
+        result = aws_products_for_deal(deal)
+        assert len(result) == MAX_AWS_PRODUCTS_PER_OPPORTUNITY == 20
+        assert result == ids[:20]
+
 
 class TestPhoneNormalization:
     """AWS rejects the whole CreateOpportunity when any contact phone fails

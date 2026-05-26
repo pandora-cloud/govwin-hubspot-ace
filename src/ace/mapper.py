@@ -136,6 +136,17 @@ ALLOWED_SALES_ACTIVITIES: set[str] = {
 DEFAULT_SALES_ACTIVITIES = ["Initialized discussions with customer"]
 
 
+# Per-opportunity association quotas published in the AWS Partner Central
+# Selling API quotas doc. Exceeding any of these causes AWS to reject the
+# AssociateOpportunity call with ValidationException. Surfacing these
+# constants here lets the form, the backend Lambda, and tests share one
+# source of truth.
+# Source: https://docs.aws.amazon.com/partner-central/latest/selling-api/quotas.html
+MAX_AWS_PRODUCTS_PER_OPPORTUNITY = 20
+MAX_SOLUTIONS_PER_OPPORTUNITY = 10
+MAX_MARKETPLACE_OFFERS_PER_OPPORTUNITY = 1
+
+
 # The remaining closed enums below are sourced verbatim from the boto3
 # service model for partnercentral-selling (CreateOpportunity input shape)
 # at the date the audit doc was last updated. Their primary job is to drive
@@ -1066,8 +1077,33 @@ def aws_products_for_deal(deal: dict[str, Any]) -> list[str]:
 
     Used by ``submit_to_ace`` to drive AssociateOpportunity calls per
     AwsProducts entry. Empty list means no per-deal AWS products specified.
+
+    Filters out the local ``"Other"`` escape-hatch identifier and any
+    duplicate entries that may slip past the HubSpot multi-select. Truncates
+    at :data:`MAX_AWS_PRODUCTS_PER_OPPORTUNITY` to match AWS's per-opportunity
+    association quota; any overage logs a warning so BD can see what got
+    dropped rather than have AWS reject the 21st AssociateOpportunity call
+    silently.
     """
-    return _split_csv(_get(deal, "govwin_ace_aws_products"))
+    raw = _split_csv(_get(deal, "govwin_ace_aws_products"))
+    # Drop the local escape-hatch and de-duplicate, preserving order.
+    seen: set[str] = set()
+    products: list[str] = []
+    for identifier in raw:
+        if identifier == "Other" or identifier in seen:
+            continue
+        seen.add(identifier)
+        products.append(identifier)
+    if len(products) > MAX_AWS_PRODUCTS_PER_OPPORTUNITY:
+        logger.warning(
+            "ace.mapper: aws_products_for_deal truncating %d entries to AWS quota of %d "
+            "(dropped=%s)",
+            len(products),
+            MAX_AWS_PRODUCTS_PER_OPPORTUNITY,
+            products[MAX_AWS_PRODUCTS_PER_OPPORTUNITY:],
+        )
+        products = products[:MAX_AWS_PRODUCTS_PER_OPPORTUNITY]
+    return products
 
 
 def resolve_solution_id(deal: dict[str, Any], config: AppConfig) -> str:
