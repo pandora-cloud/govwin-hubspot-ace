@@ -167,6 +167,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
       <Flex direction="row" gap="sm">
         <Box flex={1}>
           <Select
+            name="source_prefix"
             label="Source"
             value={source}
             onChange={(v) => setSource(String(v ?? "DIRECT"))}
@@ -178,6 +179,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
         </Box>
         <Box flex={2}>
           <Input
+            name="customer_slug"
             label="Customer slug"
             value={customer}
             onChange={(v) => setCustomer(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
@@ -187,6 +189,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
       <Flex direction="row" gap="sm">
         <Box flex={2}>
           <Input
+            name="project_slug"
             label="Project slug (optional)"
             value={project}
             onChange={(v) => setProject(String(v ?? "").toUpperCase().replace(/\s+/g, "-"))}
@@ -194,6 +197,7 @@ export const SyntheticIdHelper: React.FC<Props> = ({ defaultCompanyName, onChang
         </Box>
         <Box flex={1}>
           <Input
+            name="sequence_number"
             label={`Sequence (suggested: ${suggested})`}
             value={sequence}
             onChange={(v) => setSequence(String(v ?? "").padStart(3, "0"))}

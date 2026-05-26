@@ -90,12 +90,14 @@ export const AwsProductsPicker: React.FC<Props> = ({ apiBaseUrl, value, onChange
   return (
     <Flex direction="column" gap="sm">
       <Input
+        name="aws_products_filter"
         label="Filter products"
         description="Type to filter by name, identifier, or family."
         value={filter}
         onChange={(v) => setFilter(String(v ?? ""))}
       />
       <MultiSelect
+        name="ace_aws_products"
         label={`AWS Products consumed (${value.length} / ${MAX_AWS_PRODUCTS_PER_OPPORTUNITY})`}
         description="Each selected product creates an AssociateOpportunity call after CreateOpportunity. AWS limit is 20 per opportunity."
         value={value}

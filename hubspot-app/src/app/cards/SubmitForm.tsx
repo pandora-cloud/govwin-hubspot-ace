@@ -307,6 +307,8 @@ export const SubmitForm: React.FC<Props> = ({
         {/* Section 1: Source */}
         <Box>
           <ToggleGroup
+            name="from_govwin"
+            toggleType="radioButtonList"
             label="Did this deal come from GovWin?"
             value={state.fromGovWin ? "yes" : "no"}
             onChange={(v) => update("fromGovWin", v === "yes")}
@@ -314,13 +316,16 @@ export const SubmitForm: React.FC<Props> = ({
               { label: "Yes (GovWin IQ)", value: "yes" },
               { label: "No (synthetic ID)", value: "no" },
             ]}
+            inline
           />
           {state.fromGovWin ? (
             <Input
+              name="govwin_opp_id"
               label="GovWin Opportunity ID"
               value={state.govwinOppId}
               onChange={(v) => update("govwinOppId", String(v ?? ""))}
-              error={errorFor("govwin_opp_id")}
+              error={Boolean(errorFor("govwin_opp_id"))}
+              validationMessage={errorFor("govwin_opp_id")}
               readOnly={Boolean(existingGovwinOppId)}
             />
           ) : (
@@ -336,33 +341,41 @@ export const SubmitForm: React.FC<Props> = ({
         {/* Section 2: ACE classification */}
         <Heading>ACE classification</Heading>
         <MultiSelect
+          name="ace_partner_need"
           label="Partner Need from AWS"
           value={state.partnerNeed}
           onChange={(v) => update("partnerNeed", (v ?? []) as string[])}
           options={PARTNER_NEED_OPTIONS}
-          error={errorFor("partner_need")}
+          error={Boolean(errorFor("partner_need"))}
+          validationMessage={errorFor("partner_need")}
         />
         <MultiSelect
+          name="ace_delivery_model"
           label="Delivery Model"
           value={state.deliveryModel}
           onChange={(v) => update("deliveryModel", (v ?? []) as string[])}
           options={DELIVERY_MODELS.map((m) => ({ label: m, value: m }))}
-          error={errorFor("delivery_model")}
+          error={Boolean(errorFor("delivery_model"))}
+          validationMessage={errorFor("delivery_model")}
         />
         <Select
+          name="ace_use_case"
           label="Customer Use Case"
           value={state.useCase}
           onChange={(v) => update("useCase", String(v ?? ""))}
           options={USE_CASES.map((u) => ({ label: u, value: u }))}
-          error={errorFor("use_case")}
+          error={Boolean(errorFor("use_case"))}
+          validationMessage={errorFor("use_case")}
         />
         <Select
+          name="ace_opportunity_type"
           label="Opportunity Type"
           value={state.opportunityType}
           onChange={(v) => update("opportunityType", String(v ?? ""))}
           options={OPPORTUNITY_TYPES.map((t) => ({ label: t, value: t }))}
         />
         <MultiSelect
+          name="ace_sales_activities"
           label="Sales Activities"
           description="AWS requires non-empty SalesActivities to advance ReviewStatus past Pending Submission."
           value={state.salesActivities}
@@ -370,6 +383,7 @@ export const SubmitForm: React.FC<Props> = ({
           options={SALES_ACTIVITIES.map((a) => ({ label: a, value: a }))}
         />
         <Select
+          name="ace_competitor_name"
           label="Competitor (optional)"
           value={state.competitor}
           onChange={(v) => update("competitor", String(v ?? ""))}
@@ -377,10 +391,12 @@ export const SubmitForm: React.FC<Props> = ({
         />
         {state.competitor === "*Other" ? (
           <Input
+            name="ace_other_competitor_names"
             label="Other competitor name(s)"
             value={state.otherCompetitorNames}
             onChange={(v) => update("otherCompetitorNames", String(v ?? ""))}
-            error={errorFor("other_competitor_names")}
+            error={Boolean(errorFor("other_competitor_names"))}
+            validationMessage={errorFor("other_competitor_names")}
           />
         ) : null}
 
@@ -393,6 +409,7 @@ export const SubmitForm: React.FC<Props> = ({
           edit the deal's associated company in HubSpot.
         </Text>
         <Input
+          name="govwin_industry"
           label="Industry"
           description="Maps to Customer.Account.Industry. Use Government for federal/state/local."
           value={state.industry}
@@ -401,18 +418,21 @@ export const SubmitForm: React.FC<Props> = ({
         <Flex direction="row" gap="sm">
           <Box flex={2}>
             <Input
+              name="ace_aws_account_id"
               label="Customer AWS Account ID"
               description="12 digits. Required for AWS to attribute launched spend to this opportunity."
               value={state.awsAccountId}
               onChange={(v) => update("awsAccountId", String(v ?? "").replace(/\D/g, ""))}
-              error={errorFor("aws_account_id")}
+              error={Boolean(errorFor("aws_account_id"))}
+              validationMessage={errorFor("aws_account_id")}
               readOnly={state.awsAccountUnknown}
             />
           </Box>
           <Box>
             <Checkbox
+              name="aws_account_unknown"
               checked={state.awsAccountUnknown}
-              onChange={(v) => update("awsAccountUnknown", Boolean(v))}
+              onChange={(checked) => update("awsAccountUnknown", checked)}
             >
               Not provided yet
             </Checkbox>
@@ -420,6 +440,7 @@ export const SubmitForm: React.FC<Props> = ({
         </Flex>
         {state.industry === "Government" ? (
           <Select
+            name="ace_national_security"
             label="National Security"
             description="Set Yes only when the opportunity contains classified information."
             value={state.nationalSecurity}
@@ -428,7 +449,8 @@ export const SubmitForm: React.FC<Props> = ({
               { label: "No", value: "No" },
               { label: "Yes", value: "Yes" },
             ]}
-            error={errorFor("national_security")}
+            error={Boolean(errorFor("national_security"))}
+            validationMessage={errorFor("national_security")}
           />
         ) : null}
 
@@ -437,20 +459,24 @@ export const SubmitForm: React.FC<Props> = ({
         {/* Section 4: Project */}
         <Heading>Project</Heading>
         <Input
+          name="dealname"
           label="Deal Name"
           value={state.dealName}
           onChange={(v) => update("dealName", String(v ?? ""))}
         />
         <TextArea
+          name="description"
           label="Description"
           description="Customer's business problem. Min 20 chars; AWS reviewers see this."
           value={state.description}
           onChange={(v) => update("description", String(v ?? ""))}
-          error={errorFor("description")}
+          error={Boolean(errorFor("description"))}
+          validationMessage={errorFor("description")}
         />
         <Flex direction="row" gap="sm">
           <Box flex={1}>
             <NumberInput
+              name="amount"
               label="Amount (annualized USD)"
               description="HubSpot stores total annualized; AWS sees Amount / 12 as monthly ExpectedCustomerSpend."
               value={state.amount ? parseFloat(state.amount) : undefined}
@@ -459,6 +485,7 @@ export const SubmitForm: React.FC<Props> = ({
           </Box>
           <Box flex={1}>
             <Input
+              name="closedate"
               label="Close date (YYYY-MM-DD)"
               value={state.closeDate}
               onChange={(v) => update("closeDate", String(v ?? ""))}
@@ -487,32 +514,38 @@ export const SubmitForm: React.FC<Props> = ({
 
         {/* Section 6: Marketing (collapsible-ish via toggle) */}
         <Checkbox
+          name="marketing_enabled"
           checked={state.marketingEnabled}
-          onChange={(v) => update("marketingEnabled", Boolean(v))}
+          onChange={(checked) => update("marketingEnabled", checked)}
         >
           Include marketing attribution
         </Checkbox>
         {state.marketingEnabled ? (
           <Flex direction="column" gap="sm">
             <Select
+              name="marketing_source"
               label="Marketing Source"
               value={state.marketingSource}
               onChange={(v) => update("marketingSource", String(v ?? ""))}
               options={MARKETING_SOURCES.map((s) => ({ label: s, value: s }))}
-              error={errorFor("marketing_source")}
+              error={Boolean(errorFor("marketing_source"))}
+              validationMessage={errorFor("marketing_source")}
             />
             <MultiSelect
+              name="marketing_channels"
               label="Channels"
               value={state.marketingChannels}
               onChange={(v) => update("marketingChannels", (v ?? []) as string[])}
               options={MARKETING_CHANNELS.map((c) => ({ label: c, value: c }))}
             />
             <Input
+              name="marketing_campaign"
               label="Campaign Name"
               value={state.marketingCampaign}
               onChange={(v) => update("marketingCampaign", String(v ?? ""))}
             />
             <Select
+              name="marketing_funding_used"
               label="AWS Funding Used"
               value={state.marketingFundingUsed}
               onChange={(v) => update("marketingFundingUsed", String(v ?? ""))}
