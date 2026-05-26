@@ -4,7 +4,7 @@
   "config": {
     "name": "Submit to AWS Partner Central",
     "location": "crm.record.tab",
-    "entrypoint": "/app/cards/submit-to-aws-card/SubmitToAwsCard.tsx",
+    "entrypoint": "/app/cards/SubmitToAwsCard.tsx",
     "objectTypes": ["deals"]
   }
 }

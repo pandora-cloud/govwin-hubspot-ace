@@ -16,7 +16,6 @@ import {
   EmptyState,
   Flex,
   LoadingSpinner,
-  ModalDialog,
   Text,
   hubspot,
 } from "@hubspot/ui-extensions";
@@ -174,6 +173,25 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
     );
   }
 
+  if (formOpen && snapshot) {
+    return (
+      <SubmitForm
+        apiBaseUrl={API_BASE_URL}
+        catalog={ACE_CATALOG}
+        dealId={snapshot.dealId}
+        defaultDealName={snapshot.dealName ?? ""}
+        defaultCompanyName={snapshot.companyName ?? ""}
+        defaultIndustry={snapshot.industry}
+        defaultAmount={snapshot.amount}
+        defaultCloseDate={snapshot.closeDate}
+        defaultDescription={snapshot.description}
+        existingGovwinOppId={snapshot.govwinOppId}
+        onSubmissionQueued={onSubmissionQueued}
+        onCancel={closeSubmitForm}
+      />
+    );
+  }
+
   return (
     <Flex direction="column" gap="md">
       <Flex direction="row" gap="md" align="center" justify="between">
@@ -202,24 +220,6 @@ const SubmitToAwsCard: React.FC<{ context: any; actions: any }> = ({
         </Text>
       )}
 
-      {formOpen && snapshot ? (
-        <ModalDialog onClose={closeSubmitForm} title="Submit to AWS Partner Central">
-          <SubmitForm
-            apiBaseUrl={API_BASE_URL}
-            catalog={ACE_CATALOG}
-            dealId={snapshot.dealId}
-            defaultDealName={snapshot.dealName ?? ""}
-            defaultCompanyName={snapshot.companyName ?? ""}
-            defaultIndustry={snapshot.industry}
-            defaultAmount={snapshot.amount}
-            defaultCloseDate={snapshot.closeDate}
-            defaultDescription={snapshot.description}
-            existingGovwinOppId={snapshot.govwinOppId}
-            onSubmissionQueued={onSubmissionQueued}
-            onCancel={closeSubmitForm}
-          />
-        </ModalDialog>
-      ) : null}
     </Flex>
   );
 };

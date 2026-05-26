@@ -1123,7 +1123,10 @@ def resolve_solution_id(deal: dict[str, Any], config: AppConfig) -> str:
     OtherSolutionDescription path instead of failing the submission.
     """
     override = _get(deal, "govwin_ace_solution_id") or _get(deal, "govwin_ace_solution")
-    if override:
+    # _NONE_REGISTERED_ is the placeholder setup_hubspot uses when ListSolutions
+    # returns zero solutions for the catalog. The property must exist for
+    # the form to PATCH but the placeholder is never a real Solution Id.
+    if override and override != "_NONE_REGISTERED_":
         return str(override)
     if config.ace.catalog == "Sandbox":
         return ""

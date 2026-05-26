@@ -140,6 +140,19 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     try:
         solution_options = _solution_options(config)
+        if not solution_options:
+            # HubSpot rejects enumeration properties with zero options on
+            # create. The Sandbox catalog usually has no registered
+            # solutions; add a single placeholder so the property creates.
+            # The form's SolutionPicker hides itself when this is the only
+            # option, and the backend mapper translates the placeholder to
+            # OtherSolutionDescription.
+            solution_options = [
+                {
+                    "label": "(no AWS solutions registered in this catalog)",
+                    "value": "_NONE_REGISTERED_",
+                }
+            ]
         _patch_property_options(
             DEAL_PROPERTIES, "govwin_ace_solution_id", solution_options
         )
