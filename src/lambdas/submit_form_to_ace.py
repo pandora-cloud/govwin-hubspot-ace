@@ -98,21 +98,29 @@ class _ConfigError(Exception):
 #------HTTP helpers------
 
 
-def _required_target_url(path: str) -> str:
+def _required_target_url(path: str, query_string: str = "") -> str:
     """Return the full URL HubSpot signed against for this request.
 
     HubSpot's signature scheme covers ``method || url || raw_body || timestamp``
     so the validator needs the exact URL the UI Extension called via
-    ``hubspot.fetch()``. We compose it from the API Gateway base URL (env
-    var; same value for all three routes on this Lambda) and the request
-    path observed by API Gateway.
+    ``hubspot.fetch()``. ``hubspot.fetch`` signs the URL WITH its query
+    string (e.g. ``...?catalog=Sandbox``), so we must reconstruct it the
+    same way or the HMAC compare returns false and we 401 every GET that
+    carries query params (SolutionPicker, AwsProductsPicker).
+
+    Composed from the API Gateway base URL (env var; same value for all
+    three routes on this Lambda), the request path observed by API
+    Gateway, and the raw query string when present.
     """
     base = os.environ.get("UI_EXTENSION_BASE_URL", "").strip().rstrip("/")
     if not base:
         raise _ConfigError("UI_EXTENSION_BASE_URL is not configured")
     if not path.startswith("/"):
         path = "/" + path
-    return base + path
+    url = base + path
+    if query_string:
+        url = f"{url}?{query_string}"
+    return url
 
 
 def _lower(headers: dict[str, Any] | None) -> dict[str, str]:
@@ -121,8 +129,8 @@ def _lower(headers: dict[str, Any] | None) -> dict[str, str]:
     return {str(k).lower(): str(v) for k, v in headers.items()}
 
 
-def _resolve_route(event: dict[str, Any]) -> tuple[str, str]:
-    """Return ``(method, path)`` from the API Gateway HTTP API event shape."""
+def _resolve_route(event: dict[str, Any]) -> tuple[str, str, str]:
+    """Return ``(method, path, raw_query_string)`` from the API Gateway HTTP API event."""
     method = (
         event.get("requestContext", {}).get("http", {}).get("method")
         or event.get("httpMethod")
@@ -134,7 +142,8 @@ def _resolve_route(event: dict[str, Any]) -> tuple[str, str]:
         or event.get("path")
         or ""
     )
-    return method, raw_path
+    raw_query = event.get("rawQueryString") or ""
+    return method, raw_path, raw_query
 
 
 def _ok(body: Any, status: int = 200) -> dict[str, Any]:
@@ -565,7 +574,7 @@ def _handle_aws_products() -> dict[str, Any]:
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     config = load_config()
     _ensure_clients(config.aws.region)
-    method, path = _resolve_route(event)
+    method, path, raw_query = _resolve_route(event)
     headers = _lower(event.get("headers"))
 
     if method == "OPTIONS":
@@ -582,7 +591,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         return _err(413, "validation_failed", message="payload too large")
 
     try:
-        target_url = _required_target_url(path)
+        target_url = _required_target_url(path, raw_query)
     except _ConfigError as exc:
         logger.error("ui-extension config error: %s", exc)
         return _err(500, "validation_failed", message="misconfigured")

@@ -38,10 +38,18 @@ def _event(
 ) -> dict[str, Any]:
     raw = body.encode("utf-8") if body else b""
     ts_ms = int(time.time() * 1000)
-    sig = _sign(method, BASE_URL + path, raw, ts_ms)
+    # Build the query string the way API Gateway HTTP API exposes it
+    # (rawQueryString is a URL-encoded "a=b&c=d" with no leading "?").
+    raw_query = ""
+    if query:
+        import urllib.parse
+        raw_query = urllib.parse.urlencode(query)
+    signed_url = BASE_URL + path + (f"?{raw_query}" if raw_query else "")
+    sig = _sign(method, signed_url, raw, ts_ms)
     return {
         "requestContext": {"http": {"method": method, "path": path}},
         "rawPath": path,
+        "rawQueryString": raw_query,
         "headers": {
             "X-HubSpot-Signature-v3": sig,
             "X-HubSpot-Request-Timestamp": str(ts_ms),
