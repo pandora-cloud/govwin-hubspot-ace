@@ -61,6 +61,18 @@ data "aws_iam_policy_document" "webhook_receiver" {
     ]
   }
 
+  # KMS for the customer-managed CMK encrypting the SQS queues. SQS
+  # SendMessage against a CMK-encrypted queue calls
+  # kms:GenerateDataKey under the sender's role.
+  statement {
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [aws_kms_key.pipeline.arn]
+  }
+
   # DynamoDB PutItem on the entity-mappings table for the WHK# replay-
   # protection record. Conditional put (attribute_not_exists) is what
   # provides the dedup guarantee; read access intentionally denied so a

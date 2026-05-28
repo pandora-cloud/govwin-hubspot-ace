@@ -92,6 +92,19 @@ data "aws_iam_policy_document" "ace_permissions" {
     ]
   }
 
+  # KMS for the customer-managed CMK encrypting the SQS queues above.
+  # Without these, SQS rejects ReceiveMessage / SendMessage with
+  # KMSAccessDeniedException once we switch from sqs_managed_sse to a
+  # CMK. Scope to the specific pipeline key by ARN.
+  statement {
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [aws_kms_key.pipeline.arn]
+  }
+
   # Webhook signing secret.
   statement {
     actions   = ["secretsmanager:GetSecretValue"]

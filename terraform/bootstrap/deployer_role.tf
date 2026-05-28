@@ -556,3 +556,74 @@ resource "aws_iam_role_policy" "deployer_describe" {
     ]
   })
 }
+
+# KMS lifecycle for the customer-managed CMK used by the pipeline SQS
+# queues (terraform/modules/ace/kms.tf). Split into two statements:
+#   1. CreateKey + read-only listings: must be Resource=* because the
+#      key doesn't exist yet when CreateKey runs.
+#   2. Mutating actions on existing keys: tag-conditioned on
+#      aws:ResourceTag/Application = "${var.project_name}-${var.environment}" so a compromised
+#      deployer credential can't PutKeyPolicy or ScheduleKeyDeletion on
+#      unrelated CMKs in the account (e.g., RDS, S3 keys).
+#
+# Day-to-day data plane operations (Decrypt / GenerateDataKey) are NOT
+# granted here -- those go through the Lambda execution roles directly,
+# not the deployer.
+resource "aws_iam_role_policy" "deployer_kms" {
+  name = "kms-pipeline-cmk"
+  role = aws_iam_role.deployer.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "KMSCreateAndList"
+        Effect = "Allow"
+        Action = [
+          "kms:CreateKey",
+          "kms:ListAliases",
+          "kms:ListKeys",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "KMSManageTaggedKeysOnly"
+        Effect = "Allow"
+        Action = [
+          "kms:DescribeKey",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags",
+          "kms:PutKeyPolicy",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:UpdateKeyDescription",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:ResourceTag/Application" = "${var.project_name}-${var.environment}"
+          }
+        }
+      },
+      {
+        # Aliases are not tagged; scope by name prefix instead so the
+        # deployer can only touch aliases that begin with our name_prefix.
+        Sid    = "KMSAliasManagementByName"
+        Effect = "Allow"
+        Action = [
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:UpdateAlias",
+        ]
+        Resource = [
+          "arn:aws:kms:*:*:alias/${"${var.project_name}-${var.environment}"}-*",
+          "arn:aws:kms:*:*:key/*",
+        ]
+      },
+    ]
+  })
+}
