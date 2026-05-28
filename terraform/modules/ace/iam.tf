@@ -102,7 +102,7 @@ data "aws_iam_policy_document" "ace_permissions" {
       "kms:GenerateDataKey",
       "kms:DescribeKey",
     ]
-    resources = [aws_kms_key.pipeline.arn]
+    resources = [var.kms_key_arn]
   }
 
   # Webhook signing secret.

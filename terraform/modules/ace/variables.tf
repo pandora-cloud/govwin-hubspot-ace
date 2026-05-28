@@ -133,3 +133,8 @@ variable "sns_topic_arn" {
   description = "SNS topic ARN for mapping-error and terminal-failure alerts."
   type        = string
 }
+
+variable "kms_key_arn" {
+  description = "Pipeline CMK ARN from the kms module. Encrypts ACE SQS queues and any future at-rest CMK targets."
+  type        = string
+}

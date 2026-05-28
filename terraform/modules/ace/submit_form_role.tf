@@ -132,7 +132,7 @@ data "aws_iam_policy_document" "submit_form" {
       "kms:GenerateDataKey",
       "kms:DescribeKey",
     ]
-    resources = [aws_kms_key.pipeline.arn]
+    resources = [var.kms_key_arn]
   }
 
   # X-Ray. Cannot be resource-scoped (AWS-mandated wildcard).

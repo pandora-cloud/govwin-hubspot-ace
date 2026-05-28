@@ -9,6 +9,10 @@ variable "notification_email" {
   type    = string
   default = ""
 }
+variable "kms_key_arn" {
+  description = "Pipeline CMK ARN from the kms module. Encrypts the SNS notifications topic and the catch-all DLQ messages."
+  type        = string
+}
 # Lambda + DLQ + Scheduler names are computed from name_prefix to keep the
 # monitoring module self-contained. Adding a Lambda elsewhere in the project
 # requires bumping the local list below; that's a deliberate trade-off
@@ -38,7 +42,7 @@ locals {
 
 resource "aws_sns_topic" "sync_notifications" {
   name              = "${var.name_prefix}-notifications"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = var.kms_key_arn
 }
 
 resource "aws_sns_topic_subscription" "email" {
@@ -49,9 +53,10 @@ resource "aws_sns_topic_subscription" "email" {
 }
 
 resource "aws_sqs_queue" "dlq" {
-  name                      = "${var.name_prefix}-dlq"
-  message_retention_seconds = 1209600 # 14 days
-  sqs_managed_sse_enabled   = true
+  name                              = "${var.name_prefix}-dlq"
+  message_retention_seconds         = 1209600 # 14 days
+  kms_master_key_id                 = var.kms_key_arn
+  kms_data_key_reuse_period_seconds = 300
 }
 
 # ---------------------------------------------------------------------------

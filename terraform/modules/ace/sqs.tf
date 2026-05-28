@@ -4,7 +4,7 @@ resource "aws_sqs_queue" "submit_dlq" {
   name                              = "${var.name_prefix}-ace-submit-dlq"
   message_retention_seconds         = 14 * 24 * 3600 # 14 days
   visibility_timeout_seconds        = 60
-  kms_master_key_id                 = aws_kms_key.pipeline.arn
+  kms_master_key_id                 = var.kms_key_arn
   kms_data_key_reuse_period_seconds = 300
 }
 
@@ -15,7 +15,7 @@ resource "aws_sqs_queue" "submit" {
   # Customer-managed CMK (see kms.tf). Replaces the prior AWS-managed
   # sqs_managed_sse so DoD / FedRAMP posture has an auditable, rotatable
   # key under our control.
-  kms_master_key_id                 = aws_kms_key.pipeline.arn
+  kms_master_key_id                 = var.kms_key_arn
   kms_data_key_reuse_period_seconds = 300
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.submit_dlq.arn
@@ -26,7 +26,7 @@ resource "aws_sqs_queue" "submit" {
 resource "aws_sqs_queue" "update_dlq" {
   name                              = "${var.name_prefix}-ace-update-dlq"
   message_retention_seconds         = 14 * 24 * 3600
-  kms_master_key_id                 = aws_kms_key.pipeline.arn
+  kms_master_key_id                 = var.kms_key_arn
   kms_data_key_reuse_period_seconds = 300
 }
 
@@ -37,7 +37,7 @@ resource "aws_sqs_queue" "update" {
   # Customer-managed CMK (see kms.tf). Replaces the prior AWS-managed
   # sqs_managed_sse so DoD / FedRAMP posture has an auditable, rotatable
   # key under our control.
-  kms_master_key_id                 = aws_kms_key.pipeline.arn
+  kms_master_key_id                 = var.kms_key_arn
   kms_data_key_reuse_period_seconds = 300
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.update_dlq.arn

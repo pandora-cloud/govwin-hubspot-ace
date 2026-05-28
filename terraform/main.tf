@@ -3,6 +3,17 @@ locals {
 }
 
 # -----------------------------------------------------------------------------
+# KMS (cross-cutting CMK consumed by monitoring, dynamodb, and ace)
+# -----------------------------------------------------------------------------
+
+module "kms" {
+  source = "./modules/kms"
+
+  name_prefix = local.name_prefix
+  aws_region  = var.aws_region
+}
+
+# -----------------------------------------------------------------------------
 # Secrets
 # -----------------------------------------------------------------------------
 
@@ -25,6 +36,7 @@ module "dynamodb" {
   source = "./modules/dynamodb"
 
   name_prefix = local.name_prefix
+  kms_key_arn = module.kms.pipeline_key_arn
 }
 
 # -----------------------------------------------------------------------------
@@ -37,6 +49,7 @@ module "monitoring" {
   name_prefix          = local.name_prefix
   enable_notifications = var.enable_notifications
   notification_email   = var.notification_email
+  kms_key_arn          = module.kms.pipeline_key_arn
 }
 
 # -----------------------------------------------------------------------------
@@ -123,5 +136,6 @@ module "ace" {
   hubspot_webhook_app_id        = var.hubspot_webhook_app_id
   hubspot_webhook_client_secret = var.hubspot_webhook_client_secret
   sns_topic_arn                 = module.monitoring.sns_topic_arn
+  kms_key_arn                   = module.kms.pipeline_key_arn
 }
 

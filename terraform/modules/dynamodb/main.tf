@@ -2,6 +2,11 @@ variable "name_prefix" {
   type = string
 }
 
+variable "kms_key_arn" {
+  description = "Pipeline CMK ARN from the kms module. Encrypts DynamoDB tables at rest under our own audit trail."
+  type        = string
+}
+
 resource "aws_dynamodb_table" "sync_state" {
   name         = "${var.name_prefix}-sync-state"
   billing_mode = "PAY_PER_REQUEST"
@@ -23,7 +28,8 @@ resource "aws_dynamodb_table" "sync_state" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = var.kms_key_arn
   }
 
   ttl {
@@ -53,7 +59,8 @@ resource "aws_dynamodb_table" "entity_mappings" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = var.kms_key_arn
   }
 
   ttl {

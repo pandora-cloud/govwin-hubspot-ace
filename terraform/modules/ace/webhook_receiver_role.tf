@@ -70,7 +70,7 @@ data "aws_iam_policy_document" "webhook_receiver" {
       "kms:GenerateDataKey",
       "kms:DescribeKey",
     ]
-    resources = [aws_kms_key.pipeline.arn]
+    resources = [var.kms_key_arn]
   }
 
   # DynamoDB PutItem on the entity-mappings table for the WHK# replay-

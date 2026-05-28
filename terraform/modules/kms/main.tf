@@ -1,24 +1,38 @@
-# Customer-managed KMS CMK for the HubSpot -> ACE pipeline.
+# Cross-cutting customer-managed KMS CMK for the GovWin -> HubSpot -> ACE
+# pipeline.
 #
-# The default sqs_managed_sse uses an AWS-owned key invisible to our
-# IAM / CloudTrail surface. For DoD / FedRAMP posture, encrypt at rest
-# with a customer-managed CMK so:
+# Originally lived inside modules/ace, but ace consumes outputs from
+# monitoring and dynamodb (sns_topic_arn, table arns), which made it
+# impossible for those modules to also consume the key without a
+# dependency cycle. Hoisted into its own leaf module so all three
+# (ace, monitoring, dynamodb) can encrypt at-rest data with one
+# auditable key without circular wiring.
 #
-#   1. Key usage shows up in CloudTrail under our own KMS keyId, not the
-#      generic "alias/aws/sqs" we cannot audit individually.
-#   2. Key rotation, deletion, and policy changes are explicit.
-#   3. We can grant kms:Decrypt to specific Lambda execution roles only,
-#      so a compromised non-pipeline IAM principal can't read queue
-#      contents even if it inherits sqs:ReceiveMessage from a wildcard.
+# Key policy grants:
+#   * AWS account root (so IAM policies on individual roles take effect)
+#   * sqs.amazonaws.com (queue + DLQ messages)
+#   * sns.amazonaws.com (topic messages)
+#   * events.amazonaws.com + scheduler.amazonaws.com (EventBridge writes
+#     to SQS, Scheduler publishes to SNS)
+#   * logs.<region>.amazonaws.com (future log group migration; scoped by
+#     EncryptionContext to our own /aws/lambda/<prefix>-* groups)
+#   * dynamodb.amazonaws.com (DDB at-rest encryption; scoped by ViaService
+#     to our region so cross-region DDB calls can't reuse the key)
 #
-# Used by: submit + submit_dlq + update + update_dlq SQS queues.
-#
-# The SNS topic for orphan/rejection alerts lives in the monitoring
-# module and currently uses ``alias/aws/sns`` (AWS-managed key). Moving
-# it onto this CMK requires either relocating the topic into this module
-# or threading the key ARN cross-module; deferred to a follow-up since
-# SNS payloads are bounded to subject+message strings the operator
-# already gets via email.
+# Mutating use of the key requires the principal to be in the same
+# account (root statement) AND tagged Application=<name_prefix> for
+# administrative actions issued from the deployer role; see
+# terraform/bootstrap/deployer_role.tf for the deployer-side scoping.
+
+variable "name_prefix" {
+  type = string
+}
+
+variable "aws_region" {
+  type = string
+}
+
+data "aws_caller_identity" "current" {}
 
 resource "aws_kms_key" "pipeline" {
   description             = "${var.name_prefix} HubSpot->ACE pipeline at-rest encryption"
@@ -27,7 +41,7 @@ resource "aws_kms_key" "pipeline" {
   policy                  = data.aws_iam_policy_document.pipeline_kms.json
   tags = {
     Application = var.name_prefix
-    Purpose     = "sqs+sns-encryption"
+    Purpose     = "pipeline-encryption"
   }
 }
 
@@ -36,10 +50,6 @@ resource "aws_kms_alias" "pipeline" {
   target_key_id = aws_kms_key.pipeline.key_id
 }
 
-# Account-root statement is required so IAM policies on individual
-# principals (Lambda roles) can actually take effect. AWS-managed key
-# policies all use this pattern; see
-# https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html
 data "aws_iam_policy_document" "pipeline_kms" {
   statement {
     sid     = "EnableIAMUserPermissions"
@@ -51,9 +61,6 @@ data "aws_iam_policy_document" "pipeline_kms" {
     resources = ["*"]
   }
 
-  # SQS and SNS services need direct grants to encrypt/decrypt messages
-  # on behalf of the Lambdas that own the queues/topic. Without this,
-  # SQS managed encryption fails with KMSAccessDeniedException.
   statement {
     sid = "AllowSQSService"
     actions = [
@@ -82,8 +89,6 @@ data "aws_iam_policy_document" "pipeline_kms" {
     resources = ["*"]
   }
 
-  # EventBridge writing to SQS / publishing to SNS uses scheduler.amazonaws.com
-  # and events.amazonaws.com as the principal.
   statement {
     sid = "AllowEventBridgeAndSchedulerServices"
     actions = [
@@ -101,12 +106,9 @@ data "aws_iam_policy_document" "pipeline_kms" {
     resources = ["*"]
   }
 
-  # CloudWatch Logs encryption. Not currently in use by this stack -- log
-  # groups encrypt at rest with AWS-owned keys by default -- but granting
-  # the principal now means a future hardening pass that opts log groups
-  # into this CMK doesn't have to come back to the policy. Scoped via
-  # EncryptionContext so the grant is only usable for our own log groups,
-  # not arbitrary cross-account groups.
+  # CloudWatch Logs prep grant. Scoped via EncryptionContext to project
+  # log groups; the principal becomes useful as soon as the operator
+  # opts a log group into this CMK.
   statement {
     sid = "AllowCloudWatchLogsService"
     actions = [
@@ -130,15 +132,9 @@ data "aws_iam_policy_document" "pipeline_kms" {
     }
   }
 
-  # DynamoDB at-rest encryption. Same prep-work pattern as the Logs grant
-  # above. Today both project tables use AWS-owned keys (the default for
-  # server_side_encryption { enabled = true }). The future hardening pass
-  # that flips dynamodb/main.tf onto this CMK only needs a key ARN
-  # parameter; the key policy is already in place.
-  #
-  # Scoping by ViaService restricts the grant to DDB requests originating
-  # in our own region, so even a cross-region principal that somehow
-  # obtained kms:Decrypt cannot use this key for a foreign DDB call.
+  # DynamoDB at-rest encryption. ViaService restricts the grant to DDB
+  # calls in our own region; cross-region principals can't reuse this
+  # key for foreign DDB access even with kms:Decrypt elsewhere.
   statement {
     sid = "AllowDynamoDBService"
     actions = [
@@ -163,4 +159,14 @@ data "aws_iam_policy_document" "pipeline_kms" {
   }
 }
 
-# aws_caller_identity.current is already declared in eventbridge.tf.
+output "pipeline_key_arn" {
+  value = aws_kms_key.pipeline.arn
+}
+
+output "pipeline_key_id" {
+  value = aws_kms_key.pipeline.key_id
+}
+
+output "pipeline_alias" {
+  value = aws_kms_alias.pipeline.name
+}
