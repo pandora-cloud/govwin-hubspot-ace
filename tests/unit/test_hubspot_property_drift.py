@@ -66,7 +66,7 @@ def test_hubspot_options_match_ace_allowed(hubspot_name: str, allowed_attr: str)
     prop = _hubspot_property(hubspot_name)
     if prop is None:
         # Some enums (Origin, Industry, etc.) may not be exposed as a
-        # HubSpot deal property today. Skip rather than fail -- absence
+        # HubSpot deal property today. Skip rather than fail; absence
         # is intentional, only DRIFT between declared HubSpot options
         # and the ACE enum is a real issue.
         pytest.skip(f"HubSpot property {hubspot_name} is not declared")

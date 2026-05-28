@@ -5,7 +5,7 @@
 # dependency CVE ever lets an attacker run code in this Lambda's execution
 # context, the blast radius is whatever the role grants. The shared project
 # Lambda role can call CreateOpportunity, read GovWin/HubSpot secrets, write
-# the GovWin-tokens secret, and read+write both DynamoDB tables -- a full
+# the GovWin-tokens secret, and read+write both DynamoDB tables; a full
 # pipeline compromise vector. This role grants only what the receiver code
 # actually does (verified against src/lambdas/hubspot_webhook_receiver.py):
 #
@@ -19,7 +19,7 @@
 # Worst case if compromised: spam the submit/update SQS queues. Both queues
 # feed downstream Lambdas that themselves validate the message against
 # DynamoDB lookups and pattern matching, so the attacker cannot publish junk
-# to ACE without also forging valid HubSpot deal IDs in DynamoDB -- which the
+# to ACE without also forging valid HubSpot deal IDs in DynamoDB; which the
 # receiver role's PutItem-only-with-attribute_not_exists cannot do.
 
 data "aws_iam_policy_document" "webhook_receiver_assume" {
@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "webhook_receiver" {
     resources = [aws_secretsmanager_secret.hubspot_webhook.arn]
   }
 
-  # SQS write to the submit and update queues. No receive / delete -- the
+  # SQS write to the submit and update queues. No receive / delete; the
   # receiver only enqueues; the workers consume.
   statement {
     actions = ["sqs:SendMessage", "sqs:SendMessageBatch", "sqs:GetQueueAttributes"]

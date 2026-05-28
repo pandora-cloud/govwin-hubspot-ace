@@ -2,14 +2,14 @@
 
 Two endpoints, both mutate state:
 
-* ``POST /ui-extension/submit`` -- validates a full SubmitFormRequest,
+* ``POST /ui-extension/submit``; validates a full SubmitFormRequest,
   PATCHes the deal's GovWin/ACE properties + flips dealstage to the ACE
   trigger. The dealstage flip fires the existing
   hubspot_webhook_receiver -> submit SQS -> submit_to_ace pipeline so
   the actual CreateOpportunity call still runs from the trusted
   worker role (this Lambda never carries CreateOpportunity IAM).
 
-* ``POST /ui-extension/update`` -- validates an UpdateFormRequest,
+* ``POST /ui-extension/update``; validates an UpdateFormRequest,
   fetches the AWS opportunity, scrub_for_update + apply form delta,
   calls UpdateOpportunity synchronously. AWS Products diff is delegated
   to the async update_in_ace path via the webhook on the
@@ -243,7 +243,7 @@ def _validate_update_enums(req: UpdateFormRequest) -> list[FormFieldError]:
     lifecycle enum; ``lifecycle_closed_lost_reason`` is required (and
     enum-checked) iff stage is ``Closed Lost``. Unlike submit, the
     ``ace_partner_need`` / ``ace_delivery_model`` "at least one" rule
-    does NOT apply -- BD can leave those untouched.
+    does NOT apply; BD can leave those untouched.
     """
     errors: list[FormFieldError] = []
     _validate_shared_form(
@@ -405,7 +405,7 @@ def _trigger_stage_id() -> str:
     Reads from the ``ACE_TRIGGER_STAGES`` env var (set by Terraform from
     ``var.ace_trigger_stages``). Raises if the env var is unset because
     falling back to a hardcoded id would silently route submissions to
-    whatever HubSpot pipeline happens to share that id -- a misconfigured
+    whatever HubSpot pipeline happens to share that id; a misconfigured
     deployment must fail loud.
     """
     raw = os.environ.get("ACE_TRIGGER_STAGES", "").strip()

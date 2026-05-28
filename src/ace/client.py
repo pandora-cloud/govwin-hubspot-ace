@@ -138,11 +138,17 @@ class ACEClient:
     # ------------------------------------------------------------------
 
     def create_opportunity(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Create a new ACE opportunity.
+        """Create a new opportunity in AWS Partner Central.
 
-        ``payload`` is expected to already include ``Catalog`` and ``ClientToken``;
-        callers should generate the ClientToken via :meth:`new_client_token` and
-        persist it before this call so retries can reuse it.
+        :param payload: The CreateOpportunity request body. Must already
+            include ``Catalog`` and ``ClientToken``; the client injects
+            defaults for both if missing, but callers SHOULD generate
+            the ClientToken via :meth:`new_client_token` and persist it
+            to DynamoDB before this call so SQS-driven retries can reuse
+            it (idempotent creates).
+        :returns: The CreateOpportunity response, including ``Id`` (the
+            assigned AWS opportunity id) and ``LastModifiedDate``.
+        :raises ACEAPIError: On any non-retryable AWS error.
         """
         if "Catalog" not in payload:
             payload = {**payload, "Catalog": self._catalog}
@@ -155,15 +161,27 @@ class ACEClient:
             self._raise_api_error("CreateOpportunity", exc)
 
     def get_opportunity(self, identifier: str) -> dict[str, Any]:
+        """Fetch the full opportunity payload by AWS opportunity id.
+
+        :param identifier: The AWS opportunity id (e.g. ``O13753208``).
+        :returns: The full opportunity dict, including
+            ``LastModifiedDate`` needed for optimistic locking on
+            subsequent updates.
+        :raises ACEAPIError: On any non-retryable AWS error. The
+            ``code`` attribute carries the underlying boto3 error code,
+            or ``"CrossCatalogResponse"`` when the response ``Catalog``
+            field disagrees with the client's configured catalog. The
+            IAM Catalog condition blocks cross-catalog writes; this
+            additional check makes the mismatch a hard error at read
+            time rather than letting it flow through scrub-and-update
+            silently.
+        """
         try:
             response = self._call_read(
                 "get_opportunity", Catalog=self._catalog, Identifier=identifier
             )
         except ClientError as exc:
             self._raise_api_error("GetOpportunity", exc)
-        # Echo-check the catalog. The IAM Catalog condition already blocks
-        # cross-catalog writes, but a regressed AWS response would otherwise
-        # flow through scrub-and-update silently. Mismatch is a hard error.
         echoed = response.get("Catalog")
         if echoed and echoed != self._catalog:
             raise ACEAPIError(
@@ -187,7 +205,23 @@ class ACEClient:
         last_modified_date: Any,
         updates: dict[str, Any],
     ) -> dict[str, Any]:
-        """Update an opportunity using optimistic locking via LastModifiedDate."""
+        """Update an opportunity in AWS Partner Central.
+
+        Uses optimistic locking via ``LastModifiedDate``; a stale value
+        produces ``ConflictException``. Prefer :meth:`update_with_retry`
+        which fetches the current ``LastModifiedDate`` before retrying.
+
+        :param identifier: The AWS opportunity id.
+        :param last_modified_date: ``LastModifiedDate`` from a recent
+            GetOpportunity or UpdateOpportunity response.
+        :param updates: Top-level fields to update. AWS treats omitted
+            fields as cleared under PUT semantics; the caller should
+            pass the full scrubbed echo from a current GetOpportunity
+            plus any deltas. See :func:`scrub_for_update`.
+        :returns: The UpdateOpportunity response, including the new
+            ``LastModifiedDate``.
+        :raises ACEAPIError: On any non-retryable AWS error.
+        """
         params = {
             "Catalog": self._catalog,
             "Identifier": identifier,
@@ -413,7 +447,7 @@ class ACEClient:
         # rejects on UpdateOpportunity. Specifically:
         #
         #   * ExpectedCustomerSpend may include an entry with only
-        #     CurrencyCode populated -- Amount / Frequency / TargetCompany
+        #     CurrencyCode populated; Amount / Frequency / TargetCompany
         #     are all required when the entry is present.
         #   * Customer.Contacts[] may contain entries missing FirstName /
         #     LastName / Email when AWS auto-populated from invitations.

@@ -604,7 +604,7 @@ def main() -> int:
         help=(
             "Skip scenarios 2 and 3 (AssociateOpportunity + StartEngagement). "
             "Useful for validating the rest of the flow without exercising "
-            "AssociateOpportunity at all. Most users should NOT pass this -- "
+            "AssociateOpportunity at all. Most users should NOT pass this; "
             "the AwsProducts fallback runs the full three-call flow even "
             "without a Sandbox Solution."
         ),

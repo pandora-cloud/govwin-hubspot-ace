@@ -22,7 +22,7 @@ class HubSpotRateLimiter:
     def acquire(self) -> float:
         """Returns wait time in seconds. 0 means proceed immediately.
 
-        This method has NO side effects -- it does not record the request.
+        This method has NO side effects; it does not record the request.
         Call ``record()`` separately after the request is made.
         """
         self._prune()

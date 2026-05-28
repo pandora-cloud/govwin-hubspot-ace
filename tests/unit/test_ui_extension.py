@@ -456,7 +456,7 @@ class TestReplayProtection:
     """A signed request replayed within the freshness window must be rejected
     with status='replay_detected' (distinct from the dedup 409 which uses
     status='already_submitted'). The form's 409 handler reads body.status
-    to render the right copy -- earlier it always assumed dedup and
+    to render the right copy; earlier it always assumed dedup and
     interpolated body.ace_opportunity_id (undefined on replay)."""
 
     def test_replay_returns_409_with_status_replay_detected(

@@ -67,7 +67,7 @@ variable "log_retention_days" {
   default = 30
 }
 
-# -- ACE configuration ---
+#; ACE configuration ---
 
 variable "ace_catalog" {
   type        = string
@@ -116,7 +116,7 @@ variable "ace_trigger_stages" {
   default     = "submit_to_aws,submitted_to_aws"
 }
 
-# -- HubSpot webhook configuration ---
+#; HubSpot webhook configuration ---
 
 variable "hubspot_webhook_app_id" {
   type        = string

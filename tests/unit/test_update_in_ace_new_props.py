@@ -128,7 +128,7 @@ class TestSingleEnums:
     def test_national_security_rejects_garbage(self) -> None:
         payload = _empty_payload()
         # Updated 2026-05-27: returns False (no-op) rather than silent True.
-        # Earlier behavior was misleading -- caller fired UpdateOpportunity
+        # Earlier behavior was misleading; caller fired UpdateOpportunity
         # for a "successful" update that wrote nothing.
         assert _apply_delta(payload, "govwin_ace_national_security", "Maybe") is False
         assert "NationalSecurity" not in payload

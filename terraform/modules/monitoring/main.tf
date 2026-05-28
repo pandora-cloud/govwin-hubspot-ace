@@ -218,8 +218,8 @@ resource "aws_cloudwatch_metric_alarm" "update_in_ace_fanout" {
   alarm_description   = <<-EOT
     update_in_ace invocations exceeded the fan-out threshold for 15
     minutes. Common causes: (a) BD ran a bulk recategorize across many
-    deals -- benign, queue drains in minutes; (b) one deal's webhooks
-    are fanning out across many properties per save -- coalescing the
+    deals; benign, queue drains in minutes; (b) one deal's webhooks
+    are fanning out across many properties per save; coalescing the
     update path would eliminate this. See docs/operations.md
     "Scaling and webhook fan-out" for the diagnosis runbook.
   EOT

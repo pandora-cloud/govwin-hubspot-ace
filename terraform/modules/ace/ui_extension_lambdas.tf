@@ -22,7 +22,7 @@
 # that previously could overrun API Gateway's 29s timeout). Timeouts
 # stay sized just under the 30s API GW HTTP cap.
 
-# -- Read-only Lambda ---------------------------------------------------
+#; Read-only Lambda ---------------------------------------------------
 
 resource "aws_lambda_function" "ui_extension_reads" {
   function_name                  = "${var.name_prefix}-ui-ext-reads"
@@ -81,7 +81,7 @@ resource "aws_lambda_permission" "ui_extension_reads_api_invoke" {
   source_arn    = "${aws_apigatewayv2_api.webhook.execution_arn}/*/*"
 }
 
-# -- Write-side Lambda --------------------------------------------------
+#; Write-side Lambda --------------------------------------------------
 
 resource "aws_lambda_function" "ui_extension_writes" {
   function_name                  = "${var.name_prefix}-ui-ext-writes"

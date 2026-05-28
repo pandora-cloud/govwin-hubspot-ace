@@ -3,10 +3,10 @@
 Also seeds the *dynamic* option sets for properties whose values come from
 sources outside this codebase:
 
-* ``govwin_ace_aws_products`` -- options sourced from
+* ``govwin_ace_aws_products``; options sourced from
   ``resources/aws_products.json`` (513 AWS product Identifiers, refreshed
   via ``scripts/refresh_aws_products.py``).
-* ``govwin_ace_solution_id`` -- options sourced from a live ACE
+* ``govwin_ace_solution_id``; options sourced from a live ACE
   ``ListSolutions`` call so BD's HubSpot dropdown stays in sync with the
   Pandora Cloud Solutions catalog registered in Partner Central.
 

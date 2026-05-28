@@ -27,9 +27,15 @@ Future entries are generated automatically by [release-please](https://github.co
 - `submit_form_to_ace` (now `ui_extension_writes`) `/update` endpoint: synchronous `GetOpportunity` + `UpdateOpportunity` + Associate/Disassociate from the Submit-to-AWS card. Replay protection now distinguishes `status=replay_detected` from `status=already_submitted`.
 - CORS allowlist for the OPTIONS preflight reflection (`https://app.hubspot.com`, `app-na2`, `app-eu1`/`eu2`, `app-jp1`, `app-ap1`, sandbox variants). Unrecognized Origins fall back to the NA1 default rather than echoing the request value.
 - CloudWatch alarm `<prefix>-update-in-ace-high-rate` for sustained fan-out detection. Threshold via `var.update_in_ace_fanout_threshold` (default 30/min averaged over 15 min, set to 0 to disable). New "Scaling and webhook fan-out" runbook in `docs/operations.md`.
-- `docs/pre-install-checklist.md`: stakeholder map, eleven decisions to make BEFORE `terraform apply`, compliance posture, what cannot be changed later.
+- `docs/pre-install-checklist.md`: action-oriented "Before you install" page with the items you need ready, the three `terraform.tfvars` values that actually matter, what cannot be changed later, and the cost table.
 - `docs/cost-model.md`: per-component cost breakdown across small / medium / large deployment sizes plus the cost monitoring runbook.
-- `docs/operations/kms-relocation-runbook.md` and `docs/operations/ui-extension-split-runbook.md`: state-move + apply walkthroughs for the two CMK / Lambda topology changes.
+- `scripts/reconcile.py` + `make reconcile GOVWIN_ID=<id>`: 4-way state dump (DDB / HubSpot deal / AWS GetOpportunity / AWS ListOpportunities collision check) for triaging self-heal mismatch alerts. Read-only.
+- `make dlq-status` + `make dlq-redrive QUEUE=<name>`: depth across every project DLQ and SQS message-move-task wrapper.
+- `ACEClient.get_opportunity` now asserts the response `Catalog` matches the configured catalog and raises `CrossCatalogResponse` on mismatch. Defense-in-depth on top of the IAM Catalog condition.
+- `HUBSPOT_INTEGRATION_APP_ID` env var (set from `var.hubspot_webhook_app_id`). The audit-alert handler cross-checks `ev.sourceId` against this value; INTEGRATION-source events from a different app installed on the same HubSpot portal fire a distinct "foreign HubSpot integration" alert.
+- DDB `LeadingKeys` IAM condition on the `ui_extension_reads` and `hubspot_webhook_receiver` PutItem grants, restricting both roles to the `WHK#` prefix.
+- `MRR_MONTHS_PER_YEAR` constant in `src/ace/mapper.py` replaces the magic `/12.0` in three call sites.
+- `_validate_shared_form` extracted in `ui_extension_writes.py`; the prior ~110 lines of duplication between `_validate_enums` and `_validate_update_enums` collapsed.
 
 ### Changed
 - HubSpot subscription registration is now manifest-driven (`hubspot-app/src/app/webhooks/webhooks-hsmeta.json` deployed by `hs project upload`). The `setup_hubspot_webhooks` Lambda (legacy private-app REST endpoint) is retired.
@@ -37,6 +43,13 @@ Future entries are generated automatically by [release-please](https://github.co
 - README + deployment-guide step 9d: simplified to one webhook activation path (manifest + `hs project upload`); the prior "Option A / Option B" choice between the legacy Lambda and the manifest is gone.
 - `monitoring` module's `monitored_lambda_names` list now includes `ui-ext-reads` and `ui-ext-writes`; the legacy `setup-hubspot-webhooks` entry is removed.
 - Bootstrap deployer role gains `kms:CreateGrant` / `RetireGrant` / `ListGrants` (tag-scoped to `Application = <project>-<environment>`) so the CMK migration applies cleanly without manual deployer-policy work.
+- Webhook signature replay reservation TTL halved from `2 * webhook_max_age_seconds` to match the freshness window; replays past the window already fail the timestamp check, so the doubled TTL provided no marginal protection.
+- `src/hubspot/client.py:_redact_hubspot_error_body` expanded the full-redact set to `CompanyName`, `Email`, `Phone`, `WebsiteUrl`, `Reason` (in addition to `propertyValue` and `localizedErrorMessage`); `message` / `Message` / `ErrorMessage` are trimmed to 200 chars so operators retain diagnostic context.
+- `src/lambdas/submit_to_ace.py` and `update_in_ace.py` now pass the AWS error string through the redactor before writing it back to the HubSpot deal property; HubSpot deal properties are visible to anyone with deal-read.
+- Multi-value `_apply_delta` handlers (`partner_need`, `delivery_model`, `sales_activities`) log a WARNING on empty input so the no-op (AWS does not accept empty arrays via this path) is visible in CloudWatch.
+- `src/ace/mapper.py:_normalize_industry` renamed to `normalize_industry` (cross-module private import was a smell).
+- `src/sync/state.py:mark_event_seen` (non-atomic, legacy) deleted; only `mark_event_seen_atomic` remains.
+- `_trigger_stage_id` in `ui_extension_writes.py` raises on missing `ACE_TRIGGER_STAGES` instead of falling back to a hardcoded sandbox stage id.
 
 ### Changed
 - LocalStack pinned to `localstack/localstack:3.8` (community edition). The `:latest` tag began requiring a paid auth token in mid-2026.

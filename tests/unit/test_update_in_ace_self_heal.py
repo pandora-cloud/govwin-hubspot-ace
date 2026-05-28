@@ -90,7 +90,7 @@ def test_self_heal_recovers_from_deal_property(state_mock, hubspot_mock, ace_moc
         ace_opportunity_id="O13753999",
         hubspot_deal_id="327148407530",
     )
-    # We did NOT return "skipped: no ace mapping yet" -- the self-heal kicked in.
+    # We did NOT return "skipped: no ace mapping yet"; the self-heal kicked in.
     assert result["status"] != "skipped"
 
 
@@ -102,7 +102,7 @@ def test_returns_skipped_when_neither_cache_nor_deal_have_opportunity_id(
         "id": "327148407530",
         "properties": {
             "govwin_opp_id": "DEMO-CACHE-MISS-001",
-            # govwin_aws_cosell_id absent -- AWS side never acked yet.
+            # govwin_aws_cosell_id absent; AWS side never acked yet.
         },
     }
     state_mock.find_govwin_by_hubspot_deal_id.return_value = "DEMO-CACHE-MISS-001"
@@ -152,7 +152,7 @@ def test_self_heal_refuses_when_partner_id_mismatches(state_mock, hubspot_mock, 
 
     assert result["status"] == "skipped"
     assert "verification" in result["reason"].lower()
-    # No AWS mutations, no DDB backfill -- safety first.
+    # No AWS mutations, no DDB backfill; safety first.
     ace_mock.update_with_retry.assert_not_called()
     state_mock.update_ace_mapping.assert_not_called()
 
@@ -167,7 +167,7 @@ def test_self_heal_refuses_cross_deal_rebind(state_mock, hubspot_mock, ace_mock)
     """
     # ACE# row exists with hubspot_deal_id set, but the incoming event
     # comes from a different deal. ace_opportunity_id is empty (partial
-    # state -- this is the only way the self-heal path runs at all).
+    # state; this is the only way the self-heal path runs at all).
     state_mock.get_ace_mapping.return_value = {
         "hubspot_deal_id": "111111111111",
     }

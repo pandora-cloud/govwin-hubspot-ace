@@ -87,9 +87,9 @@ The integration auto-populates the majority of mandatory fields required by AWS 
 | 7 | Expected AWS Monthly Revenue | `amount` | GovWin `oppValue` x 1000 | Yes |
 | 8 | Opportunity Type | `govwin_ace_opportunity_type` | Default: "Net New Business" | Yes |
 | 9 | Stage | `dealstage` | Mapped from GovWin `status` | Yes |
-| 10 | Delivery Model | `govwin_ace_delivery_model` | -- | **Manual** |
-| 11 | Solution Offered | `govwin_ace_solution` | -- | **Manual** |
-| 12 | Partner Primary Need from AWS | `govwin_ace_partner_need` | -- | **Manual** |
+| 10 | Delivery Model | `govwin_ace_delivery_model` |; | **Manual** |
+| 11 | Solution Offered | `govwin_ace_solution` |; | **Manual** |
+| 12 | Partner Primary Need from AWS | `govwin_ace_partner_need` |; | **Manual** |
 
 For the full end-to-end ACE submission workflow, see the [ACE Integration Guide](docs/ace-integration.md).
 
@@ -353,7 +353,7 @@ terraform/
     secrets/                 # Secrets Manager secrets
     monitoring/              # SNS, SQS, CloudWatch alarms (incl. fan-out detector)
 tests/
-  unit/                      # 515+ unit tests (hermetic; lint + mypy + drift-CI gates)
+  unit/                      # 558+ unit tests (hermetic; lint + mypy + drift-CI gates)
   integration/               # LocalStack integration tests (skipped without AWS_ENDPOINT_URL)
   conftest.py                # Shared pytest fixtures
 scripts/
@@ -412,7 +412,7 @@ Main cost drivers: Lambda invocations, DynamoDB reads/writes, CloudWatch logs + 
 
 ```bash
 make install-dev    # Install development dependencies (ruff, mypy, pytest, etc.)
-make test           # Run 515+ unit tests (no Docker required)
+make test           # Run 558+ unit tests (no Docker required)
 make local-up       # Start LocalStack 3.8 (community edition; no auth token needed)
 make local-test     # Run 6 LocalStack integration tests
 make local-down     # Tear down LocalStack
@@ -421,6 +421,15 @@ make format         # Auto-format code with ruff
 make typecheck      # Run mypy type checking
 make package        # Build the ARM64 Lambda layer zip (requires uv-managed requirements.lock)
 make lock           # Regenerate requirements.lock from pyproject.toml via uv
+make audit          # Run pip-audit against the locked dependencies
+```
+
+Operational tooling:
+
+```bash
+make dlq-status                          # Depth across every project DLQ
+make dlq-redrive QUEUE=<dlq-name>        # Redrive a DLQ back into its source queue
+make reconcile GOVWIN_ID=OPP12345        # 4-way state dump (DDB + HubSpot + AWS) for one opportunity
 ```
 
 Optional but recommended:

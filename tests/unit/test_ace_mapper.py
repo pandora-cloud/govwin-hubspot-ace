@@ -307,13 +307,13 @@ class TestExtendedFieldMapping:
                     "firstname": "John",
                     "lastname": "Smith",
                     "email": "john.smith@energy.gov",
-                    # no title or phone -- still valid
+                    # no title or phone; still valid
                 },
             },
             {
                 "id": "3",
                 "properties": {
-                    # missing email -- must be dropped silently
+                    # missing email; must be dropped silently
                     "firstname": "X",
                     "lastname": "Y",
                 },
@@ -413,7 +413,7 @@ class TestExtendedFieldMapping:
         """The MRR fix: AWS expects ExpectedCustomerSpend.Amount to match
         Frequency. We bill monthly, so divide by 12. Without this AWS sees
         12x reality."""
-        deal["properties"]["amount"] = "1200000"  # type: ignore[index] -- $1.2M annual
+        deal["properties"]["amount"] = "1200000"  # type: ignore[index]; $1.2M annual
         payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         spend = payload["Project"]["ExpectedCustomerSpend"][0]
         assert spend["Amount"] == "100000.00"  # 1.2M / 12
@@ -512,7 +512,7 @@ class TestPhoneNormalization:
                     "firstname": "Jane",
                     "lastname": "Doe",
                     "email": "jd@x.gov",
-                    "phone": "ext 555",  # unparseable -- drop only the phone
+                    "phone": "ext 555",  # unparseable; drop only the phone
                 }
             },
         ]

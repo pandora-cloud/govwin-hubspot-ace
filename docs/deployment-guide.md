@@ -311,17 +311,17 @@ By default, only opportunities your BD team explicitly marks in GovWin IQ will s
 3. The opportunity will be picked up on the next scheduled sync
 
 **Alternative filtering modes** (set in `terraform.tfvars`):
-- `govwin_saved_search_id = "12345"` -- sync opps matching a GovWin saved search
-- `govwin_bookmarked_only = true` -- sync only bookmarked opps
-- `govwin_marked_version = ""` -- disable filtering, sync all opps (not recommended for production)
+- `govwin_saved_search_id = "12345"`; sync opps matching a GovWin saved search
+- `govwin_bookmarked_only = true`; sync only bookmarked opps
+- `govwin_marked_version = ""`; disable filtering, sync all opps (not recommended for production)
 
 ## Step 8: Verify Deployment
 
 ### Check HubSpot Setup
 
 The `setup_hubspot` Lambda runs automatically during deployment and creates the custom properties (it does not create a pipeline). Verify in HubSpot:
-- Go to **Settings > Properties > Deal properties** -- you should see `govwin_*` properties
-- Go to **Settings > Objects > Deals > Pipelines** -- the **"Government"** pipeline you prepared in Step 1a is where new deals will appear
+- Go to **Settings > Properties > Deal properties**; you should see `govwin_*` properties
+- Go to **Settings > Objects > Deals > Pipelines**; the **"Government"** pipeline you prepared in Step 1a is where new deals will appear
 
 ### Trigger First Sync
 

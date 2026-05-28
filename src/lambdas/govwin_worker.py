@@ -191,7 +191,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     )
                     failures.append({"itemIdentifier": message_id})
             except json.JSONDecodeError:
-                # Permanent error -- drop without retry, but alert so the
+                # Permanent error; drop without retry, but alert so the
                 # poison-pill is visible to the on-call engineer.
                 logger.warning("worker: invalid JSON in message %s", message_id)
                 _publish_failure_alert(

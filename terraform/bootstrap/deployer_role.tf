@@ -567,7 +567,7 @@ resource "aws_iam_role_policy" "deployer_describe" {
 #      unrelated CMKs in the account (e.g., RDS, S3 keys).
 #
 # Day-to-day data plane operations (Decrypt / GenerateDataKey) are NOT
-# granted here -- those go through the Lambda execution roles directly,
+# granted here; those go through the Lambda execution roles directly,
 # not the deployer.
 resource "aws_iam_role_policy" "deployer_kms" {
   name = "kms-pipeline-cmk"

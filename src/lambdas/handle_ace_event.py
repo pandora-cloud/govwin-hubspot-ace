@@ -110,7 +110,7 @@ def _resolve_or_heal_deal_id(
     if not found_deal_id:
         return None, "genuine-orphan"
     logger.info(
-        "handle_ace_event: self-heal -- backfilling DDB mapping for govwin=%s deal=%s",
+        "handle_ace_event: self-heal; backfilling DDB mapping for govwin=%s deal=%s",
         partner_id,
         found_deal_id,
     )
@@ -135,7 +135,7 @@ def _update_hubspot_stage(
     Returns ``(success, reason)``. ``success`` is True when the deal was
     patched, False when the call was a deliberate no-op (stage label not in
     the configured pipeline, or deal is archived in HubSpot). Archived deals
-    are an expected end-state -- BD has dispositioned the opp in HubSpot --
+    are an expected end-state; BD has dispositioned the opp in HubSpot --
     and must not fire SNS alerts.
     """
     stage_id = hubspot.get_stage_id_by_label(target_label)
@@ -198,7 +198,7 @@ def _handle_opportunity_event(
         state=state, hubspot=hubspot, partner_id=partner_id_str
     )
     if not deal_id:
-        # Self-heal exhausted -- this is a real orphan. Alert once via SNS.
+        # Self-heal exhausted; this is a real orphan. Alert once via SNS.
         config = load_config()
         _publish_orphan_alert(
             config=config,
@@ -334,7 +334,7 @@ def _handle_opportunity_event(
 
 # Domains we trust to identify AWS-side reviewers / PDMs. EngagementInvitation
 # contacts whose email is outside this set are never persisted as HubSpot
-# Contacts -- AWS reviewers occasionally include customer-side contacts in
+# Contacts; AWS reviewers occasionally include customer-side contacts in
 # invitation payloads, and a malicious / mistaken AWS-side actor could supply
 # any string here. Forwarding those into HubSpot via upsert would clobber
 # real customer contact records that share the email.

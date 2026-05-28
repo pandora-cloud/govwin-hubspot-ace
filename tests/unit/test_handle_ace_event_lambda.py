@@ -42,7 +42,7 @@ def hubspot_mock() -> MagicMock:
     # Default: deal is active (not archived). Tests that need the
     # archived path override this on the fixture.
     hs.is_deal_archived.return_value = False
-    # Default: no existing HubSpot contact with the same email -- safe
+    # Default: no existing HubSpot contact with the same email; safe
     # to upsert. Tests that exercise the existing-contact protection
     # override this on the fixture.
     hs.find_contact_by_email.return_value = None
@@ -337,7 +337,7 @@ def test_archived_deal_is_skipped_no_alert(state_mock, ace_mock, hubspot_mock, c
     # pre-flight (which short-circuits the cosell_id/status patch) and once
     # by _update_hubspot_stage. Both must see the archived state.
     assert hubspot_mock.is_deal_archived.call_count >= 1
-    # Nothing higher than INFO should fire -- this is an expected end-state.
+    # Nothing higher than INFO should fire; this is an expected end-state.
     high_severity = [r for r in caplog.records if r.levelno >= 30]
     assert not high_severity, (
         f"unexpected WARNING/ERROR for archived deal: {[r.message for r in high_severity]}"
@@ -447,7 +447,7 @@ def test_hyperscaler_contact_skips_overwrite_of_real_existing_contact(
         handle_ace_event.handler(event, context=None)
     # No upsert: real contact protected.
     hubspot_mock.upsert_contact.assert_not_called()
-    # But association still made -- visibility for the AWS reviewer linkage.
+    # But association still made; visibility for the AWS reviewer linkage.
     assert hubspot_mock.associate_objects.call_count >= 1
 
 

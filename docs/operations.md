@@ -26,6 +26,27 @@ aws cloudwatch describe-alarms \
   --output table
 ```
 
+### Audit alerts on integration-owned properties
+
+The webhook receiver SNS-alerts on changes to `govwin_aws_cosell_id`
+that come from any source other than this integration. Two subject
+lines distinguish the cases:
+
+- **`AWS Co-sell ID hand-edited on HubSpot deal <id>`**: the change
+  came from `CRM_UI`, `API`, `WORKFLOWS`, `IMPORT`, or another
+  non-integration source. Triage by running
+  `make reconcile GOVWIN_ID=<opp>` and reverting the property if the
+  edit was unintentional.
+- **`AWS Co-sell ID written by foreign HubSpot integration (deal <id>, app <source_id>)`**:
+  the change came from an INTEGRATION source whose `sourceId` did
+  NOT match `var.hubspot_webhook_app_id`. Another HubSpot integration
+  installed on the same portal wrote the property. Identify the app
+  at `https://app.hubspot.com/integrations/<portal>/installed-apps`
+  and decide whether its access should be revoked.
+
+Either alert means the next deal save will trip the `update_in_ace`
+self-heal verify and refuse the AWS write.
+
 ## DLQs and queues
 
 Three operational SQS DLQs hold messages that have exhausted retries:
@@ -48,6 +69,41 @@ aws sqs start-message-move-task \
   --source-arn arn:aws:sqs:us-east-1:ACCOUNT:govwin-hubspot-prod-ace-submit-dlq \
   --destination-arn arn:aws:sqs:us-east-1:ACCOUNT:govwin-hubspot-prod-ace-submit
 ```
+
+### DLQ status and replay via Makefile
+
+The DLQ commands above are wrapped by `make` targets that handle the
+queue-url lookup and ARN composition:
+
+```bash
+make dlq-status                           # depth for every project DLQ
+make dlq-redrive QUEUE=<dlq-name>         # start a redrive task
+
+# Override the AWS profile / project prefix / region:
+make dlq-status PROFILE=ops PREFIX=acme-cosell-prod REGION=us-east-1
+```
+
+`dlq-redrive` issues `aws sqs start-message-move-task` from the
+source DLQ back into its parent queue; the source queue retries the
+messages just like a fresh delivery. Make sure the underlying poison
+condition is fixed before redriving, otherwise the messages cycle
+back into the DLQ on the same code path.
+
+### 4-way state reconciliation
+
+When the self-heal mismatch alert fires, or the operator suspects DDB
+state is out of sync with HubSpot or AWS, dump the 4-way view for a
+single GovWin opportunity:
+
+```bash
+make reconcile GOVWIN_ID=OPP12345
+make reconcile GOVWIN_ID=OPP12345 CATALOG=AWS   # production catalog
+```
+
+The script (`scripts/reconcile.py`) reads from DynamoDB, HubSpot
+deal-properties, AWS `GetOpportunity`, and AWS `ListOpportunities`
+(matching `PartnerOpportunityIdentifier`) and prints each side's
+view plus a drift summary. Read-only; safe to run against production.
 
 ## Stuck deal recovery
 

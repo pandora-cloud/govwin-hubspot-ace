@@ -260,7 +260,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 # For INTEGRATION-source events we additionally cross-check sourceId
 # against ``HUBSPOT_INTEGRATION_APP_ID`` so an INTEGRATION event from a
 # DIFFERENT app installed on the same HubSpot portal still triggers an
-# alert -- another integration writing to govwin_aws_cosell_id is
+# alert; another integration writing to govwin_aws_cosell_id is
 # operator-relevant even if it isn't a hand-edit.
 _INTEGRATION_CHANGE_SOURCES: frozenset[str] = frozenset({"INTEGRATION", "INTEGRATIONS_PLATFORM"})
 
@@ -273,7 +273,7 @@ def _process_audit_events(events: list[Any], *, config: Any) -> int:
     via config, and the alert is purely advisory. A failure to publish
     is logged but does not fail the webhook response: HubSpot would
     retry the delivery, the integration source filter would re-evaluate
-    on retry, and we'd alert twice instead of zero times -- acceptable.
+    on retry, and we'd alert twice instead of zero times; acceptable.
     """
     if not events:
         return 0

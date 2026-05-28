@@ -306,7 +306,7 @@ def test_audit_property_alert_failure_does_not_break_webhook(
     ):
         response = receiver.handler(_api_event("POST", body, headers), context=None)
     assert response["statusCode"] == 200
-    # audit counter does NOT increment on publish failure -- we only
+    # audit counter does NOT increment on publish failure; we only
     # count successful alerts.
     body_json = json.loads(response["body"])
     assert body_json["audit"] == 0

@@ -52,7 +52,7 @@ class TokenBucketRateLimiter:
     def acquire(self, count: int = 1) -> float:
         """Check if request(s) can proceed. Returns wait time in seconds.
 
-        This method has NO side effects -- it does not record the request.
+        This method has NO side effects; it does not record the request.
         Call ``record_call()`` separately after the request completes.
         """
         self._prune_old_calls()

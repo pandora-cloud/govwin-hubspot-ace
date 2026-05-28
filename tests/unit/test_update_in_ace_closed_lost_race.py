@@ -107,10 +107,10 @@ def test_get_deal_failure_falls_through(hubspot_mock: MagicMock) -> None:
         "Project": {},
     }
     hubspot_mock.get_deal.side_effect = RuntimeError("HubSpot 5xx")
-    # Should not raise -- the function logs and returns.
+    # Should not raise; the function logs and returns.
     _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
     # Stage remains; AWS will reject this UpdateOpportunity which surfaces
-    # via the existing permanent-error SNS alert path -- preferred over
+    # via the existing permanent-error SNS alert path; preferred over
     # silently writing an incomplete payload.
     assert payload["LifeCycle"] == {"Stage": "Closed Lost"}
 

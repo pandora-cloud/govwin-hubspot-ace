@@ -164,7 +164,7 @@ MAX_MARKETPLACE_OFFERS_PER_OPPORTUNITY = 1
 
 # Sentinel value of CompetitorName that AWS requires to be paired with a
 # free-text OtherCompetitorNames. Exported so mapper, validator, and TS
-# enums import the same literal -- a typo here was a real source of
+# enums import the same literal; a typo here was a real source of
 # enum-validation drift in early-2026 iterations.
 COMPETITOR_OTHER_SENTINEL: str = "*Other"
 
@@ -713,7 +713,7 @@ def _is_implausible_phone(digits: str) -> bool:
     """Reject obviously-garbage phone digit strings."""
     if not digits:
         return True
-    # All-same-digit (e.g. "0000000000", "1111111111") -- never legitimate.
+    # All-same-digit (e.g. "0000000000", "1111111111"); never legitimate.
     if len(set(digits)) == 1:
         return True
     return False
@@ -730,7 +730,7 @@ def _normalize_phone(value: str | None) -> str | None:
         before digit extraction so a US number with extension does not
         produce a 14-digit garbage E.164.
       * Reject phones whose digits are all the same character (``0000...``,
-        ``1111...``) -- never legitimate, often planted by form-spam.
+        ``1111...``); never legitimate, often planted by form-spam.
       * Require US 10-digit area codes to start ``[2-9]`` (NANP rule).
       * Cap international numbers to 8-15 digits inclusive of country
         code; require the leading digit to be ``[1-9]``.
@@ -799,7 +799,7 @@ def _customer_contacts(
     misclassified contacts ("subscriber", "other", blank stage) are
     dropped so PII never reaches AWS reviewers without a CRM-level
     consent signal. Hyperscaler-Contact records (created by the
-    handle_ace_event Lambda) are also filtered out -- they're AWS-side
+    handle_ace_event Lambda) are also filtered out; they're AWS-side
     contacts, not customer-side.
     """
     out: list[dict[str, Any]] = []
@@ -1179,7 +1179,7 @@ def map_hubspot_deal_to_ace_create_payload(
 
 def map_update_form_to_ace_payload(
     *,
-    form: Any,  # UpdateFormRequest -- typed Any to avoid src.models import cycle
+    form: Any,  # UpdateFormRequest; typed Any to avoid src.models import cycle
     current: dict[str, Any],
     config: AppConfig,
 ) -> dict[str, Any]:
@@ -1192,15 +1192,15 @@ def map_update_form_to_ace_payload(
     overlay only the form fields the BD operator actually set.
 
     The mapper does NOT touch:
-      * ``PartnerOpportunityIdentifier`` -- the synthetic GovWin id stays
+      * ``PartnerOpportunityIdentifier``; the synthetic GovWin id stays
         bound to this opportunity for its full lifecycle. AWS enforces
         uniqueness; the Lambda also rejects any attempt to change it.
-      * ``Origin``, ``OpportunityTeam``, ``Tags`` -- not present in the
+      * ``Origin``, ``OpportunityTeam``, ``Tags``; not present in the
         UpdateOpportunity input shape (verified against boto3 service
         model 2026-05-27). AWS hides them on update entirely.
       * ``LifeCycle.ReviewStatus`` / ``LifeCycle.ReviewComments`` /
-        ``LifeCycle.ReviewStatusReason`` -- AWS reviewer owns these.
-      * AWS Products / Solutions -- managed via separate
+        ``LifeCycle.ReviewStatusReason``; AWS reviewer owns these.
+      * AWS Products / Solutions; managed via separate
         ``AssociateOpportunity`` / ``DisassociateOpportunity`` calls by the
         caller, not by ``UpdateOpportunity``.
     """
@@ -1308,7 +1308,7 @@ def map_update_form_to_ace_payload(
     if form.lifecycle_target_close_date:
         life_cycle["TargetCloseDate"] = form.lifecycle_target_close_date[:10]
     # AWS reviewer-owned fields: echo the current values back unchanged.
-    # UpdateOpportunity has PUT semantics -- popping these would clear them
+    # UpdateOpportunity has PUT semantics; popping these would clear them
     # on the AWS side (verified: an update on O13753317 with these popped
     # wiped ReviewStatus="Submitted" to null, 2026-05-27). The fields ARE
     # in the boto3 Update input shape; AWS accepts the same value we just
@@ -1316,7 +1316,7 @@ def map_update_form_to_ace_payload(
     payload["LifeCycle"] = life_cycle
 
     # Marketing block. Mirror the create-path "Source=Marketing Activity or
-    # omit the block" rule -- AWS rejects companion fields when Source is None.
+    # omit the block" rule; AWS rejects companion fields when Source is None.
     if form.marketing is not None:
         source = (form.marketing.source or "").strip()
         if source == "Marketing Activity":

@@ -36,7 +36,7 @@ def test_matching_catalog_returns_response(client: ACEClient) -> None:
 
 def test_missing_catalog_field_is_accepted(client: ACEClient) -> None:
     """An AWS response without the Catalog field (older API revision)
-    must NOT trigger the mismatch error -- it's not a cross-catalog
+    must NOT trigger the mismatch error; it's not a cross-catalog
     bleed, just incomplete data."""
     client._client.get_opportunity.return_value = {  # type: ignore[attr-defined]
         "Id": "O1",

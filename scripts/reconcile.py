@@ -94,7 +94,7 @@ def main() -> int:
                 deal.get("properties", {}),
             )
         except Exception as exc:  # noqa: BLE001 -- diagnostic; report and continue
-            _dump(f"2. HubSpot deal {deal_id} -- LOOKUP FAILED", str(exc))
+            _dump(f"2. HubSpot deal {deal_id}; LOOKUP FAILED", str(exc))
     else:
         _dump("2. HubSpot deal", "(no hubspot_deal_id in DDB mapping; skipped)")
 
@@ -115,11 +115,11 @@ def main() -> int:
             }
             _dump(f"3. AWS PC GetOpportunity({ace_id})", slim)
         except ACEAPIError as exc:
-            _dump(f"3. AWS PC GetOpportunity({ace_id}) -- FAILED", f"{exc.code}: {exc}")
+            _dump(f"3. AWS PC GetOpportunity({ace_id}); FAILED", f"{exc.code}: {exc}")
     else:
         _dump("3. AWS PC GetOpportunity", "(no ace_opportunity_id in DDB mapping; skipped)")
 
-    # 4. ListOpportunities filter -- catches collision attempts where a
+    # 4. ListOpportunities filter; catches collision attempts where a
     # foreign opp shares the same PartnerOpportunityIdentifier as our
     # govwin id.
     try:
@@ -135,10 +135,10 @@ def main() -> int:
         ]
         _dump(
             f"4. AWS PC ListOpportunities (PartnerOpportunityIdentifier == {govwin_id})",
-            candidates or "(none -- expected unless prior submissions collided)",
+            candidates or "(none; expected unless prior submissions collided)",
         )
     except ACEAPIError as exc:
-        _dump("4. AWS PC ListOpportunities -- FAILED", f"{exc.code}: {exc}")
+        _dump("4. AWS PC ListOpportunities; FAILED", f"{exc.code}: {exc}")
 
     # Drift summary
     print(f"\n{'=' * 70}")

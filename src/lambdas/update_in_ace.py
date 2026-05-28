@@ -96,7 +96,7 @@ def _ensure_closed_lost_pair_consistency(
             life_cycle["ClosedLostReason"] = str(deal_reason)
             payload["LifeCycle"] = life_cycle
             logger.info(
-                "update_in_ace: closed-lost pair self-heal -- backfilled "
+                "update_in_ace: closed-lost pair self-heal; backfilled "
                 "ClosedLostReason from deal=%s",
                 deal_id,
             )
@@ -118,7 +118,7 @@ def _ensure_closed_lost_pair_consistency(
             life_cycle["Stage"] = "Closed Lost"
             payload["LifeCycle"] = life_cycle
             logger.info(
-                "update_in_ace: closed-lost pair self-heal -- backfilled "
+                "update_in_ace: closed-lost pair self-heal; backfilled "
                 "Stage=Closed Lost from deal=%s",
                 deal_id,
             )
@@ -126,7 +126,7 @@ def _ensure_closed_lost_pair_consistency(
             life_cycle.pop("ClosedLostReason", None)
             payload["LifeCycle"] = life_cycle
             logger.info(
-                "update_in_ace: closed-lost pair self-heal -- dropped orphan "
+                "update_in_ace: closed-lost pair self-heal; dropped orphan "
                 "ClosedLostReason because deal Stage=%r",
                 deal_stage,
             )
@@ -150,7 +150,7 @@ def _handle_amount(payload: dict[str, Any], value: Any, partner_company_name: st
     # contract value, AWS expects ExpectedCustomerSpend.Amount paired
     # with Frequency=Monthly. Divide by 12. Without this, an amount
     # update via webhook would write a value 12x the create-path
-    # baseline -- a real divergence between the two paths.
+    # baseline; a real divergence between the two paths.
     monthly = total / MRR_MONTHS_PER_YEAR
     project["ExpectedCustomerSpend"] = [
         {
@@ -171,7 +171,7 @@ def _handle_closedate(payload: dict[str, Any], value: Any, _: str) -> bool:
     # TargetCloseDate is strictly YYYY-MM-DD. Normalize.
     raw = str(value).strip()
     normalized: str | None = None
-    # Require >=10 digits to count as an epoch -- anything shorter
+    # Require >=10 digits to count as an epoch; anything shorter
     # (e.g. "20261231" with no separators) is rejected as malformed
     # rather than misread as some 1970-era epoch.
     if raw.isdigit() and len(raw) >= 10:
@@ -716,7 +716,7 @@ def _process_event(
     govwin_id = _resolve_govwin_id(state, hubspot, deal_id)
     if not govwin_id:
         logger.warning(
-            "update_in_ace: skipping deal=%s prop=%s -- deal has no govwin_opp_id "
+            "update_in_ace: skipping deal=%s prop=%s; deal has no govwin_opp_id "
             "and no reverse-index entry; the deal is not part of this integration",
             deal_id,
             prop,
@@ -742,7 +742,7 @@ def _process_event(
         existing_deal_id = str(mapping.get("hubspot_deal_id") or "")
         if existing_deal_id and existing_deal_id != deal_id:
             logger.warning(
-                "update_in_ace: self-heal refused -- govwin=%s mapping is already "
+                "update_in_ace: self-heal refused; govwin=%s mapping is already "
                 "bound to a different deal=%s (incoming deal=%s); refusing to "
                 "rebind via the BD-editable govwin_aws_cosell_id property",
                 govwin_id,
@@ -790,7 +790,7 @@ def _process_event(
         verify_partner_id = str(verify.get("PartnerOpportunityIdentifier") or "")
         if verify_partner_id != govwin_id:
             logger.warning(
-                "update_in_ace: self-heal mismatch -- deal carries opp=%s but its "
+                "update_in_ace: self-heal mismatch; deal carries opp=%s but its "
                 "PartnerOpportunityIdentifier=%r does not equal expected govwin=%s; "
                 "refusing to mutate",
                 ace_id,
@@ -813,7 +813,7 @@ def _process_event(
                 logger.exception("update_in_ace: SNS publish for self-heal mismatch failed")
             return {"status": "skipped", "reason": "self-heal verification failed"}
         logger.info(
-            "update_in_ace: self-heal -- backfilling ace_opportunity_id=%s "
+            "update_in_ace: self-heal; backfilling ace_opportunity_id=%s "
             "for govwin=%s from HubSpot deal property (verified)",
             ace_id,
             govwin_id,

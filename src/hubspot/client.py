@@ -186,7 +186,7 @@ class HubSpotClient:
         if response.status_code >= 400:
             # Promote 4xx responses to WARNING for visibility, but redact
             # field values that HubSpot sometimes echoes (deal description,
-            # company name, etc.) -- those can include PII or CUI we don't
+            # company name, etc.); those can include PII or CUI we don't
             # want copied to CloudWatch. Keep the error / message / property-
             # name keys which describe WHY it failed, drop the propertyValue
             # which can echo the deal payload verbatim.
@@ -243,7 +243,7 @@ class HubSpotClient:
         sets, descriptions, and labels stay in sync with code.
 
         Without the PATCH path, adding a new dropdown option in code never
-        propagated -- HubSpot returned 409 on every redeploy and we silently
+        propagated; HubSpot returned 409 on every redeploy and we silently
         kept the old option set. The mapper would then accept values the
         BD dropdown didn't expose, causing confusing "value not in enum"
         errors only after a CreateOpportunity round-trip.
@@ -272,7 +272,7 @@ class HubSpotClient:
         # Property already exists. PATCH to sync options / label / description.
         # HubSpot's PATCH endpoint accepts the same body shape minus 'name'
         # (name is in the URL) and 'type' (immutable). hasUniqueValue is
-        # also not patchable -- HubSpot rejects attempts to flip it.
+        # also not patchable; HubSpot rejects attempts to flip it.
         update_payload = {
             k: v for k, v in payload.items() if k not in {"name", "type", "hasUniqueValue"}
         }
@@ -305,7 +305,7 @@ class HubSpotClient:
                 update_payload["options"] = merged
             except HubSpotAPIError as e:
                 # If we can't read existing options, fall back to
-                # replacing -- accepts the BD-option-loss risk for the
+                # replacing; accepts the BD-option-loss risk for the
                 # rare case where the GET fails but the PATCH might
                 # succeed. Emit at WARN so the operator sees it.
                 logger.warning(

@@ -2,11 +2,11 @@
 
 Two endpoints, no mutations:
 
-* ``GET /ui-extension/solutions`` -- returns the partner's catalog of
+* ``GET /ui-extension/solutions``; returns the partner's catalog of
   active Solutions. Calls ``partnercentral:ListSolutions`` once per
   TTL window per catalog. Used by SolutionPicker in the form.
 
-* ``GET /ui-extension/aws-products`` -- returns the AWS Products catalog
+* ``GET /ui-extension/aws-products``; returns the AWS Products catalog
   bundled in ``resources/aws_products.json``. Static file read; no
   AWS API calls.
 

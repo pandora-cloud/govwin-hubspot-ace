@@ -76,7 +76,7 @@ interface Props {
   // Update-mode pre-fill: the last known state of the ACE classification
   // fields, sourced from HubSpot deal properties the card already loaded.
   // Without these the form opens with create-mode defaults and BD sees
-  // empty pickers for Delivery Model / Partner Need / etc. -- they'd
+  // empty pickers for Delivery Model / Partner Need / etc.; they'd
   // either re-pick (risk of accidental change) or skip (and submit nulls,
   // which the mapper treats as "no change" but is confusing UX).
   defaultPartnerNeed?: string[];
@@ -210,7 +210,7 @@ export const SubmitForm: React.FC<Props> = ({
     nationalSecurity: defaultNationalSecurity ?? "",
     // Infer "Not provided yet" in update mode when there's no account id
     // on the deal. The original toggle state isn't persisted to HubSpot
-    // -- only the account id is -- so an empty id in update mode means
+    //; only the account id is; so an empty id in update mode means
     // BD either skipped via the toggle at create time OR the customer
     // hasn't shared an account id yet. Either way the right default is
     // checkbox ON so the form reflects "still don't have one" rather
@@ -242,7 +242,7 @@ export const SubmitForm: React.FC<Props> = ({
 
   const validate = (): FieldError[] => {
     const errs: FieldError[] = [];
-    // In update mode the synthetic-id builder is hidden -- the bound
+    // In update mode the synthetic-id builder is hidden; the bound
     // govwin_opp_id (PartnerOpportunityIdentifier) is immutable per AWS
     // and we never need to revalidate it. Only check the id machinery
     // when creating a new opportunity.
@@ -250,7 +250,7 @@ export const SubmitForm: React.FC<Props> = ({
       if (state.fromGovWin && !state.govwinOppId.trim()) {
         errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
       }
-      // Non-GovWin deals get an auto-minted UUID at submit time -- no
+      // Non-GovWin deals get an auto-minted UUID at submit time; no
       // user input to validate. The dealname (validated below) is the
       // human-readable label AWS reviewers see.
     }
@@ -406,7 +406,7 @@ export const SubmitForm: React.FC<Props> = ({
       }
       if (response.status === 409) {
         // Two distinct 409 cases the backend distinguishes via body.status:
-        //   "already_submitted": dedup -- this govwin id already has an ACE
+        //   "already_submitted": dedup; this govwin id already has an ACE
         //     opportunity. body.ace_opportunity_id is set.
         //   "replay_detected": the request was retried inside the 10-min
         //     signature window (transparent hubspot.fetch retry on a transient

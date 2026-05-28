@@ -122,19 +122,19 @@ The Sandbox catalog mirrors production validation but is isolated. Run the sandb
 | `Project.ExpectedCustomerSpend[].Amount` | `amount` | `oppValue` x 1000 | Auto |
 | `Project.CustomerBusinessProblem` | `description` | `description` | Auto (sanitized) |
 | `Project.CustomerUseCase` | `description` | `description` | Auto (same as business problem in v2; track for split) |
-| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` | -- | **Manual** |
+| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` |; | **Manual** |
 | `LifeCycle.TargetCloseDate` | `closedate` | `pAwardDateTo` | Auto |
-| `LifeCycle.NextSteps` | -- | -- | Reserved for future use |
+| `LifeCycle.NextSteps` |; |; | Reserved for future use |
 | `Customer.Account.CompanyName` | Company `name` | `govEntity.title` | Auto via association |
 | `Customer.Account.Industry` | `govwin_industry` | NAICS mapped to AWS | Auto |
 | `Customer.Account.Address.CountryCode` | `govwin_country` | `country` | Auto (defaulted to US) |
 | `OpportunityType` | `govwin_ace_opportunity_type` | Default `Net New Business` | Auto |
-| `Origin` | -- | -- | Auto (`Partner Referral`) |
-| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` | -- | **Manual** |
+| `Origin` |; |; | Auto (`Partner Referral`) |
+| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` |; | **Manual** |
 | `PartnerOpportunityIdentifier` | `govwin_opp_id` | GovWin opp ID | Auto |
-| Solution association | `govwin_ace_solution_id` | -- | **Manual** (defaulted to `ace_default_solution_id`) |
-| `Catalog` | -- | -- | From `ACE_CATALOG` env (Sandbox or AWS) |
-| `ClientToken` | -- | -- | UUID, persisted in DynamoDB for idempotency |
+| Solution association | `govwin_ace_solution_id` |; | **Manual** (defaulted to `ace_default_solution_id`) |
+| `Catalog` |; |; | From `ACE_CATALOG` env (Sandbox or AWS) |
+| `ClientToken` |; |; | UUID, persisted in DynamoDB for idempotency |
 
 ## Idempotency notes
 

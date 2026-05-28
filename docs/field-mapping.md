@@ -62,12 +62,12 @@ These properties feed `src/ace/mapper.py`, which builds the `CreateOpportunity` 
 | `OpportunityType` | `govwin_ace_opportunity_type` | Default: `Net New Business` | Yes |
 | `Project.ExpectedCustomerSpend[].Amount` | `amount` | `oppValue` x 1000 | Yes |
 | `PartnerOpportunityIdentifier` | `govwin_opp_id` | GovWin opp ID | Yes |
-| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` | -- | **MANUAL ENTRY REQUIRED** |
-| Solution association (`AssociateOpportunity`) | `govwin_ace_solution_id` (override) or `ace_default_solution_id` | -- | **MANUAL ENTRY REQUIRED** (defaulted) |
-| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` | -- | **MANUAL ENTRY REQUIRED** |
-| `Catalog` | -- | `ACE_CATALOG` env (`Sandbox` or `AWS`) | Auto |
-| `ClientToken` | -- | UUID, persisted in DynamoDB for idempotency | Auto |
-| `Origin` | -- | Always `Partner Referral` | Auto |
+| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` |; | **MANUAL ENTRY REQUIRED** |
+| Solution association (`AssociateOpportunity`) | `govwin_ace_solution_id` (override) or `ace_default_solution_id` |; | **MANUAL ENTRY REQUIRED** (defaulted) |
+| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` |; | **MANUAL ENTRY REQUIRED** |
+| `Catalog` |; | `ACE_CATALOG` env (`Sandbox` or `AWS`) | Auto |
+| `ClientToken` |; | UUID, persisted in DynamoDB for idempotency | Auto |
+| `Origin` |; | Always `Partner Referral` | Auto |
 
 The three **MANUAL ENTRY REQUIRED** fields cannot be auto-populated from GovWin data. They must come from the BD team in HubSpot before the deal moves to the **Submit to AWS** stage. The mapper validates the partner-need and delivery-model values against the AWS-published enum and rejects deals with invalid values before any API call.
 
@@ -120,7 +120,7 @@ The integration uses an existing HubSpot pipeline named **"Government"** rather 
 | `parentHierarchy[0].title` | `govwin_parent_agency` | string | Parent department |
 | `links.webHref` | `govwin_entity_url` | string | GovWin entity page |
 | `type` | `govwin_entity_type` | enumeration | federal, state_local |
-| -- | `industry` (built-in) | string | Set to `GOVERNMENT_ADMINISTRATION` (HubSpot enum) |
+|; | `industry` (built-in) | string | Set to `GOVERNMENT_ADMINISTRATION` (HubSpot enum) |
 
 ## GovWin Contacts -> HubSpot Contacts
 

@@ -344,7 +344,7 @@ def _process_event(
         )
 
     # Step 3b: AssociateOpportunity for any BD-tagged AWS products. Idempotent
-    # via ConflictException -- a redelivered SQS message won't re-associate.
+    # via ConflictException; a redelivered SQS message won't re-associate.
     aws_products = aws_products_for_deal(deal)
     if aws_products and not mapping.get("ace_task_id"):
         product_failures: list[str] = []
@@ -365,7 +365,7 @@ def _process_event(
                     continue  # already associated
                 # Real failure (typo'd identifier, ResourceNotFoundException,
                 # ValidationException). Don't fail the whole submission
-                # because one product is invalid -- but DO surface to BD
+                # because one product is invalid; but DO surface to BD
                 # via SNS so the bad value gets fixed in HubSpot.
                 logger.warning(
                     "ace.associate awsproduct=%s failed: %s",
@@ -375,7 +375,7 @@ def _process_event(
                 product_failures.append(f"{product_id}: {exc.code}")
         if product_failures:
             # Intentionally NOT publishing the BD-facing SNS alert here.
-            # CreateOpportunity already succeeded -- the opp exists in AWS,
+            # CreateOpportunity already succeeded; the opp exists in AWS,
             # the deal is advancing through the pipeline, and only a subset
             # of the product associations were rejected. Reusing the
             # "submission rejected" alert template here is misleading
