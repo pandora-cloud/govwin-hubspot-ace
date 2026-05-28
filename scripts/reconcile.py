@@ -121,17 +121,25 @@ def main() -> int:
 
     # 4. ListOpportunities filter; catches collision attempts where a
     # foreign opp shares the same PartnerOpportunityIdentifier as our
-    # govwin id.
+    # govwin id. Note: boto3's list_opportunities does not support
+    # filtering by PartnerOpportunityIdentifier server-side, so we
+    # paginate the partner's catalog and filter client-side. For a
+    # large catalog this is slow; the diagnostic is intended for
+    # operator-driven triage of a single mismatch, not a routine sweep.
     try:
-        listing = ace.list_opportunities(
-            CustomerCompanyName=None,
-            Identifier=None,
-            LastModifiedDate=None,
-        )
+        all_opps: list[dict[str, Any]] = []
+        next_token: str | None = None
+        while True:
+            params: dict[str, Any] = {"MaxResults": 100}
+            if next_token:
+                params["NextToken"] = next_token
+            page = ace.list_opportunities(**params)
+            all_opps.extend(page.get("OpportunitySummaries") or [])
+            next_token = page.get("NextToken")
+            if not next_token or len(all_opps) >= 1000:
+                break
         candidates = [
-            o
-            for o in (listing.get("OpportunitySummaries") or [])
-            if o.get("PartnerOpportunityIdentifier") == govwin_id
+            o for o in all_opps if o.get("PartnerOpportunityIdentifier") == govwin_id
         ]
         _dump(
             f"4. AWS PC ListOpportunities (PartnerOpportunityIdentifier == {govwin_id})",

@@ -78,8 +78,13 @@ dlq-redrive: ## Start an SQS redrive task for one DLQ (QUEUE=<dlq-name> required
 	echo "Track progress: aws sqs list-message-move-tasks --source-arn $$src_arn --profile $(PROFILE) --region $(REGION)"
 
 reconcile: ## Walk DDB + HubSpot + AWS for one govwin id (GOVWIN_ID=... required)
-	@if [ -z "$(GOVWIN_ID)" ]; then echo "usage: make reconcile GOVWIN_ID=OPP12345 [CATALOG=Sandbox|AWS]"; exit 1; fi
-	@PYTHONPATH=. .venv/bin/python scripts/reconcile.py $(if $(CATALOG),--catalog $(CATALOG),) $(GOVWIN_ID)
+	@if [ -z "$(GOVWIN_ID)" ]; then echo "usage: make reconcile GOVWIN_ID=OPP12345 [CATALOG=Sandbox|AWS] [PREFIX=...]"; exit 1; fi
+	@PYTHONPATH=. \
+		SYNC_STATE_TABLE=$(PREFIX)-sync-state \
+		ENTITY_MAPPINGS_TABLE=$(PREFIX)-entity-mappings \
+		HUBSPOT_SECRET_NAME=$(PREFIX)/hubspot \
+		HUBSPOT_WEBHOOK_SECRET_NAME=$(PREFIX)/hubspot-webhook \
+		.venv/bin/python scripts/reconcile.py $(if $(CATALOG),--catalog $(CATALOG),) $(GOVWIN_ID)
 
 clean: ## Remove build artifacts
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache
