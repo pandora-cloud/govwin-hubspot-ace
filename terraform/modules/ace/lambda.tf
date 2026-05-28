@@ -116,28 +116,6 @@ resource "aws_lambda_function" "handle_ace_event" {
   }
 }
 
-resource "aws_lambda_function" "setup_hubspot_webhooks" {
-  function_name                  = "${var.name_prefix}-setup-hubspot-webhooks"
-  role                           = var.lambda_role_arn
-  handler                        = "src.lambdas.setup_hubspot_webhooks.handler"
-  runtime                        = "python3.12"
-  architectures                  = ["arm64"]
-  timeout                        = 60
-  memory_size                    = 128
-  reserved_concurrent_executions = 1
-  filename                       = var.lambda_source_zip
-  source_code_hash               = var.lambda_source_hash
-  layers                         = [var.lambda_layer_arn]
-
-  tracing_config {
-    mode = "Active"
-  }
-
-  environment {
-    variables = local.ace_env
-  }
-}
-
 # CloudWatch log groups with explicit retention.
 resource "aws_cloudwatch_log_group" "ace_logs" {
   for_each = toset([
@@ -145,7 +123,6 @@ resource "aws_cloudwatch_log_group" "ace_logs" {
     aws_lambda_function.submit_to_ace.function_name,
     aws_lambda_function.update_in_ace.function_name,
     aws_lambda_function.handle_ace_event.function_name,
-    aws_lambda_function.setup_hubspot_webhooks.function_name,
   ])
   name              = "/aws/lambda/${each.value}"
   retention_in_days = var.log_retention_days

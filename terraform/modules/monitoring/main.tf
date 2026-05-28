@@ -13,6 +13,19 @@ variable "kms_key_arn" {
   description = "Pipeline CMK ARN from the kms module. Encrypts the SNS notifications topic and the catch-all DLQ messages."
   type        = string
 }
+variable "update_in_ace_fanout_threshold" {
+  description = <<-EOT
+    update_in_ace invocations-per-minute that, when sustained over 15
+    minutes, fires the fan-out alarm. Default 30/min: comfortably above
+    Pandora's BD-load envelope (~3-5/min peak) and well below the AWS
+    Partner Central 60/min write quota ceiling. Raise for deployments
+    that legitimately run at higher steady-state load; set to 0 to
+    disable the alarm. See docs/operations.md "Scaling and webhook
+    fan-out" for the upgrade path when this fires.
+  EOT
+  type        = number
+  default     = 30
+}
 # Lambda + DLQ + Scheduler names are computed from name_prefix to keep the
 # monitoring module self-contained. Adding a Lambda elsewhere in the project
 # requires bumping the local list below; that's a deliberate trade-off
@@ -28,7 +41,6 @@ locals {
     "${var.name_prefix}-submit-to-ace",
     "${var.name_prefix}-update-in-ace",
     "${var.name_prefix}-handle-ace-event",
-    "${var.name_prefix}-setup-hubspot-webhooks",
     "${var.name_prefix}-ui-ext-reads",
     "${var.name_prefix}-ui-ext-writes",
   ]
@@ -170,6 +182,51 @@ resource "aws_cloudwatch_metric_alarm" "webhook_5xx" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.sync_notifications.arn]
+}
+
+# update_in_ace fan-out signal.
+#
+# Each HubSpot deal-property webhook fires one update_in_ace invocation
+# and one AWS Partner Central UpdateOpportunity call. AWS limits writes
+# to 1/sec per partner; sustained high invocation rates on this Lambda
+# indicate either a bulk operation (acceptable but worth knowing) or
+# fan-out from multiple properties changing on the same deal (which
+# could be coalesced; see docs/operations.md "Scaling and webhook
+# fan-out" for the upgrade path).
+#
+# Threshold rationale: Pandora's BD-load envelope (5-50 ops/day) yields
+# ~3-5 invocations/min peak burst. The AWS quota ceiling is 60/min
+# (1/sec sustained). 30/min averaged over 15 minutes (3 evaluation
+# periods of 5 min each) is well above normal Pandora load AND well
+# below the AWS hard ceiling, so operators get a "you're approaching
+# saturation" signal with time to react rather than a "you've already
+# overrun" surprise.
+#
+# Adjust ``var.update_in_ace_fanout_threshold`` if the deployment runs
+# at a steady-state load that legitimately exceeds 30/min. Setting it
+# to 0 disables the alarm entirely.
+resource "aws_cloudwatch_metric_alarm" "update_in_ace_fanout" {
+  count               = var.update_in_ace_fanout_threshold > 0 ? 1 : 0
+  alarm_name          = "${var.name_prefix}-update-in-ace-high-rate"
+  alarm_description   = <<-EOT
+    update_in_ace invocations exceeded the fan-out threshold for 15
+    minutes. Common causes: (a) BD ran a bulk recategorize across many
+    deals -- benign, queue drains in minutes; (b) one deal's webhooks
+    are fanning out across many properties per save -- coalescing the
+    update path would eliminate this. See docs/operations.md
+    "Scaling and webhook fan-out" for the diagnosis runbook.
+  EOT
+  namespace           = "AWS/Lambda"
+  metric_name         = "Invocations"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = var.update_in_ace_fanout_threshold * 5 # threshold is per-minute; period is 5 min
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  dimensions          = { FunctionName = "${var.name_prefix}-update-in-ace" }
+  alarm_actions       = [aws_sns_topic.sync_notifications.arn]
+  ok_actions          = [aws_sns_topic.sync_notifications.arn]
 }
 
 output "sns_topic_arn" {

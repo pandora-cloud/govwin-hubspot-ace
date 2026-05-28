@@ -20,11 +20,6 @@ def test_import_setup_hubspot():
     assert hasattr(mod, "handler")
 
 
-def test_import_setup_hubspot_webhooks():
-    mod = importlib.import_module("src.lambdas.setup_hubspot_webhooks")
-    assert hasattr(mod, "handler")
-
-
 def test_import_hubspot_webhook_receiver():
     mod = importlib.import_module("src.lambdas.hubspot_webhook_receiver")
     assert hasattr(mod, "handler")
@@ -42,4 +37,14 @@ def test_import_update_in_ace():
 
 def test_import_handle_ace_event():
     mod = importlib.import_module("src.lambdas.handle_ace_event")
+    assert hasattr(mod, "handler")
+
+
+def test_import_ui_extension_reads():
+    mod = importlib.import_module("src.lambdas.ui_extension_reads")
+    assert hasattr(mod, "handler")
+
+
+def test_import_ui_extension_writes():
+    mod = importlib.import_module("src.lambdas.ui_extension_writes")
     assert hasattr(mod, "handler")

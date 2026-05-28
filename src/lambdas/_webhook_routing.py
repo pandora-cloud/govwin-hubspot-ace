@@ -1,10 +1,13 @@
 """Single source of truth for HubSpot webhook property routing.
 
-Both the deploy-time webhook subscription registrar
-(``setup_hubspot_webhooks.py``) and the request-time receiver Lambda
-(``hubspot_webhook_receiver.py``) import these constants. Adding a new
-property in one place without the other was a recurring drift source in
-v2.0; this module pins the contract.
+The deploy-time subscription set is declared by the HubSpot Dev Platform
+project at ``hubspot-app/src/app/webhooks/webhooks-hsmeta.json`` and
+deployed via ``hs project upload``. The request-time receiver Lambda
+(``hubspot_webhook_receiver.py``) imports the constants here to route
+inbound events between the submit / update / audit SQS queues. Adding
+a new property requires both: declare it in ``webhooks-hsmeta.json``
+AND list it in the matching set here, otherwise the receiver drops
+the event with no route match.
 """
 
 from __future__ import annotations
