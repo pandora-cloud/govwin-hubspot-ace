@@ -55,11 +55,14 @@ EventBridge Scheduler (rate(1 hour))
 | `govwin_orchestrator` | Discovery, OAuth refresh, SQS fan-out, cursor advance | EventBridge Scheduler | 10 min | 512 MB |
 | `govwin_worker` | Per-batch fetch + HubSpot sync, partial-batch failure reporting | SQS govwin-sync queue | 5 min | 512 MB |
 | `setup_hubspot` | One-time: create custom properties and pipeline | Manual / deploy | 2 min | 128 MB |
-| `hubspot_webhook_receiver` | Validate `X-HubSpot-Signature-v3`, route events to SQS | API Gateway HTTP API | 5s | 256 MB |
+| `hubspot_webhook_receiver` | Validate `X-HubSpot-Signature-v3`, route events to submit / update / audit | API Gateway HTTP API | 5s | 256 MB |
 | `submit_to_ace` | Three-call ACE submission (Create + Associate + StartEngagement) with resume-from-step idempotency | SQS submit queue | 5 min | 512 MB |
 | `update_in_ace` | UpdateOpportunity with optimistic locking on `LastModifiedDate` | SQS update queue | 2 min | 256 MB |
 | `handle_ace_event` | Mirror EventBridge events from `aws.partnercentral-selling` back to HubSpot deal stage | EventBridge | 1 min | 256 MB |
-| `setup_hubspot_webhooks` | One-time: register webhook subscriptions on the HubSpot dev-platform app | Manual / deploy | 1 min | 128 MB |
+| `ui_extension_reads` | GET `/ui-extension/solutions`, GET `/ui-extension/aws-products` for the Submit-to-AWS card | API Gateway HTTP API | 10s | 192 MB |
+| `ui_extension_writes` | POST `/ui-extension/submit`, POST `/ui-extension/update` for the Submit-to-AWS card | API Gateway HTTP API | 28s | 256 MB |
+
+HubSpot webhook subscriptions live in the Dev Platform project at `hubspot-app/src/app/webhooks/webhooks-hsmeta.json` and are deployed by `hs project upload`. There is no longer a webhook-registration Lambda; the manifest is the source of truth.
 
 ## DynamoDB Tables
 
@@ -85,7 +88,7 @@ Maps GovWin entities to HubSpot objects, plus ACE-side state.
 | `ACE#{govwin_id}` | `MAPPING` | AWS opportunity id, ClientToken, engagement task id, last-modified date for optimistic locking |
 | `EVT#{event_id}` | `SEEN` | EventBridge dedup record, 24-hour TTL |
 
-Both tables use a 180-day TTL on per-opportunity and entity-mapping records (the `SYNC_CURSOR` row has none). DynamoDB encryption-at-rest with AWS-managed keys is enabled by default.
+Both tables use a 180-day TTL on per-opportunity and entity-mapping records (the `SYNC_CURSOR` row has none). DynamoDB encryption-at-rest is configured with a customer-managed CMK from `module.kms`; the same key encrypts the SNS notifications topic and every SQS queue (operational + DLQs) so every project-owned at-rest data store shows up under one auditable keyId in CloudTrail. See [SECURITY.md "Known design decisions"](../SECURITY.md#known-design-decisions) for the scope conditions on the key policy.
 
 ## Rate Limiting
 

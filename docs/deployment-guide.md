@@ -399,7 +399,7 @@ The `id` is what you want; it looks like `3590200042`. Pick the stage that BD wi
 ace_trigger_stages = "3590200042,3590200043"
 ```
 
-If you skip this step, the webhook receiver will still receive HubSpot events but will never recognize a stage match, and no ACE submission will ever fire. Symptom: `setup_hubspot_webhooks` succeeds, deals appear in HubSpot, but nothing arrives in AWS Partner Central.
+If you skip this step, the webhook receiver will still receive HubSpot events but will never recognize a stage match, and no ACE submission will ever fire. Symptom: `hs project upload` succeeds and deals appear in HubSpot, but nothing arrives in AWS Partner Central.
 
 ### 9c. Set the v2 Terraform variables
 
@@ -414,30 +414,14 @@ Then re-run `terraform apply`. The output `hubspot_webhook_target_url` is the pu
 
 ### 9d. Activate the webhook subscriptions
 
-You have two equivalent paths. **Option A is recommended** because it keeps the developer-platform manifest the source of truth, can be re-run idempotently, and does not require a manual file edit.
-
-#### Option A: invoke the `setup_hubspot_webhooks` Lambda (recommended)
+Paste the `hubspot_webhook_target_url` Terraform output value into `hubspot-app/src/app/webhooks/webhooks-hsmeta.json` (replacing the `<api-id>` placeholder), confirm every subscription has `"active": true`, and deploy:
 
 ```bash
-aws lambda invoke \
-  --function-name govwin-hubspot-prod-setup-hubspot-webhooks \
-  --region us-east-1 \
-  --payload '{"action": "activate"}' \
-  --cli-binary-format raw-in-base64-out \
-  /tmp/wh.json && cat /tmp/wh.json
-```
-
-The Lambda reads the `hubspot_webhook_target_url` Terraform output, calls the HubSpot developer-platform API to set every subscription's `targetUrl` and flip `active=true`, and returns a summary. Re-running it is idempotent: subscriptions already active stay active.
-
-#### Option B: edit `webhooks-hsmeta.json` and re-upload
-
-Paste the `hubspot_webhook_target_url` value into `hubspot-app/src/app/webhooks/webhooks-hsmeta.json` (replacing the `<api-id>` placeholder), flip every `"active": false` to `"active": true`, and re-run:
-
-```bash
+cd hubspot-app
 hs project upload
 ```
 
-HubSpot now delivers deal property changes to the API Gateway. The receiver Lambda validates the signature, routes events to the appropriate SQS queue, and the `submit_to_ace` / `update_in_ace` Lambdas drain them.
+The Dev Platform 2025.2+ manifest is the source of truth for subscription state. `hs project upload` is idempotent: subscriptions already active stay active. HubSpot starts delivering deal property changes to the API Gateway URL; the receiver Lambda validates the signature, routes events to the submit / update / audit destinations, and the `submit_to_ace` / `update_in_ace` Lambdas drain them. The `govwin_aws_cosell_id` audit subscription fires an SNS alert when the property changes from any source other than the integration token (e.g., a BD hand-edit).
 
 ### 9e. Smoke test
 
@@ -491,8 +475,8 @@ This will delete all AWS resources. HubSpot custom properties and deals created 
 | `submit_to_ace` returns `ConflictException` | Optimistic-locking failure on `UpdateOpportunity` (concurrent edits) | The client's tenacity retry refetches `LastModifiedDate` and retries; if it persists past 5 attempts the message lands in the DLQ. Inspect DynamoDB `ACE#{govwin_id}` to clear stale state if needed. |
 | `submit_to_ace` returns `ResourceNotFoundException` immediately after `CreateOpportunity` | Eventual consistency on the Partner Central side: the `Id` returned by `CreateOpportunity` is not yet readable by `AssociateOpportunity` / `StartEngagementFromOpportunityTask` | The client retries up to 5 times with exponential backoff. If still failing, AWS may be experiencing a regional issue; check the AWS Health dashboard. |
 | `submit_to_ace` returns `ThrottlingException` | Burst above the 1 write/sec quota or 10K writes/24h | The token bucket and tenacity retry handle short bursts. For sustained throttling, reduce SQS `batch_size` or stagger BD's stage transitions. |
-| `setup_hubspot_webhooks` Lambda returns 401 | Stale `hubspot_webhook_client_secret` in Secrets Manager (rotated in HubSpot but not Terraform) | Update `hubspot_webhook_client_secret` in `terraform.tfvars`, `terraform apply`, then re-invoke. |
-| Webhook delivers but `submit_to_ace` never invoked | SQS event-source mapping disabled, or `webhooks-hsmeta.json` still has `active=false` and Option B was used in step 9d | Check the SQS queue's "ApproximateNumberOfMessages" metric. If zero, the webhook receiver isn't enqueueing — verify in CloudWatch logs. If non-zero with no Lambda invocations, re-enable the event-source mapping. If using Option B, re-run `hs project upload` after flipping `active=true`. |
+| `hs project upload` is rejected as unauthenticated | `hs account auth` token expired | Re-run `hs account auth` against the HubSpot account that owns the developer project, then re-upload. |
+| Webhook delivers but `submit_to_ace` never invoked | SQS event-source mapping disabled, or `webhooks-hsmeta.json` still has `active=false` | Check the SQS queue's "ApproximateNumberOfMessages" metric. If zero, the webhook receiver isn't enqueueing — verify in CloudWatch logs. If non-zero with no Lambda invocations, re-enable the event-source mapping. If subscriptions are `active=false`, flip them in the manifest and re-run `hs project upload`. |
 
 ### Checking logs
 

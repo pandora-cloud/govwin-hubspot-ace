@@ -93,6 +93,10 @@ The integration auto-populates the majority of mandatory fields required by AWS 
 
 For the full end-to-end ACE submission workflow, see the [ACE Integration Guide](docs/ace-integration.md).
 
+## Before you install
+
+Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It covers the stakeholders to engage, the eleven decisions to make BEFORE `terraform apply` (including the AWS catalog choice and the pipeline-stage IDs that drive ACE submission), the compliance posture, and the cost expectations. The deployment steps below assume those decisions are made.
+
 ## Prerequisites
 
 - [ ] **Deltek GovWin IQ** subscription with WSAPI V3 access (Client ID, Client Secret, username, password)
@@ -324,28 +328,32 @@ src/
     dedup.py                 # Change detection via updateDate comparison
     orchestrator.py          # High-level sync coordination
   lambdas/
-    govwin_orchestrator.py    # EventBridge Scheduler -> discovery + token refresh + SQS fan-out
-    govwin_worker.py          # SQS -> per-batch fetch + HubSpot sync (replaces v1 fetch + sync chain)
-    setup_hubspot.py          # One-time property/pipeline creation
-    setup_hubspot_webhooks.py # One-time webhook subscription registration
-    hubspot_webhook_receiver.py # API Gateway -> validate signature -> SQS routing
-    submit_to_ace.py          # SQS -> three-call ACE submission with resume-from-step idempotency
-    update_in_ace.py          # SQS -> UpdateOpportunity with optimistic locking
-    handle_ace_event.py       # EventBridge -> mirror AWS state changes to HubSpot
+    govwin_orchestrator.py      # EventBridge Scheduler -> discovery + token refresh + SQS fan-out
+    govwin_worker.py            # SQS -> per-batch fetch + HubSpot sync (replaces v1 fetch + sync chain)
+    setup_hubspot.py            # One-time property/pipeline creation
+    hubspot_webhook_receiver.py # API Gateway -> validate signature -> route submit / update / audit
+    submit_to_ace.py            # SQS -> three-call ACE submission with resume-from-step idempotency
+    update_in_ace.py            # SQS -> UpdateOpportunity with optimistic locking
+    handle_ace_event.py         # EventBridge -> mirror AWS state changes to HubSpot
+    _ui_extension_common.py     # Shared signature / CORS / replay gates for the UI Extension Lambdas
+    ui_extension_reads.py       # GET /solutions, GET /aws-products (tight IAM)
+    ui_extension_writes.py      # POST /submit, POST /update (full write-path IAM, no Create)
+  alerts.py                    # Shared SNS publisher with body redaction
 terraform/
   main.tf                    # Root module wiring
   variables.tf               # All configurable inputs
   outputs.tf                 # Terraform outputs (ARNs, URLs)
   provider.tf                # AWS provider configuration
   modules/
+    kms/                     # Cross-cutting customer-managed CMK consumed by ace, dynamodb, monitoring
     lambda/                  # Shared Lambda execution role + dependency layer + source archive
     govwin_sync/             # GovWin orchestrator + worker, SQS fan-out, EventBridge Scheduler
-    ace/                     # ACE submission half (webhook receiver, submit/update, EventBridge handler)
-    dynamodb/                # DynamoDB tables
+    ace/                     # ACE submission half: webhook receiver, submit/update, EventBridge handler, UI Extension reads + writes Lambdas
+    dynamodb/                # DynamoDB tables (CMK-encrypted)
     secrets/                 # Secrets Manager secrets
-    monitoring/              # SNS, SQS, CloudWatch
+    monitoring/              # SNS, SQS, CloudWatch alarms (incl. fan-out detector)
 tests/
-  unit/                      # 92 unit tests (17 test files, hermetic)
+  unit/                      # 515+ unit tests (hermetic; lint + mypy + drift-CI gates)
   integration/               # LocalStack integration tests (skipped without AWS_ENDPOINT_URL)
   conftest.py                # Shared pytest fixtures
 scripts/
@@ -365,13 +373,29 @@ docs/
 
 ## Documentation
 
-- [Architecture Overview](docs/architecture.md) - System design, sync flow, DynamoDB schema, rate limiting strategy
-- [Field Mapping Reference](docs/field-mapping.md) - All 38 mapped properties, NAICS-to-industry codes, pipeline stages, associations
+**Planning and install**
+
+- [Pre-install planning and decisions](docs/pre-install-checklist.md) - Stakeholder map, decisions to make BEFORE `terraform apply`, compliance posture, what cannot be changed later
 - [Deployment Guide](docs/deployment-guide.md) - Full deployment walkthrough, credential setup, troubleshooting
 - [ACE Integration Guide](docs/ace-integration.md) - End-to-end workflow for submitting deals to AWS Partner Central
-- [Testing in your AWS account](docs/testing-in-your-account.md) - The full test pyramid (unit -> static -> LocalStack -> validate -> dry-run -> sandbox smoke -> production smoke), the 11-scenario smoke matrix, MFA / Sandbox-Solution gotchas, and the criteria for flipping to the AWS catalog
-- [Operations](docs/operations.md) - CloudWatch alarms, stuck-deal recovery, fault-injection, DR
+
+**Reference**
+
+- [Architecture Overview](docs/architecture.md) - System design, sync flow, DynamoDB schema, rate limiting strategy
+- [Field Mapping Reference](docs/field-mapping.md) - All mapped properties, NAICS-to-industry codes, pipeline stages, associations
+- [Cost model](docs/cost-model.md) - Per-component breakdown at small / medium / large deployment sizes; cost monitoring runbook
+
+**Validate, test, operate**
+
+- [Testing in your AWS account](docs/testing-in-your-account.md) - The full test pyramid (unit -> static -> LocalStack -> validate -> dry-run -> sandbox smoke -> production smoke), the 11-scenario smoke matrix, MFA / Sandbox-Solution gotchas, criteria for flipping to the AWS catalog
+- [Operations](docs/operations.md) - CloudWatch alarms, stuck-deal recovery, fault-injection, scaling + fan-out detection, disaster recovery
 - [Phase 4 runbook](docs/phase4-runbook.md) - Sandbox bring-up + production cutover
+
+**Subsystem runbooks** in `docs/operations/`
+
+- [`kms-relocation-runbook.md`](docs/operations/kms-relocation-runbook.md) - State-move guide for the pipeline CMK consolidation
+- [`ui-extension-split-runbook.md`](docs/operations/ui-extension-split-runbook.md) - Lambda split deploy walkthrough
+- [`ui-extension-deployment.md`](docs/operations/ui-extension-deployment.md) - HubSpot UI Extension card deployment
 
 ## Security
 
@@ -379,18 +403,24 @@ docs/
 - GovWin OAuth tokens are cached in Secrets Manager and refreshed automatically before expiry. The refresh flow avoids the 5-attempt lockout on the password grant.
 - Lambda execution roles follow least-privilege principles - each function can only access the specific Secrets Manager keys and DynamoDB tables it needs.
 - `terraform.tfvars` and `.env` are gitignored. Secret detection runs in the GitLab CI pipeline to catch accidental credential commits.
-- DynamoDB tables use encryption at rest (AWS-managed keys). Secrets Manager encrypts all stored values with KMS.
+- DynamoDB tables, SNS topic, and every SQS queue encrypt at rest under a single customer-managed CMK in `module.kms`. CloudTrail records every key use under the project's own keyId rather than the unauditable `alias/aws/<service>` defaults. Secrets Manager encrypts all stored values with KMS.
 - No VPC is required since the integration only calls external APIs, reducing attack surface and eliminating NAT Gateway costs.
 
 ## Estimated Cost
 
-Running this integration on AWS costs approximately **$6/month** at moderate volume (around 1,000 opportunities). The main cost drivers are Lambda invocations, DynamoDB reads/writes, and Secrets Manager API calls. EventBridge Scheduler, SNS, and SQS all fall within their free tiers at this scale. Lambda runs on ARM64 (Graviton2) for a 20% cost reduction over x86.
+| Deployment size | Opportunities synced | BD ops / day | Monthly cost |
+|---|---|---|---|
+| Small | ~1,000 | 5-50 | **~$6** |
+| Medium | ~10,000 | 100-200 | **~$20** |
+| Large | ~100,000 | 500-1,000 | **~$80** |
+
+Main cost drivers: Lambda invocations, DynamoDB reads/writes, CloudWatch logs + alarms, KMS key use, Secrets Manager. EventBridge Scheduler, SNS, and SQS fall within their free tiers at small scale. Lambda runs on ARM64 (Graviton2) for a 20% cost reduction over x86. Full per-component breakdown and cost monitoring runbook in [docs/cost-model.md](docs/cost-model.md).
 
 ## Development
 
 ```bash
 make install-dev    # Install development dependencies (ruff, mypy, pytest, etc.)
-make test           # Run 293 unit tests (no Docker required)
+make test           # Run 515+ unit tests (no Docker required)
 make local-up       # Start LocalStack 3.8 (community edition; no auth token needed)
 make local-test     # Run 6 LocalStack integration tests
 make local-down     # Tear down LocalStack

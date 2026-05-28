@@ -17,7 +17,26 @@ Future entries are generated automatically by [release-please](https://github.co
 - `scripts/generate_security_pgp.sh` + `.well-known/security/` for encrypted vulnerability disclosure.
 - ACE-specific troubleshooting table in the deployment guide (signature mismatch, ConflictException, ValidationException, ResourceNotFoundException, ThrottlingException).
 - Step 9b.i in the deployment guide: how to retrieve numeric HubSpot pipeline-stage IDs for `ace_trigger_stages`.
-- Option A in step 9d: invoke the `setup_hubspot_webhooks` Lambda to activate webhook subscriptions instead of editing `webhooks-hsmeta.json` by hand.
+- `src/alerts.py`: shared SNS publish helper with HubSpot 4xx body redaction (strips `propertyValue` / `localizedErrorMessage` before sending).
+- `module.kms`: cross-cutting customer-managed CMK. SNS topic, both DynamoDB tables, and every SQS queue (operational + DLQs) now encrypt at rest under one auditable keyId.
+- `ui_extension_reads` + `ui_extension_writes` Lambdas (replacing the prior monolithic `submit_form_to_ace`). Reads role is minimal (`ListSolutions` + signing-secret read only); writes role excludes `CreateOpportunity` and `StartEngagementFromOpportunityTask` (those run only from the trusted shared role behind the SQS pipeline). Apply runbook in `docs/operations/ui-extension-split-runbook.md`.
+- `AUDIT_ONLY_PROPERTIES` set in `src/lambdas/_webhook_routing.py` + audit-event handling in `hubspot_webhook_receiver`. Hand-edits of `govwin_aws_cosell_id` from non-integration sources fire a real-time SNS alert.
+- `update_in_ace` self-heal verify: refuses to write to AWS when the deal's recovered ACE id resolves to a foreign `PartnerOpportunityIdentifier`, publishes a mismatch alert.
+- `update_in_ace` Closed-Lost race fix: when a `LifeCycle.Stage = Closed Lost` change arrives without its companion `ClosedLostReason` (or vice versa), the Lambda reads the missing companion from the HubSpot deal so AWS gets both fields in one `UpdateOpportunity`.
+- `update_in_ace._apply_delta` refactored into a dispatch table; new handlers for `govwin_ace_lifecycle_stage`, `govwin_ace_closed_lost_reason`, `govwin_ace_solution_id`, `govwin_ace_partner_need`, `govwin_ace_delivery_model`, `govwin_ace_sales_activities`, `govwin_ace_national_security`, `govwin_ace_opportunity_type`, `govwin_industry`, plus the AWS Products diff handler.
+- `submit_form_to_ace` (now `ui_extension_writes`) `/update` endpoint: synchronous `GetOpportunity` + `UpdateOpportunity` + Associate/Disassociate from the Submit-to-AWS card. Replay protection now distinguishes `status=replay_detected` from `status=already_submitted`.
+- CORS allowlist for the OPTIONS preflight reflection (`https://app.hubspot.com`, `app-na2`, `app-eu1`/`eu2`, `app-jp1`, `app-ap1`, sandbox variants). Unrecognized Origins fall back to the NA1 default rather than echoing the request value.
+- CloudWatch alarm `<prefix>-update-in-ace-high-rate` for sustained fan-out detection. Threshold via `var.update_in_ace_fanout_threshold` (default 30/min averaged over 15 min, set to 0 to disable). New "Scaling and webhook fan-out" runbook in `docs/operations.md`.
+- `docs/pre-install-checklist.md`: stakeholder map, eleven decisions to make BEFORE `terraform apply`, compliance posture, what cannot be changed later.
+- `docs/cost-model.md`: per-component cost breakdown across small / medium / large deployment sizes plus the cost monitoring runbook.
+- `docs/operations/kms-relocation-runbook.md` and `docs/operations/ui-extension-split-runbook.md`: state-move + apply walkthroughs for the two CMK / Lambda topology changes.
+
+### Changed
+- HubSpot subscription registration is now manifest-driven (`hubspot-app/src/app/webhooks/webhooks-hsmeta.json` deployed by `hs project upload`). The `setup_hubspot_webhooks` Lambda (legacy private-app REST endpoint) is retired.
+- Disaster-recovery runbook step 5 in `docs/operations.md` replaced "re-run `setup_hubspot_webhooks`" with "`hs project upload`".
+- README + deployment-guide step 9d: simplified to one webhook activation path (manifest + `hs project upload`); the prior "Option A / Option B" choice between the legacy Lambda and the manifest is gone.
+- `monitoring` module's `monitored_lambda_names` list now includes `ui-ext-reads` and `ui-ext-writes`; the legacy `setup-hubspot-webhooks` entry is removed.
+- Bootstrap deployer role gains `kms:CreateGrant` / `RetireGrant` / `ListGrants` (tag-scoped to `Application = <project>-<environment>`) so the CMK migration applies cleanly without manual deployer-policy work.
 
 ### Changed
 - LocalStack pinned to `localstack/localstack:3.8` (community edition). The `:latest` tag began requiring a paid auth token in mid-2026.
@@ -33,6 +52,15 @@ Future entries are generated automatically by [release-please](https://github.co
 ### Fixed
 - `src/ace/client.py` previously used `config.aws.region` for the partnercentral-selling boto3 client, which would 404 on any deployment configured to a region other than us-east-1. Now hard-coded to `us-east-1` via `make_client`.
 - `tests/integration/test_localstack_state.py` constructed `AppConfig` without the required `ace=` argument; pre-existing bug, surfaced when LocalStack was finally runnable.
+- `submit_to_ace` consolidates the dual writeback path into a single outer handler that records the actual AWS error string (trimmed to 480 chars) on permanent failure, rather than the prior "see pc@..." placeholder.
+- `handle_ace_event` writes `govwin_ace_lifecycle_stage` only when the value actually changes, preventing the AWS-event -> HubSpot-PATCH -> AWS-event feedback loop.
+- `handle_ace_event` writes `govwin_aws_cosell_products` (AWS-side mirror) so the Submit-to-AWS card can render a "Products syncing..." pill without burning a Partner Central read quota call.
+- `_handle_aws_products_diff` collects non-Conflict failures into a `failures` list and surfaces them so partial-product-association failures are visible rather than silent.
+- Multi-value `_apply_delta` handlers (`govwin_ace_partner_need`, `govwin_ace_delivery_model`, `govwin_ace_sales_activities`, `govwin_ace_national_security`, `govwin_ace_opportunity_type`) now return `False` on empty / garbage / invalid-enum values so the DDB mapping is not marked "updated" on a no-op.
+- `govwin_industry` handler now routes through `mapper._normalize_industry` so `OtherIndustry` is cleared when the new industry maps to a closed-enum value.
+- Webhook signature 4xx responses gate detailed mismatch context behind `LOG_LEVEL=DEBUG` so a CloudWatch ingest leak does not give an attacker a precise oracle.
+- HubSpot 4xx error bodies and SNS alert bodies pass through `_redact_hubspot_error_body` before logging / publishing, stripping `propertyValue` and `localizedErrorMessage` echoes.
+- `scripts/verify_fips.py` honors the `_NO_FIPS_ENDPOINT` exception set in `src/aws_clients.py` (currently `partnercentral-selling`, which has no FIPS variant published) and reports SKIP rather than FAIL.
 
 ## [v2.1.0] - 2026-04-30
 

@@ -1,5 +1,13 @@
 # Submit-to-AWS UI Extension: deployment and verification
 
+> **Historical reference (pre-split topology).** This runbook documents
+> the original single-Lambda deployment of the Submit-to-AWS card. As
+> of 2026-05-28 the Lambda is split into `ui_extension_reads` +
+> `ui_extension_writes`; for current installs and re-deploys see
+> [`ui-extension-split-runbook.md`](ui-extension-split-runbook.md).
+> The HubSpot project upload steps (Section 4 onward) and the property
+> option-set seeding (Section 2) remain accurate.
+
 End-to-end procedure for shipping the Submit-to-AWS HubSpot CRM card
 plus its backend Lambda + API Gateway routes. Roughly 20 minutes of
 hands-on work the first time; subsequent deploys are mostly `terraform apply`
