@@ -144,6 +144,11 @@ DEFAULT_SALES_ACTIVITIES = ["Initialized discussions with customer"]
 # source of truth.
 # Source: https://docs.aws.amazon.com/partner-central/latest/selling-api/quotas.html
 MAX_AWS_PRODUCTS_PER_OPPORTUNITY = 20
+
+# HubSpot stores deal.amount as the annual / full-contract value;
+# AWS Partner Central's ExpectedCustomerSpend.Amount is paired with
+# Frequency=Monthly. Divide by this constant to convert.
+MRR_MONTHS_PER_YEAR = 12
 MAX_SOLUTIONS_PER_OPPORTUNITY = 10
 MAX_MARKETPLACE_OFFERS_PER_OPPORTUNITY = 1
 
@@ -1003,7 +1008,7 @@ def _project_block(
             # carry amount=0 (no value disclosed yet); skip the spend entry
             # entirely rather than emit a value AWS will reject.
             if total > 0:
-                monthly = total / 12.0
+                monthly = total / MRR_MONTHS_PER_YEAR
                 project["ExpectedCustomerSpend"] = [
                     {
                         "Amount": f"{monthly:.2f}",
@@ -1253,7 +1258,7 @@ def map_update_form_to_ace_payload(
             project["CustomerBusinessProblem"] = text
     if form.amount is not None and form.amount > 0:
         # Same MRR convention as create-path: HubSpot annual / 12 = monthly.
-        monthly = float(form.amount) / 12.0
+        monthly = float(form.amount) / MRR_MONTHS_PER_YEAR
         project["ExpectedCustomerSpend"] = [
             {
                 "Amount": f"{monthly:.2f}",

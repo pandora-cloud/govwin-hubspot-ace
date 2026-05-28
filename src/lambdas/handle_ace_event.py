@@ -26,19 +26,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 
-# AWS review status -> HubSpot stage label. Keys MUST match the exact
-# casing of the boto3 enum values for LifeCycle.ReviewStatus:
-# ['Pending Submission', 'Submitted', 'In review', 'Approved', 'Rejected',
-# 'Action Required']. Note 'In review' uses a lowercase 'r'.
-#
-# Label values are resolved at runtime via get_stage_id_by_label so
-# deployments can rename pipeline stages without touching code; only the
-# labels listed here need to exist in the configured pipeline. Statuses
-# not in the map are intentionally ignored (e.g. 'Pending Submission'
-# fires on every CreateOpportunity but doesn't move the deal stage).
 # AWS Partner Central opportunity-id format (O followed by digits / dashes).
 # Defense-in-depth on the EventBridge -> HubSpot write-back path.
 _AWS_OPP_ID_PATTERN = re.compile(r"^O[A-Z0-9-]{1,99}$")
+
+
+# Keys must match boto3 LifeCycle.ReviewStatus casing exactly; in
+# particular 'In review' is lowercase-r. Statuses not in the map are
+# intentionally ignored ('Pending Submission' fires on every Create but
+# doesn't move the deal stage).
 
 
 _DEALSTAGE_BY_AWS_REVIEW: dict[str, str] = {

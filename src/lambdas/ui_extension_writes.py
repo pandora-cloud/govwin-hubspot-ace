@@ -68,52 +68,152 @@ _ALLOWED_PATHS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 
-def _validate_enums(req: SubmitFormRequest) -> list[FormFieldError]:
-    """Re-check that every closed-enum field matches the AWS source of truth.
+def _enum_error(field: str, value: str) -> FormFieldError:
+    return FormFieldError(field=field, message=f"value {value!r} is not in the AWS-published enum")
 
-    The form is supposed to enforce this client-side via the generated
-    enums file, but we re-check on the server so a bypassed client cannot
-    produce a payload AWS will reject (or worse, accept silently into
-    the wrong field).
+
+def _validate_enum(
+    errors: list[FormFieldError],
+    field: str,
+    value: str | None,
+    allowed: set[str] | frozenset[str],
+) -> None:
+    """Append an error if ``value`` is set and not in ``allowed``.
+
+    Empty / None values are passes (the field is optional or untouched).
     """
-    errors: list[FormFieldError] = []
+    if value is None or value == "":
+        return
+    if value not in allowed:
+        errors.append(_enum_error(field, value))
 
-    def _check(field: str, value: str | None, allowed: set[str] | frozenset[str]) -> None:
-        if value is None or value == "":
+
+def _validate_enum_list(
+    errors: list[FormFieldError],
+    field: str,
+    values: list[str],
+    allowed: set[str] | frozenset[str],
+) -> None:
+    """Append one error if any value in ``values`` is not in ``allowed``."""
+    for v in values:
+        if v not in allowed:
+            errors.append(_enum_error(field, v))
             return
-        if value not in allowed:
-            errors.append(
-                FormFieldError(
-                    field=field, message=f"value {value!r} is not in the AWS-published enum"
-                )
-            )
 
-    def _check_list(field: str, values: list[str], allowed: set[str] | frozenset[str]) -> None:
-        for v in values:
-            if v not in allowed:
-                errors.append(
-                    FormFieldError(
-                        field=field,
-                        message=f"value {v!r} is not in the AWS-published enum",
-                    )
-                )
-                return
 
-    translated_needs = [ace_mapper._normalize_partner_need(n) for n in req.ace_partner_need]
-    _check_list("ace_partner_need", translated_needs, ace_mapper.ALLOWED_PRIMARY_NEEDS)
-    _check_list("ace_delivery_model", req.ace_delivery_model, ace_mapper.ALLOWED_DELIVERY_MODELS)
-    _check_list(
-        "ace_sales_activities", req.ace_sales_activities, ace_mapper.ALLOWED_SALES_ACTIVITIES
+def _validate_shared_form(
+    req: Any,
+    *,
+    errors: list[FormFieldError],
+    closedate_field: str,
+    closedate_value: str | None,
+) -> None:
+    """Validate fields present on BOTH SubmitFormRequest and UpdateFormRequest.
+
+    Each route uses a different name for the close date (submit:
+    ``closedate``, update: ``lifecycle_target_close_date``); both
+    accept the same epoch-ms format. The caller passes the route-specific
+    name + value so the error rolls up under the right field path.
+    """
+    if req.ace_partner_need:
+        translated = [ace_mapper._normalize_partner_need(n) for n in req.ace_partner_need]
+        _validate_enum_list(
+            errors, "ace_partner_need", translated, ace_mapper.ALLOWED_PRIMARY_NEEDS
+        )
+    if req.ace_delivery_model:
+        _validate_enum_list(
+            errors, "ace_delivery_model", req.ace_delivery_model, ace_mapper.ALLOWED_DELIVERY_MODELS
+        )
+    if req.ace_sales_activities:
+        _validate_enum_list(
+            errors,
+            "ace_sales_activities",
+            req.ace_sales_activities,
+            ace_mapper.ALLOWED_SALES_ACTIVITIES,
+        )
+    _validate_enum(errors, "ace_use_case", req.ace_use_case, ace_mapper.ALLOWED_CUSTOMER_USE_CASES)
+    _validate_enum(
+        errors,
+        "ace_opportunity_type",
+        req.ace_opportunity_type,
+        ace_mapper.ALLOWED_OPPORTUNITY_TYPES,
     )
-    _check("ace_use_case", req.ace_use_case, ace_mapper.ALLOWED_CUSTOMER_USE_CASES)
-    _check("ace_opportunity_type", req.ace_opportunity_type, ace_mapper.ALLOWED_OPPORTUNITY_TYPES)
-    _check("ace_competitor_name", req.ace_competitor_name, ace_mapper.ALLOWED_COMPETITORS)
-    _check(
+    _validate_enum(
+        errors, "ace_competitor_name", req.ace_competitor_name, ace_mapper.ALLOWED_COMPETITORS
+    )
+    _validate_enum(
+        errors,
         "ace_national_security",
         req.ace_national_security,
         ace_mapper.ALLOWED_NATIONAL_SECURITY,
     )
 
+    if req.marketing is not None:
+        _validate_enum(
+            errors, "marketing.source", req.marketing.source, ace_mapper.ALLOWED_MARKETING_SOURCES
+        )
+        _validate_enum(
+            errors,
+            "marketing.aws_funding_used",
+            req.marketing.aws_funding_used,
+            ace_mapper.ALLOWED_FUNDING_USED,
+        )
+        if req.marketing.channels:
+            _validate_enum_list(
+                errors,
+                "marketing.channels",
+                req.marketing.channels,
+                ace_mapper.ALLOWED_MARKETING_CHANNELS,
+            )
+
+    if req.ace_aws_account_id and not is_valid_aws_account_id(req.ace_aws_account_id):
+        errors.append(
+            FormFieldError(field="ace_aws_account_id", message="AWS account id must be 12 digits")
+        )
+    if req.description is not None and 0 < len(req.description) < 20:
+        errors.append(
+            FormFieldError(
+                field="description",
+                message="Description must be at least 20 characters when provided",
+            )
+        )
+    if closedate_value:
+        normalized = _closedate_to_epoch_ms(closedate_value)
+        if not isinstance(normalized, int):
+            errors.append(
+                FormFieldError(
+                    field=closedate_field,
+                    message="Close date must be YYYY-MM-DD or an epoch number",
+                )
+            )
+    if len(req.ace_aws_products) > ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY:
+        errors.append(
+            FormFieldError(
+                field="ace_aws_products",
+                message=(
+                    "AWS Products limit is "
+                    f"{ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY} per opportunity"
+                ),
+            )
+        )
+
+
+def _validate_enums(req: SubmitFormRequest) -> list[FormFieldError]:
+    """Re-check every closed-enum field on a SubmitFormRequest.
+
+    The form is supposed to enforce these client-side via the generated
+    enums file, but we re-check on the server so a bypassed client
+    cannot produce a payload AWS will reject (or accept silently into
+    the wrong field).
+
+    Submit-only rules: ``ace_partner_need`` and ``ace_delivery_model``
+    are required; ``ace_national_security=Yes`` requires
+    ``govwin_industry=Government``.
+    """
+    errors: list[FormFieldError] = []
+    _validate_shared_form(
+        req, errors=errors, closedate_field="closedate", closedate_value=req.closedate
+    )
     if (req.ace_national_security or "").strip() == "Yes" and (
         req.govwin_industry or ""
     ).strip().lower() not in {"government", ""}:
@@ -123,42 +223,9 @@ def _validate_enums(req: SubmitFormRequest) -> list[FormFieldError]:
                 message="NationalSecurity=Yes is only valid when Industry=Government",
             )
         )
-
-    if req.marketing is not None:
-        _check("marketing.source", req.marketing.source, ace_mapper.ALLOWED_MARKETING_SOURCES)
-        _check(
-            "marketing.aws_funding_used",
-            req.marketing.aws_funding_used,
-            ace_mapper.ALLOWED_FUNDING_USED,
-        )
-        if req.marketing.channels:
-            _check_list(
-                "marketing.channels", req.marketing.channels, ace_mapper.ALLOWED_MARKETING_CHANNELS
-            )
-
-    if req.ace_aws_account_id and not is_valid_aws_account_id(req.ace_aws_account_id):
-        errors.append(
-            FormFieldError(
-                field="ace_aws_account_id", message="AWS account id must be 12 digits"
-            )
-        )
-
-    if len(req.ace_aws_products) > ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY:
-        errors.append(
-            FormFieldError(
-                field="ace_aws_products",
-                message=(
-                    "AWS Products limit is "
-                    f"{ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY} per opportunity"
-                ),
-            )
-        )
-
     if not req.ace_partner_need:
         errors.append(
-            FormFieldError(
-                field="ace_partner_need", message="At least one PartnerNeed is required"
-            )
+            FormFieldError(field="ace_partner_need", message="At least one PartnerNeed is required")
         )
     if not req.ace_delivery_model:
         errors.append(
@@ -166,77 +233,28 @@ def _validate_enums(req: SubmitFormRequest) -> list[FormFieldError]:
                 field="ace_delivery_model", message="At least one DeliveryModel is required"
             )
         )
-    if req.description is not None and 0 < len(req.description) < 20:
-        errors.append(
-            FormFieldError(
-                field="description",
-                message="Description must be at least 20 characters when provided",
-            )
-        )
-
-    if req.closedate:
-        normalized = _closedate_to_epoch_ms(req.closedate)
-        if not isinstance(normalized, int):
-            errors.append(
-                FormFieldError(
-                    field="closedate",
-                    message="Close date must be YYYY-MM-DD or an epoch number",
-                )
-            )
-
     return errors
 
 
 def _validate_update_enums(req: UpdateFormRequest) -> list[FormFieldError]:
     """Server-side closed-enum validation for the update form.
 
-    Mirrors :func:`_validate_enums` but adapted for the update-only
-    fields (LifeCycle.Stage, ClosedLostReason) and without the create-only
-    "PartnerNeed required" / "DeliveryModel required" rules: on update,
-    BD can leave those untouched if they don't want to change them.
+    Update-specific rules: ``lifecycle_stage`` must be in the AWS
+    lifecycle enum; ``lifecycle_closed_lost_reason`` is required (and
+    enum-checked) iff stage is ``Closed Lost``. Unlike submit, the
+    ``ace_partner_need`` / ``ace_delivery_model`` "at least one" rule
+    does NOT apply -- BD can leave those untouched.
     """
     errors: list[FormFieldError] = []
-
-    def _check(field: str, value: str | None, allowed: set[str] | frozenset[str]) -> None:
-        if value is None or value == "":
-            return
-        if value not in allowed:
-            errors.append(
-                FormFieldError(
-                    field=field, message=f"value {value!r} is not in the AWS-published enum"
-                )
-            )
-
-    def _check_list(field: str, values: list[str], allowed: set[str] | frozenset[str]) -> None:
-        for v in values:
-            if v not in allowed:
-                errors.append(
-                    FormFieldError(
-                        field=field, message=f"value {v!r} is not in the AWS-published enum"
-                    )
-                )
-                return
-
-    if req.ace_partner_need:
-        translated = [ace_mapper._normalize_partner_need(n) for n in req.ace_partner_need]
-        _check_list("ace_partner_need", translated, ace_mapper.ALLOWED_PRIMARY_NEEDS)
-    if req.ace_delivery_model:
-        _check_list(
-            "ace_delivery_model", req.ace_delivery_model, ace_mapper.ALLOWED_DELIVERY_MODELS
-        )
-    if req.ace_sales_activities:
-        _check_list(
-            "ace_sales_activities",
-            req.ace_sales_activities,
-            ace_mapper.ALLOWED_SALES_ACTIVITIES,
-        )
-    _check("ace_use_case", req.ace_use_case, ace_mapper.ALLOWED_CUSTOMER_USE_CASES)
-    _check("ace_opportunity_type", req.ace_opportunity_type, ace_mapper.ALLOWED_OPPORTUNITY_TYPES)
-    _check("ace_competitor_name", req.ace_competitor_name, ace_mapper.ALLOWED_COMPETITORS)
-    _check(
-        "ace_national_security", req.ace_national_security, ace_mapper.ALLOWED_NATIONAL_SECURITY
+    _validate_shared_form(
+        req,
+        errors=errors,
+        closedate_field="lifecycle_target_close_date",
+        closedate_value=req.lifecycle_target_close_date,
     )
-    _check("lifecycle_stage", req.lifecycle_stage, ace_mapper.ALLOWED_LIFECYCLE_STAGES)
+    _validate_enum(
+        errors, "lifecycle_stage", req.lifecycle_stage, ace_mapper.ALLOWED_LIFECYCLE_STAGES
+    )
     if req.lifecycle_stage == "Closed Lost":
         if not req.lifecycle_closed_lost_reason:
             errors.append(
@@ -246,58 +264,12 @@ def _validate_update_enums(req: UpdateFormRequest) -> list[FormFieldError]:
                 )
             )
         else:
-            _check(
+            _validate_enum(
+                errors,
                 "lifecycle_closed_lost_reason",
                 req.lifecycle_closed_lost_reason,
                 ace_mapper.ALLOWED_CLOSED_LOST_REASONS,
             )
-
-    if req.marketing is not None:
-        _check("marketing.source", req.marketing.source, ace_mapper.ALLOWED_MARKETING_SOURCES)
-        _check(
-            "marketing.aws_funding_used",
-            req.marketing.aws_funding_used,
-            ace_mapper.ALLOWED_FUNDING_USED,
-        )
-        if req.marketing.channels:
-            _check_list(
-                "marketing.channels",
-                req.marketing.channels,
-                ace_mapper.ALLOWED_MARKETING_CHANNELS,
-            )
-
-    if req.ace_aws_account_id and not is_valid_aws_account_id(req.ace_aws_account_id):
-        errors.append(
-            FormFieldError(
-                field="ace_aws_account_id", message="AWS account id must be 12 digits"
-            )
-        )
-    if req.description is not None and 0 < len(req.description) < 20:
-        errors.append(
-            FormFieldError(
-                field="description",
-                message="Description must be at least 20 characters when provided",
-            )
-        )
-    if req.lifecycle_target_close_date:
-        normalized = _closedate_to_epoch_ms(req.lifecycle_target_close_date)
-        if not isinstance(normalized, int):
-            errors.append(
-                FormFieldError(
-                    field="lifecycle_target_close_date",
-                    message="Close date must be YYYY-MM-DD or an epoch number",
-                )
-            )
-    if len(req.ace_aws_products) > ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY:
-        errors.append(
-            FormFieldError(
-                field="ace_aws_products",
-                message=(
-                    "AWS Products limit is "
-                    f"{ace_mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY} per opportunity"
-                ),
-            )
-        )
     return errors
 
 
@@ -525,17 +497,13 @@ def _handle_submit(raw_body: bytes) -> dict[str, Any]:
             hubspot.update_deal(req.deal_id, _hubspot_property_payload(req))
         except HubSpotAPIError as exc:
             logger.exception("ui-extension HubSpot property patch failed")
-            return err(
-                502, "validation_failed", message=f"HubSpot property update failed: {exc}"
-            )
+            return err(502, "validation_failed", message=f"HubSpot property update failed: {exc}")
 
         try:
             hubspot.update_deal(req.deal_id, {"dealstage": _trigger_stage_id()})
         except HubSpotAPIError as exc:
             logger.exception("ui-extension dealstage flip failed")
-            return err(
-                502, "validation_failed", message=f"HubSpot dealstage flip failed: {exc}"
-            )
+            return err(502, "validation_failed", message=f"HubSpot dealstage flip failed: {exc}")
 
     logger.info(
         "ui-extension queued submission deal=%s govwin=%s products=%d",
@@ -625,9 +593,7 @@ def _handle_update(raw_body: bytes) -> dict[str, Any]:
     mapping_deal_id = str(mapping.get("hubspot_deal_id") or "")
     if not mapping_deal_id:
         try:
-            state.update_ace_mapping(
-                govwin_id=req.govwin_opp_id, hubspot_deal_id=req.deal_id
-            )
+            state.update_ace_mapping(govwin_id=req.govwin_opp_id, hubspot_deal_id=req.deal_id)
             mapping_deal_id = req.deal_id
         except Exception:  # noqa: BLE001 -- best-effort backfill
             logger.exception(
@@ -681,16 +647,13 @@ def _handle_update(raw_body: bytes) -> dict[str, Any]:
                 "(error logged with code ValidationException)."
             ),
             "ConflictException": (
-                "The AWS opportunity changed since the form opened. "
-                "Reload the deal and try again."
+                "The AWS opportunity changed since the form opened. Reload the deal and try again."
             ),
             "AccessDeniedException": (
                 "The pipeline lacks permission to apply this update. "
                 "Contact the admin (error logged with code AccessDeniedException)."
             ),
-            "ThrottlingException": (
-                "AWS is rate-limiting requests. Wait a moment and try again."
-            ),
+            "ThrottlingException": ("AWS is rate-limiting requests. Wait a moment and try again."),
         }
         code = exc.code or "Unknown"
         message = safe_messages.get(code, f"AWS rejected the update ({code}). Contact the admin.")

@@ -23,6 +23,7 @@ import os
 from typing import Any
 
 from src.ace.client import ACEAPIError, ACEClient
+from src.ace.mapper import MRR_MONTHS_PER_YEAR
 from src.ace.validators import is_valid_hubspot_object_id
 from src.config import load_config
 from src.hubspot.client import HubSpotClient
@@ -131,17 +132,8 @@ def _ensure_closed_lost_pair_consistency(
             )
 
 
-# ---------------------------------------------------------------------------
-# Per-property delta handlers
-#
-# Each handler takes ``(payload, value, partner_company_name)`` and returns
-# True if the payload was actually mutated, False otherwise. The dispatcher
-# (``_apply_delta``) looks up the handler by HubSpot property name. Keeping
-# handlers as small named functions means each is independently testable and
-# the lookup table is the single source of truth for "which properties does
-# this Lambda know how to map?". Adding a new property = write a handler +
-# add one row to ``_DELTA_HANDLERS``.
-# ---------------------------------------------------------------------------
+# Per-property delta handlers. Each returns True if the payload was
+# actually mutated, False otherwise. Dispatch via ``_DELTA_HANDLERS``.
 
 
 def _handle_amount(payload: dict[str, Any], value: Any, partner_company_name: str) -> bool:
@@ -159,7 +151,7 @@ def _handle_amount(payload: dict[str, Any], value: Any, partner_company_name: st
     # with Frequency=Monthly. Divide by 12. Without this, an amount
     # update via webhook would write a value 12x the create-path
     # baseline -- a real divergence between the two paths.
-    monthly = total / 12.0
+    monthly = total / MRR_MONTHS_PER_YEAR
     project["ExpectedCustomerSpend"] = [
         {
             "Amount": f"{monthly:.2f}",
@@ -366,6 +358,14 @@ def _handle_closed_lost_reason(payload: dict[str, Any], value: Any, _: str) -> b
 def _handle_partner_need(payload: dict[str, Any], value: Any, _: str) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
+        # Multi-value clears are not currently sent to AWS: list-valued
+        # AWS fields don't accept empty arrays via UpdateOpportunity in
+        # this client, so an empty incoming list is a no-op rather than
+        # a clear. Log so the no-op is visible in CloudWatch (CR3).
+        logger.warning(
+            "update_in_ace: empty value for govwin_ace_partner_need; "
+            "no-op (clearing multi-value AWS fields is not supported on this path)"
+        )
         return False
     payload["PrimaryNeedsFromAws"] = [v.strip() for v in text.split(";") if v.strip()]
     return True
@@ -374,6 +374,10 @@ def _handle_partner_need(payload: dict[str, Any], value: Any, _: str) -> bool:
 def _handle_delivery_model(payload: dict[str, Any], value: Any, _: str) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
+        logger.warning(
+            "update_in_ace: empty value for govwin_ace_delivery_model; "
+            "no-op (clearing multi-value AWS fields is not supported on this path)"
+        )
         return False
     project = dict(payload.get("Project") or {})
     project["DeliveryModels"] = [v.strip() for v in text.split(";") if v.strip()]
@@ -384,6 +388,10 @@ def _handle_delivery_model(payload: dict[str, Any], value: Any, _: str) -> bool:
 def _handle_sales_activities(payload: dict[str, Any], value: Any, _: str) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
+        logger.warning(
+            "update_in_ace: empty value for govwin_ace_sales_activities; "
+            "no-op (clearing multi-value AWS fields is not supported on this path)"
+        )
         return False
     project = dict(payload.get("Project") or {})
     project["SalesActivities"] = [v.strip() for v in text.split(";") if v.strip()]
@@ -925,13 +933,16 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     except Exception:  # noqa: BLE001 -- best-effort
                         logger.exception("update_in_ace: SNS publish for permanent error failed")
                     if is_valid_hubspot_object_id(deal_id):
+                        from src.hubspot.client import _redact_hubspot_error_body
+
+                        redacted = _redact_hubspot_error_body(str(exc))
                         try:
                             hubspot.update_deal(
                                 deal_id,
                                 {
                                     "govwin_ace_next_steps": (
                                         f"AWS rejected UpdateOpportunity ({exc.code}) "
-                                        f"for property '{prop}': {str(exc)[:1400]}"
+                                        f"for property '{prop}': {redacted[:1400]}"
                                     ),
                                 },
                             )
