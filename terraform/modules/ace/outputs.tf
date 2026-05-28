@@ -20,8 +20,12 @@ output "ui_extension_aws_products_url" {
   value = "https://${aws_apigatewayv2_api.webhook.id}.execute-api.${var.aws_region}.amazonaws.com/ui-extension/aws-products"
 }
 
-output "submit_form_to_ace_arn" {
-  value = aws_lambda_function.submit_form_to_ace.arn
+output "ui_extension_reads_arn" {
+  value = aws_lambda_function.ui_extension_reads.arn
+}
+
+output "ui_extension_writes_arn" {
+  value = aws_lambda_function.ui_extension_writes.arn
 }
 
 output "submit_queue_url" {
@@ -79,7 +83,8 @@ output "lambda_function_names" {
     aws_lambda_function.update_in_ace.function_name,
     aws_lambda_function.handle_ace_event.function_name,
     aws_lambda_function.setup_hubspot_webhooks.function_name,
-    aws_lambda_function.submit_form_to_ace.function_name,
+    aws_lambda_function.ui_extension_reads.function_name,
+    aws_lambda_function.ui_extension_writes.function_name,
   ]
 }
 

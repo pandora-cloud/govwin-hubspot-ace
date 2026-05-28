@@ -1,9 +1,13 @@
-"""Tests for the submit_form_to_ace Lambda (UI Extension callback endpoint).
+"""Tests for the HubSpot UI Extension callback Lambdas (reads + writes).
 
-Covers all three routes (POST /submit, GET /solutions, GET /aws-products),
-signature validation reuse, server-side enum re-validation, dedup against
-the existing ACE mapping, and the two-phase HubSpot PATCH ordering
-(properties first, then dealstage).
+The submit_form_to_ace monolith was split into ui_extension_reads (GET
+/solutions, GET /aws-products) and ui_extension_writes (POST /submit,
+POST /update) with a shared _ui_extension_common helper module that
+owns signature validation, CORS preflight, replay protection, and path
+allowlisting. These tests cover all four routes by routing each event
+to the right handler via the shim below; the test bodies stay
+unchanged so the regression surface is identical to the pre-split
+suite.
 """
 
 from __future__ import annotations
@@ -18,7 +22,68 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.lambdas import submit_form_to_ace as lambda_mod
+from src.lambdas import _ui_extension_common as common_mod
+from src.lambdas import ui_extension_reads as reads_mod
+from src.lambdas import ui_extension_writes as writes_mod
+
+
+def _handler_for(event: dict[str, Any]):
+    """Route the test event to the right Lambda handler.
+
+    Mirrors API Gateway: GET /ui-extension/{solutions,aws-products} ->
+    reads_mod; POST /ui-extension/{submit,update} -> writes_mod. The
+    OPTIONS preflight path is detected ahead of routing so either
+    Lambda answers it identically.
+    """
+    path = (
+        event.get("requestContext", {}).get("http", {}).get("path")
+        or event.get("rawPath")
+        or event.get("path")
+        or ""
+    )
+    if "/solutions" in path or "/aws-products" in path:
+        return reads_mod.handler
+    return writes_mod.handler
+
+
+class _LambdaShim:
+    """Backwards-compatible facade so existing tests that reference
+    ``lambda_mod.<attr>`` continue to work after the Lambda split. The
+    attribute lookup walks (reads_mod, writes_mod, common_mod) in order
+    so a test that imported a function from the monolith still resolves.
+    Attribute assignments (the kind ``monkeypatch.setattr`` issues for
+    stubbing out SyncStateManager etc.) propagate to every module that
+    declares the attribute so both reads_mod and writes_mod see the
+    stub.
+    """
+
+    @staticmethod
+    def handler(event, context=None):
+        return _handler_for(event)(event, context)
+
+    def __getattr__(self, name: str):
+        for mod in (reads_mod, writes_mod, common_mod):
+            if hasattr(mod, name):
+                return getattr(mod, name)
+        raise AttributeError(name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        applied = False
+        for mod in (reads_mod, writes_mod, common_mod):
+            if hasattr(mod, name) or name in {"_aws_products_cache", "_secrets_client"}:
+                # The two write-targets above are valid even when the
+                # attribute is currently None on the module (cache resets).
+                if hasattr(mod, name):
+                    setattr(mod, name, value)
+                    applied = True
+        if not applied:
+            # Tests sometimes monkeypatch.setattr unknown attributes; fall
+            # back to assigning on the writes module so existing test
+            # expectations of "the monolith module had this" succeed.
+            setattr(writes_mod, name, value)
+
+
+lambda_mod = _LambdaShim()
 
 # Reuse the same secret across tests so signature math stays consistent.
 SECRET = "0xCAFEBABE-not-a-real-hubspot-client-secret"

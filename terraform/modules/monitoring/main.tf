@@ -29,6 +29,8 @@ locals {
     "${var.name_prefix}-update-in-ace",
     "${var.name_prefix}-handle-ace-event",
     "${var.name_prefix}-setup-hubspot-webhooks",
+    "${var.name_prefix}-ui-ext-reads",
+    "${var.name_prefix}-ui-ext-writes",
   ]
 
   monitored_dlq_names = [
