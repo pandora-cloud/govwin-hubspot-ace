@@ -114,9 +114,11 @@ def _run(event: dict, ace, state, hubspot) -> dict:
     # production handler relies on it returning a real dict.
     mock_ace_class = MagicMock(side_effect=lambda config: ace)
     mock_ace_class.scrub_for_update = staticmethod(ACEClient.scrub_for_update)
-    with patch.object(update_in_ace, "ACEClient", mock_ace_class), \
-         patch.object(update_in_ace, "SyncStateManager", return_value=state), \
-         patch.object(update_in_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(update_in_ace, "ACEClient", mock_ace_class),
+        patch.object(update_in_ace, "SyncStateManager", return_value=state),
+        patch.object(update_in_ace, "HubSpotClient", return_value=hubspot),
+    ):
         return update_in_ace.handler(event, context=None)
 
 
@@ -155,7 +157,8 @@ class TestApplyDelta:
     def test_dealname_writes_project_title(self):
         ace, state, hubspot = _patches()
         hubspot.get_deal.return_value = {
-            "id": "320194741966", "properties": {"dealname": "New Deal Title"}
+            "id": "320194741966",
+            "properties": {"dealname": "New Deal Title"},
         }
         result = _run(_event(_record("dealname", "Truncated...")), ace, state, hubspot)
         assert result["results"][0]["status"] == "updated"
@@ -190,7 +193,9 @@ class TestApplyDelta:
         ace, state, hubspot = _patches()
         result = _run(
             _event(_record("govwin_ace_marketing_source", "Marketing Activity")),
-            ace, state, hubspot,
+            ace,
+            state,
+            hubspot,
         )
         assert result["results"][0]["status"] == "updated"
         body = ace.update_with_retry.call_args.kwargs["updates"]
@@ -201,7 +206,9 @@ class TestApplyDelta:
         ace, state, hubspot = _patches()
         result = _run(
             _event(_record("govwin_ace_marketing_source", "None")),
-            ace, state, hubspot,
+            ace,
+            state,
+            hubspot,
         )
         assert result["results"][0]["status"] == "updated"
         body = ace.update_with_retry.call_args.kwargs["updates"]
@@ -220,7 +227,8 @@ class TestDescription:
         ace, state, hubspot = _patches()
         full_text = "A " * 100  # 200 chars, well above the 20-char minimum
         hubspot.get_deal.return_value = {
-            "id": "320194741966", "properties": {"description": full_text}
+            "id": "320194741966",
+            "properties": {"description": full_text},
         }
         result = _run(_event(_record("description", "TRUNCATED")), ace, state, hubspot)
         assert result["results"][0]["status"] == "updated"
@@ -228,16 +236,15 @@ class TestDescription:
         cbp = body["Project"]["CustomerBusinessProblem"]
         assert cbp == full_text
         # Confirm we asked HubSpot for the description
-        assert any(
-            "description" in str(call) for call in hubspot.get_deal.call_args_list
-        )
+        assert any("description" in str(call) for call in hubspot.get_deal.call_args_list)
 
     def test_description_padded_with_title_when_short(self):
         """If both webhook and HubSpot return a short value, pad with the
         existing project title to satisfy the 20-char regex."""
         ace, state, hubspot = _patches()
         hubspot.get_deal.return_value = {
-            "id": "320194741966", "properties": {"description": "tiny"}
+            "id": "320194741966",
+            "properties": {"description": "tiny"},
         }
         result = _run(_event(_record("description", "tiny")), ace, state, hubspot)
         assert result["results"][0]["status"] == "updated"
@@ -255,9 +262,7 @@ class TestDescription:
             **_full_get_opp_response(),
             "Project": {**_full_get_opp_response()["Project"], "Title": ""},
         }
-        hubspot.get_deal.return_value = {
-            "id": "320194741966", "properties": {"description": "x"}
-        }
+        hubspot.get_deal.return_value = {"id": "320194741966", "properties": {"description": "x"}}
         result = _run(_event(_record("description", "x")), ace, state, hubspot)
         assert result["results"][0]["status"] == "skipped"
         ace.update_with_retry.assert_not_called()
@@ -273,12 +278,14 @@ class TestSkips:
         ace, state, hubspot = _patches()
         bad = {
             "messageId": "msg-1",
-            "body": json.dumps({
-                "objectId": "../../../etc/passwd",
-                "subscriptionType": "object.propertyChange",
-                "propertyName": "amount",
-                "propertyValue": "1000",
-            }),
+            "body": json.dumps(
+                {
+                    "objectId": "../../../etc/passwd",
+                    "subscriptionType": "object.propertyChange",
+                    "propertyName": "amount",
+                    "propertyValue": "1000",
+                }
+            ),
         }
         result = _run(_event(bad), ace, state, hubspot)
         assert result["results"][0]["status"] == "skipped"
@@ -330,6 +337,67 @@ class TestErrors:
         result = _run(_event(bad), ace, state, hubspot)
         # Permanent error: do not retry via SQS
         assert result["batchItemFailures"] == []
+
+    def test_permanent_validation_fires_sns_and_writeback(self, monkeypatch):
+        """B3.3 / test coverage HIGH: a permanent ValidationException must
+        (a) NOT retry via SQS, (b) fire an SNS alert via
+        _publish_update_error_alert, and (c) write a rejection reason to
+        the HubSpot deal so BD sees it on the card. Previously the test
+        only asserted (a)."""
+        from src.lambdas import update_in_ace
+
+        ace, state, hubspot = _patches()
+        ace.update_with_retry.side_effect = ACEAPIError(
+            "field x is invalid", code="ValidationException"
+        )
+
+        # Spy on the SNS publish helper so we can assert it fired.
+        sns_calls: list[dict] = []
+
+        def _spy(*, config, deal_id, prop, error):
+            sns_calls.append({"deal_id": deal_id, "prop": prop, "error": error})
+
+        monkeypatch.setattr(update_in_ace, "_publish_update_error_alert", _spy)
+
+        result = _run(_event(_record("amount", "1000")), ace, state, hubspot)
+
+        # (a) Not retried.
+        assert result["batchItemFailures"] == []
+        # (b) SNS publish fired with the right context.
+        assert len(sns_calls) == 1
+        assert sns_calls[0]["prop"] == "amount"
+        assert "ValidationException" in sns_calls[0]["error"]
+        # (c) HubSpot writeback recorded the reason on the deal.
+        writeback_calls = [
+            c
+            for c in hubspot.update_deal.call_args_list
+            if "govwin_ace_next_steps"
+            in (c.args[1] if len(c.args) > 1 else c.kwargs.get("properties", {}))
+        ]
+        assert writeback_calls, "Expected a HubSpot writeback with govwin_ace_next_steps"
+
+    def test_redelivered_sqs_message_is_idempotent(self):
+        """SQS at-least-once: the same property change can arrive twice.
+        update_in_ace's UpdateOpportunity is itself idempotent under PUT
+        semantics (the same value over the same value is a no-op on AWS).
+        We confirm two deliveries produce two UpdateOpportunity calls
+        without error and the second doesn't error."""
+        ace, state, hubspot = _patches()
+        rec = _record("amount", "1000")
+        # Two records with the same body but distinct messageId (SQS
+        # convention: the messageId differs even for redelivery, but
+        # the body is identical).
+        event = {
+            "Records": [
+                {**rec, "messageId": "msg-1"},
+                {**rec, "messageId": "msg-2"},
+            ]
+        }
+        result = _run(event, ace, state, hubspot)
+        assert result["batchItemFailures"] == []
+        # Both deliveries reached UpdateOpportunity (PUT semantics handle
+        # the dedup at the AWS layer).
+        assert ace.update_with_retry.call_count == 2
 
 
 # ---------------------------------------------------------------------------

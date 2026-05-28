@@ -21,6 +21,18 @@ SUBMIT_TRIGGER_PROPERTY: str = "dealstage"
 # also handling it in update_in_ace._apply_delta is a no-op; the receiver
 # enqueues but the worker doesn't know what to do with it. Keep both in
 # sync.
+#
+# Write-quota note: one form save that PATCHes N of these properties at
+# once fans out into N webhooks -> N SQS messages -> N
+# UpdateOpportunity calls against AWS Partner Central (1 write/sec quota
+# per partner). At the realistic BD-load envelope this codebase serves
+# (5-50 ops/day, 10-20 changed fields per save, occasional bulk update)
+# the fan-out is fine. At a 200-deal bulk recategorize, the queue
+# serializes to ~30 minutes of catch-up. If that becomes a real BD
+# complaint, coalesce per-deal in the webhook receiver (250ms window)
+# and have update_in_ace consume the combined message in a single
+# UpdateOpportunity. Tracked in /Users/isi/.claude/plans/...teacup.md
+# non-goals (architecture review's larger fix).
 UPDATE_TRIGGER_PROPERTIES: frozenset[str] = frozenset(
     {
         "amount",
@@ -40,6 +52,19 @@ UPDATE_TRIGGER_PROPERTIES: frozenset[str] = frozenset(
         "govwin_ace_marketing_use_cases",
         "govwin_ace_marketing_channel",
         "govwin_ace_marketing_dev_funded",
+        # Added 2026-05-27 with the async /ui-extension/update path:
+        # the form PATCHes these and the webhook -> update_in_ace
+        # pipeline applies them to the AWS opportunity.
+        "govwin_ace_lifecycle_stage",
+        "govwin_ace_closed_lost_reason",
+        "govwin_ace_aws_products",
+        "govwin_ace_partner_need",
+        "govwin_ace_delivery_model",
+        "govwin_ace_sales_activities",
+        "govwin_ace_national_security",
+        "govwin_ace_opportunity_type",
+        "govwin_ace_solution_id",
+        "govwin_industry",
     }
 )
 
