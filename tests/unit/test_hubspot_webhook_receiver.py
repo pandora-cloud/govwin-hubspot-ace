@@ -227,6 +227,60 @@ def test_irrelevant_property_is_dropped(mock_secrets, mock_sqs) -> None:
     assert mock_sqs.send_message_batch.call_count == 0
 
 
+def test_update_event_from_our_integration_is_dropped(mock_secrets, mock_sqs, monkeypatch) -> None:
+    """When the receiver itself is the source of a property change
+    (via update_in_ace's permanent-error writeback to
+    ``govwin_ace_next_steps``), the webhook HubSpot fires must NOT
+    re-enqueue the change. Otherwise the path writes-on-error -> webhook
+    -> update_in_ace -> writes-on-error loops indefinitely against the
+    AWS Partner Central quota."""
+    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "38079082")
+    body = json.dumps(
+        [
+            {
+                "objectId": 327176399578,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "govwin_ace_next_steps",
+                "propertyValue": "AWS rejected: ...",
+                "changeSource": "INTEGRATION",
+                "sourceId": "38079082",
+            }
+        ]
+    )
+    headers = _signed_headers("POST", TARGET_URL, body.encode())
+    response = receiver.handler(_api_event("POST", body, headers), context=None)
+    assert response["statusCode"] == 200
+    body_json = json.loads(response["body"])
+    assert body_json["update"] == 0
+    assert body_json["dropped"] == 1
+
+
+def test_update_event_from_foreign_integration_is_routed(mock_secrets, mock_sqs, monkeypatch) -> None:
+    """An INTEGRATION-source event from a DIFFERENT HubSpot app
+    installed on the same portal still routes to update; it represents
+    a real value change another integration made that we must reflect
+    to AWS. Only events where sourceId matches OUR app id are dropped."""
+    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "38079082")
+    body = json.dumps(
+        [
+            {
+                "objectId": 327176399578,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "govwin_ace_next_steps",
+                "propertyValue": "Updated by foreign integration",
+                "changeSource": "INTEGRATION",
+                "sourceId": "99999999",
+            }
+        ]
+    )
+    headers = _signed_headers("POST", TARGET_URL, body.encode())
+    response = receiver.handler(_api_event("POST", body, headers), context=None)
+    assert response["statusCode"] == 200
+    body_json = json.loads(response["body"])
+    assert body_json["update"] == 1
+    assert body_json["dropped"] == 0
+
+
 def test_audit_property_from_integration_does_not_alert(mock_secrets, mock_sqs) -> None:
     """handle_ace_event writes govwin_aws_cosell_id via the integration
     token; HubSpot stamps changeSource=INTEGRATION on those events. The

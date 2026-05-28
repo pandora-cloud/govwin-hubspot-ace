@@ -81,19 +81,50 @@ def _required_target_url() -> str:
     return url
 
 
-def _route_event(ev: Any) -> str:
-    """Decide whether an event belongs on the submit queue or update queue.
+# Sources HubSpot stamps on property changes that come from any
+# integration token (not just ours). Used in two filters:
+#
+# 1. :func:`_route_event` drops update-class events whose changeSource
+#    is INTEGRATION AND sourceId matches our own app id, breaking the
+#    write -> webhook -> write feedback loop on the error-writeback
+#    path in update_in_ace.
+# 2. :func:`_process_audit_events` SNS-alerts on audit-class events
+#    whose source is NOT INTEGRATION, OR whose sourceId does not match
+#    our app (foreign-integration writes to integration-owned properties).
+_INTEGRATION_CHANGE_SOURCES: frozenset[str] = frozenset({"INTEGRATION", "INTEGRATIONS_PLATFORM"})
 
-    Routing is keyed off ``_webhook_routing.classify_property_change`` so the
-    receiver and the deploy-time subscription registrar share the same
-    canonical property list. Unknown properties are dropped (logged) rather
-    than mis-routed.
+
+def _route_event(ev: Any, *, our_app_id: str = "") -> str:
+    """Decide whether an event belongs on submit / update / audit / drop.
+
+    Routing is keyed off ``_webhook_routing.classify_property_change`` so
+    the receiver and the deploy-time subscription registrar share the
+    same canonical property list. Unknown properties are dropped.
+
+    Update events that originated from our own integration are dropped
+    instead of routed: re-processing a property we just wrote produces
+    a feedback loop (writeback -> webhook -> update_in_ace -> UpdateOpp
+    -> permanent error writeback -> ...). The audit path keeps its own
+    sourceId check in ``_process_audit_events``; this filter only
+    affects the update routing.
+
+    :param ev: HubSpot webhook event dict.
+    :param our_app_id: Configured ``HUBSPOT_INTEGRATION_APP_ID``. When
+        empty (test / local), the integration-from-us filter is bypassed
+        and all update events route normally.
+    :returns: ``"submit"``, ``"update"``, ``"audit"``, or ``"drop"``.
     """
     if not isinstance(ev, dict):
         return "drop"
     if ev.get("subscriptionType") != "object.propertyChange":
         return "drop"
-    return classify_property_change(ev.get("propertyName"))
+    target = classify_property_change(ev.get("propertyName"))
+    if target == "update" and our_app_id:
+        change_source = str(ev.get("changeSource") or "").upper()
+        source_id = str(ev.get("sourceId") or "")
+        if change_source in _INTEGRATION_CHANGE_SOURCES and source_id == our_app_id:
+            return "drop"
+    return target
 
 
 def _send_sqs_batches(queue_url: str, events: list[Any]) -> int:
@@ -227,8 +258,9 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     update_events: list[Any] = []
     audit_events: list[Any] = []
     dropped = 0
+    our_app_id = (os.environ.get("HUBSPOT_INTEGRATION_APP_ID") or "").strip()
     for ev in events:
-        target = _route_event(ev)
+        target = _route_event(ev, our_app_id=our_app_id)
         if target == "submit":
             submit_events.append(ev)
         elif target == "update":
@@ -259,20 +291,6 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             }
         ),
     }
-
-
-# Sources HubSpot stamps on property changes coming from any
-# integration token (not just ours). Anything else (CRM_UI, API,
-# AUTOMATION_PLATFORM, WORKFLOWS, IMPORT, MIGRATION, etc.) is by
-# definition a non-integration writer and worth alerting on for the
-# AUDIT_ONLY_PROPERTIES set.
-#
-# For INTEGRATION-source events we additionally cross-check sourceId
-# against ``HUBSPOT_INTEGRATION_APP_ID`` so an INTEGRATION event from a
-# DIFFERENT app installed on the same HubSpot portal still triggers an
-# alert; another integration writing to govwin_aws_cosell_id is
-# operator-relevant even if it isn't a hand-edit.
-_INTEGRATION_CHANGE_SOURCES: frozenset[str] = frozenset({"INTEGRATION", "INTEGRATIONS_PLATFORM"})
 
 
 def _process_audit_events(events: list[Any], *, config: Any) -> int:
