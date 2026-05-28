@@ -57,6 +57,7 @@ def _normalize_partner_need(value: str) -> str:
     """Translate HubSpot short labels to AWS-long PrimaryNeedsFromAws values."""
     return _HUBSPOT_PARTNER_NEED_TO_AWS.get(value, value)
 
+
 # Allowed values for ``Project.DeliveryModels``.
 ALLOWED_DELIVERY_MODELS: set[str] = {
     "SaaS or PaaS",
@@ -156,47 +157,60 @@ MAX_MARKETPLACE_OFFERS_PER_OPPORTUNITY = 1
 # diffs each constant against the live boto3 model so new enum members or
 # renames surface in CI rather than at submission time.
 
-# Project.CompetitorName (11 values). Note the literal asterisk in "*Other"
-# (when picked, populate Project.OtherCompetitorNames) and the missing
-# space in "Other- Cost Optimization".
-ALLOWED_COMPETITORS: frozenset[str] = frozenset({
-    "Oracle Cloud",
-    "On-Prem",
-    "Co-location",
-    "Akamai",
-    "AliCloud",
-    "Google Cloud Platform",
-    "IBM Softlayer",
-    "Microsoft Azure",
-    "Other- Cost Optimization",
-    "No Competition",
-    "*Other",
-})
+# Sentinel value of CompetitorName that AWS requires to be paired with a
+# free-text OtherCompetitorNames. Exported so mapper, validator, and TS
+# enums import the same literal -- a typo here was a real source of
+# enum-validation drift in early-2026 iterations.
+COMPETITOR_OTHER_SENTINEL: str = "*Other"
+
+# Project.CompetitorName (11 values). Note the literal asterisk in
+# COMPETITOR_OTHER_SENTINEL (when picked, populate
+# Project.OtherCompetitorNames) and the missing space in
+# "Other- Cost Optimization".
+ALLOWED_COMPETITORS: frozenset[str] = frozenset(
+    {
+        "Oracle Cloud",
+        "On-Prem",
+        "Co-location",
+        "Akamai",
+        "AliCloud",
+        "Google Cloud Platform",
+        "IBM Softlayer",
+        "Microsoft Azure",
+        "Other- Cost Optimization",
+        "No Competition",
+        COMPETITOR_OTHER_SENTINEL,
+    }
+)
 
 # Marketing.Channels[] (13 values; multi-select). Only allowed when
 # Marketing.Source == "Marketing Activity".
-ALLOWED_MARKETING_CHANNELS: frozenset[str] = frozenset({
-    "AWS Marketing Central",
-    "Content Syndication",
-    "Display",
-    "Email",
-    "Live Event",
-    "Out Of Home (OOH)",
-    "Print",
-    "Search",
-    "Social",
-    "Telemarketing",
-    "TV",
-    "Video",
-    "Virtual Event",
-})
+ALLOWED_MARKETING_CHANNELS: frozenset[str] = frozenset(
+    {
+        "AWS Marketing Central",
+        "Content Syndication",
+        "Display",
+        "Email",
+        "Live Event",
+        "Out Of Home (OOH)",
+        "Print",
+        "Search",
+        "Social",
+        "Telemarketing",
+        "TV",
+        "Video",
+        "Virtual Event",
+    }
+)
 
 # OpportunityType (3 values). The default for net-new co-sell is "Net New Business".
-ALLOWED_OPPORTUNITY_TYPES: frozenset[str] = frozenset({
-    "Net New Business",
-    "Flat Renewal",
-    "Expansion",
-})
+ALLOWED_OPPORTUNITY_TYPES: frozenset[str] = frozenset(
+    {
+        "Net New Business",
+        "Flat Renewal",
+        "Expansion",
+    }
+)
 
 # Origin (2 values). For Catalog == "AWS" the value MUST be "Partner Referral".
 # "AWS Referral" is only valid in Sandbox catalog for simulating AWS-originated flows.
@@ -217,91 +231,101 @@ ALLOWED_FUNDING_USED: frozenset[str] = frozenset({"Yes", "No"})
 
 # LifeCycle.ClosedLostReason (19 values). Only meaningful when the
 # opportunity is being moved to LifeCycle.Stage == "Closed Lost".
-ALLOWED_CLOSED_LOST_REASONS: frozenset[str] = frozenset({
-    "Customer Deficiency",
-    "Delay / Cancellation of Project",
-    "Legal / Tax / Regulatory",
-    "Lost to Competitor - Google",
-    "Lost to Competitor - Microsoft",
-    "Lost to Competitor - SoftLayer",
-    "Lost to Competitor - VMWare",
-    "Lost to Competitor - Other",
-    "No Opportunity",
-    "On Premises Deployment",
-    "Partner Gap",
-    "Price",
-    "Security / Compliance",
-    "Technical Limitations",
-    "Customer Experience",
-    "Other",
-    "People/Relationship/Governance",
-    "Product/Technology",
-    "Financial/Commercial",
-})
+ALLOWED_CLOSED_LOST_REASONS: frozenset[str] = frozenset(
+    {
+        "Customer Deficiency",
+        "Delay / Cancellation of Project",
+        "Legal / Tax / Regulatory",
+        "Lost to Competitor - Google",
+        "Lost to Competitor - Microsoft",
+        "Lost to Competitor - SoftLayer",
+        "Lost to Competitor - VMWare",
+        "Lost to Competitor - Other",
+        "No Opportunity",
+        "On Premises Deployment",
+        "Partner Gap",
+        "Price",
+        "Security / Compliance",
+        "Technical Limitations",
+        "Customer Experience",
+        "Other",
+        "People/Relationship/Governance",
+        "Product/Technology",
+        "Financial/Commercial",
+    }
+)
 
 # LifeCycle.Stage (7 values). handle_ace_event maps HubSpot lifecyclestage
 # to one of these on the inbound AWS EventBridge writeback. "Launched" is
 # AWS-set after spend is verified; we never set it from this codebase.
-ALLOWED_LIFECYCLE_STAGES: frozenset[str] = frozenset({
-    "Prospect",
-    "Qualified",
-    "Technical Validation",
-    "Business Validation",
-    "Committed",
-    "Launched",
-    "Closed Lost",
-})
+ALLOWED_LIFECYCLE_STAGES: frozenset[str] = frozenset(
+    {
+        "Prospect",
+        "Qualified",
+        "Technical Validation",
+        "Business Validation",
+        "Committed",
+        "Launched",
+        "Closed Lost",
+    }
+)
 
 # SoftwareRevenue.DeliveryModel (3 values). Only relevant for partners
 # carrying SoftwareRevenue commitments. Not currently emitted by the mapper.
-ALLOWED_SOFTWARE_REVENUE_DELIVERY_MODELS: frozenset[str] = frozenset({
-    "Contract",
-    "Pay-as-you-go",
-    "Subscription",
-})
+ALLOWED_SOFTWARE_REVENUE_DELIVERY_MODELS: frozenset[str] = frozenset(
+    {
+        "Contract",
+        "Pay-as-you-go",
+        "Subscription",
+    }
+)
 
 # OpportunityTeam[].BusinessTitle server-side enum (NOT in the boto3 model;
 # documented on the Contact API page). AWS rejects any other value with
 # INVALID_VALUE at CreateOpportunity time. OpportunityOwner is the right
 # fit for the HubSpot deal owner driving the engagement.
-ALLOWED_OPPORTUNITY_TEAM_BUSINESS_TITLES: frozenset[str] = frozenset({
-    "PartnerAccountManager",
-    "OpportunityOwner",
-})
+ALLOWED_OPPORTUNITY_TEAM_BUSINESS_TITLES: frozenset[str] = frozenset(
+    {
+        "PartnerAccountManager",
+        "OpportunityOwner",
+    }
+)
 
 
 # AWS Customer.Account.Industry enum. Sourced from the boto3 service model
 # (partnercentral-selling 2022-07-26).
-ALLOWED_INDUSTRIES: frozenset[str] = frozenset({
-    "Aerospace",
-    "Agriculture",
-    "Automotive",
-    "Computers and Electronics",
-    "Consumer Goods",
-    "Education",
-    "Energy - Oil and Gas",
-    "Energy - Power and Utilities",
-    "Financial Services",
-    "Gaming",
-    "Government",
-    "Healthcare",
-    "Hospitality",
-    "Life Sciences",
-    "Manufacturing",
-    "Marketing and Advertising",
-    "Media and Entertainment",
-    "Mining",
-    "Non-Profit Organization",
-    "Professional Services",
-    "Real Estate and Construction",
-    "Retail",
-    "Software and Internet",
-    "Telecommunications",
-    "Transportation and Logistics",
-    "Travel",
-    "Wholesale and Distribution",
-    "Other",
-})
+ALLOWED_INDUSTRIES: frozenset[str] = frozenset(
+    {
+        "Aerospace",
+        "Agriculture",
+        "Automotive",
+        "Computers and Electronics",
+        "Consumer Goods",
+        "Education",
+        "Energy - Oil and Gas",
+        "Energy - Power and Utilities",
+        "Financial Services",
+        "Gaming",
+        "Government",
+        "Healthcare",
+        "Hospitality",
+        "Life Sciences",
+        "Manufacturing",
+        "Marketing and Advertising",
+        "Media and Entertainment",
+        "Mining",
+        "Non-Profit Organization",
+        "Professional Services",
+        "Real Estate and Construction",
+        "Retail",
+        "Software and Internet",
+        "Telecommunications",
+        "Transportation and Logistics",
+        "Travel",
+        "Wholesale and Distribution",
+        "Other",
+    }
+)
 
 
 def _normalize_industry(value: str | None) -> tuple[str, str | None]:
@@ -326,23 +350,63 @@ def _normalize_industry(value: str | None) -> tuple[str, str | None]:
 # carrying the standard 2-letter abbreviation Just Work; everything else
 # falls through unchanged.
 _STATE_ABBR_TO_FULL: dict[str, str] = {
-    "AL": "Alabama", "AK": "Alaska", "AS": "American Samoa", "AZ": "Arizona",
-    "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut",
-    "DE": "Delaware", "DC": "Dist. of Columbia",
-    "FM": "Federated States of Micronesia", "FL": "Florida", "GA": "Georgia",
-    "GU": "Guam", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois",
-    "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky",
-    "LA": "Louisiana", "ME": "Maine", "MH": "Marshall Islands",
-    "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan",
-    "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana",
-    "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire",
-    "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York",
-    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
-    "OK": "Oklahoma", "OR": "Oregon", "PW": "Palau", "PA": "Pennsylvania",
-    "PR": "Puerto Rico", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "VI": "Virgin Islands",
-    "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin",
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AS": "American Samoa",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "Dist. of Columbia",
+    "FM": "Federated States of Micronesia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "GU": "Guam",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MH": "Marshall Islands",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PW": "Palau",
+    "PA": "Pennsylvania",
+    "PR": "Puerto Rico",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "VI": "Virgin Islands",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
     "WY": "Wyoming",
 }
 
@@ -424,22 +488,70 @@ def _get(deal: dict[str, Any], key: str) -> Any:
 # prevents the "United States" -> "UN" or "Germany" -> "GE" wrong-code
 # misroutings that AWS would silently accept and that violate CMMC L2
 # 3.1.3 (controlled flow of CUI by jurisdiction).
-_VALID_ISO3166_ALPHA2: frozenset[str] = frozenset({
-    # North America
-    "US", "CA", "MX",
-    # Europe (most common for federal partners)
-    "GB", "FR", "DE", "IT", "ES", "NL", "BE", "PT", "IE", "AT", "CH",
-    "SE", "NO", "DK", "FI", "PL", "CZ", "GR", "RO", "HU",
-    # APAC
-    "JP", "KR", "AU", "NZ", "SG", "IN", "ID", "MY", "PH", "TH", "VN",
-    "TW", "HK", "CN",
-    # Middle East / Africa (federal-relevant)
-    "IL", "AE", "SA", "QA", "KW", "TR", "EG", "ZA", "NG", "KE",
-    # Latin America
-    "BR", "AR", "CL", "CO", "PE",
-    # Other
-    "RU", "UA",
-})
+_VALID_ISO3166_ALPHA2: frozenset[str] = frozenset(
+    {
+        # North America
+        "US",
+        "CA",
+        "MX",
+        # Europe (most common for federal partners)
+        "GB",
+        "FR",
+        "DE",
+        "IT",
+        "ES",
+        "NL",
+        "BE",
+        "PT",
+        "IE",
+        "AT",
+        "CH",
+        "SE",
+        "NO",
+        "DK",
+        "FI",
+        "PL",
+        "CZ",
+        "GR",
+        "RO",
+        "HU",
+        # APAC
+        "JP",
+        "KR",
+        "AU",
+        "NZ",
+        "SG",
+        "IN",
+        "ID",
+        "MY",
+        "PH",
+        "TH",
+        "VN",
+        "TW",
+        "HK",
+        "CN",
+        # Middle East / Africa (federal-relevant)
+        "IL",
+        "AE",
+        "SA",
+        "QA",
+        "KW",
+        "TR",
+        "EG",
+        "ZA",
+        "NG",
+        "KE",
+        # Latin America
+        "BR",
+        "AR",
+        "CL",
+        "CO",
+        "PE",
+        # Other
+        "RU",
+        "UA",
+    }
+)
 
 _COUNTRY_NAME_TO_ISO2: dict[str, str] = {
     "UNITED STATES": "US",
@@ -511,9 +623,7 @@ def _company_prop(company: dict[str, Any] | None, key: str) -> str | None:
     return str(val) if val else None
 
 
-def _customer_block(
-    deal: dict[str, Any], company: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def _customer_block(deal: dict[str, Any], company: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build the Customer.Account block.
 
     Reads customer fields from the deal's associated HubSpot Company when
@@ -534,9 +644,7 @@ def _customer_block(
         or _get(deal, "dealname")
         or "Unknown Federal Agency"
     )
-    industry_raw = (
-        _company_prop(company, "industry") or _get(deal, "govwin_industry")
-    )
+    industry_raw = _company_prop(company, "industry") or _get(deal, "govwin_industry")
     industry, other_industry = _normalize_industry(industry_raw)
     website = (
         _company_prop(company, "website")
@@ -549,18 +657,11 @@ def _customer_block(
     street = _company_prop(company, "address")
     city = _company_prop(company, "city")
     postal_code = (
-        _company_prop(company, "zip")
-        or _get(deal, "govwin_customer_postal_code")
-        or "20001"
+        _company_prop(company, "zip") or _get(deal, "govwin_customer_postal_code") or "20001"
     )
-    country_raw = (
-        _company_prop(company, "country") or _get(deal, "govwin_country") or "US"
-    )
+    country_raw = _company_prop(company, "country") or _get(deal, "govwin_country") or "US"
     country_code = _normalize_country(country_raw)
-    state_value = (
-        _company_prop(company, "state")
-        or _get(deal, "govwin_customer_state")
-    )
+    state_value = _company_prop(company, "state") or _get(deal, "govwin_customer_state")
 
     address: dict[str, Any] = {
         "CountryCode": country_code,
@@ -666,13 +767,15 @@ def _normalize_phone(value: str | None) -> str | None:
 # customer-side participants. Other stages (subscriber, evangelist, other,
 # internal partner staff misclassified by BD) are dropped to avoid leaking
 # PII to AWS reviewers under GDPR/CCPA "purpose limitation" and SOC 2 CC6.7.
-_FORWARDABLE_LIFECYCLESTAGES: frozenset[str] = frozenset({
-    "lead",
-    "marketingqualifiedlead",
-    "salesqualifiedlead",
-    "opportunity",
-    "customer",
-})
+_FORWARDABLE_LIFECYCLESTAGES: frozenset[str] = frozenset(
+    {
+        "lead",
+        "marketingqualifiedlead",
+        "salesqualifiedlead",
+        "opportunity",
+        "customer",
+    }
+)
 
 
 def _customer_contacts(
@@ -799,7 +902,11 @@ def _marketing_block(deal: dict[str, Any]) -> dict[str, Any] | None:
     if use_cases:
         block["UseCases"] = [_scrub_text(v, limit=80) for v in _split_csv(use_cases)]
     if channel:
-        block["Channels"] = [_scrub_text(channel, limit=80)]
+        # HubSpot stores a multi-select checkbox enumeration as a single
+        # ";"-joined string ("Email;Telemarketing"). AWS's marketing.channels
+        # is a list of enum values; splitting here keeps both happy and
+        # mirrors how delivery_models / use_cases are already handled above.
+        block["Channels"] = [_scrub_text(v, limit=80) for v in _split_csv(channel)]
     if funded in ("Yes", "No"):
         block["AwsFundingUsed"] = funded
     return block
@@ -814,14 +921,12 @@ def _project_block(
     delivery_models = _split_csv(_get(deal, "govwin_ace_delivery_model"))
     if not delivery_models:
         raise ACEMappingError(
-            "govwin_ace_delivery_model is required (one of: "
-            f"{sorted(ALLOWED_DELIVERY_MODELS)})"
+            f"govwin_ace_delivery_model is required (one of: {sorted(ALLOWED_DELIVERY_MODELS)})"
         )
     invalid = [m for m in delivery_models if m not in ALLOWED_DELIVERY_MODELS]
     if invalid:
         raise ACEMappingError(
-            f"Invalid DeliveryModels: {len(invalid)} value(s) not in the "
-            "AWS-published enum"
+            f"Invalid DeliveryModels: {len(invalid)} value(s) not in the AWS-published enum"
         )
 
     project: dict[str, Any] = {
@@ -881,9 +986,7 @@ def _project_block(
     # Per-deal override via govwin_ace_other_solution_description wins;
     # otherwise we fall back to the deal title.
     other_solution = (
-        _get(deal, "govwin_ace_other_solution_description")
-        or title
-        or "Partner solution"
+        _get(deal, "govwin_ace_other_solution_description") or title or "Partner solution"
     )
     project["OtherSolutionDescription"] = str(other_solution)[:255]
 
@@ -990,9 +1093,7 @@ def _life_cycle_block(deal: dict[str, Any]) -> dict[str, Any]:
         except (TypeError, AttributeError):
             pass
     if "TargetCloseDate" not in block:
-        block["TargetCloseDate"] = (
-            datetime.now(UTC) + timedelta(days=180)
-        ).strftime("%Y-%m-%d")
+        block["TargetCloseDate"] = (datetime.now(UTC) + timedelta(days=180)).strftime("%Y-%m-%d")
     next_steps = _get(deal, "govwin_ace_next_steps")
     if next_steps:
         block["NextSteps"] = str(next_steps)[:255]
@@ -1029,8 +1130,7 @@ def map_hubspot_deal_to_ace_create_payload(
     primary_needs_raw = _split_csv(_get(deal, "govwin_ace_partner_need"))
     if not primary_needs_raw:
         raise ACEMappingError(
-            "govwin_ace_partner_need is required (one or more of: "
-            f"{sorted(ALLOWED_PRIMARY_NEEDS)})"
+            f"govwin_ace_partner_need is required (one or more of: {sorted(ALLOWED_PRIMARY_NEEDS)})"
         )
     primary_needs = [_normalize_partner_need(n) for n in primary_needs_raw]
     invalid_needs = [n for n in primary_needs if n not in ALLOWED_PRIMARY_NEEDS]
@@ -1068,6 +1168,165 @@ def map_hubspot_deal_to_ace_create_payload(
     marketing = _marketing_block(deal)
     if marketing:
         payload["Marketing"] = marketing
+
+    return payload
+
+
+def map_update_form_to_ace_payload(
+    *,
+    form: Any,  # UpdateFormRequest -- typed Any to avoid src.models import cycle
+    current: dict[str, Any],
+    config: AppConfig,
+) -> dict[str, Any]:
+    """Build an ``UpdateOpportunity`` body from an UpdateFormRequest + current AWS state.
+
+    AWS UpdateOpportunity has PUT semantics: every field present is treated
+    as the new value, every field absent is treated as cleared. To avoid
+    silently nuking values BD never touched, we start from a scrubbed copy
+    of the current AWS opportunity (``ACEClient.scrub_for_update``) and
+    overlay only the form fields the BD operator actually set.
+
+    The mapper does NOT touch:
+      * ``PartnerOpportunityIdentifier`` -- the synthetic GovWin id stays
+        bound to this opportunity for its full lifecycle. AWS enforces
+        uniqueness; the Lambda also rejects any attempt to change it.
+      * ``Origin``, ``OpportunityTeam``, ``Tags`` -- not present in the
+        UpdateOpportunity input shape (verified against boto3 service
+        model 2026-05-27). AWS hides them on update entirely.
+      * ``LifeCycle.ReviewStatus`` / ``LifeCycle.ReviewComments`` /
+        ``LifeCycle.ReviewStatusReason`` -- AWS reviewer owns these.
+      * AWS Products / Solutions -- managed via separate
+        ``AssociateOpportunity`` / ``DisassociateOpportunity`` calls by the
+        caller, not by ``UpdateOpportunity``.
+    """
+    from src.ace.client import ACEClient
+
+    payload: dict[str, Any] = ACEClient.scrub_for_update(current)
+
+    # Top-level mutables.
+    if form.govwin_industry:
+        cust = dict(payload.get("Customer") or {})
+        account = dict(cust.get("Account") or {})
+        # Reuse the create-path industry normalizer so "Government" -> the
+        # AWS enum value (and OtherIndustry when applicable) stays consistent.
+        industry_enum, other = _normalize_industry(form.govwin_industry)
+        account["Industry"] = industry_enum
+        if other:
+            account["OtherIndustry"] = other
+        else:
+            account.pop("OtherIndustry", None)
+        cust["Account"] = account
+        payload["Customer"] = cust
+
+    if form.ace_aws_account_id:
+        cust = dict(payload.get("Customer") or {})
+        account = dict(cust.get("Account") or {})
+        account["AwsAccountId"] = form.ace_aws_account_id
+        cust["Account"] = account
+        payload["Customer"] = cust
+
+    if form.ace_national_security:
+        payload["NationalSecurity"] = form.ace_national_security
+
+    if form.ace_opportunity_type:
+        payload["OpportunityType"] = form.ace_opportunity_type
+
+    if form.ace_partner_need:
+        payload["PrimaryNeedsFromAws"] = [_normalize_partner_need(n) for n in form.ace_partner_need]
+
+    # Project block updates.
+    project = dict(payload.get("Project") or {})
+    if form.ace_delivery_model:
+        project["DeliveryModels"] = list(form.ace_delivery_model)
+    if form.ace_use_case:
+        project["CustomerUseCase"] = form.ace_use_case
+    if form.dealname:
+        project["Title"] = _scrub_text(form.dealname, limit=255)
+    if form.description is not None:
+        text = _scrub_text(form.description, limit=2000)
+        # CustomerBusinessProblem requires 20-2000 chars; if BD wrote
+        # something short, pad with the title to stay above the floor.
+        if len(text) and len(text) < 20:
+            title = str(project.get("Title") or "")[:200]
+            text = f"{title}: {text}"[:2000] if title else text
+        if len(text) >= 20:
+            project["CustomerBusinessProblem"] = text
+    if form.amount is not None and form.amount > 0:
+        # Same MRR convention as create-path: HubSpot annual / 12 = monthly.
+        monthly = float(form.amount) / 12.0
+        project["ExpectedCustomerSpend"] = [
+            {
+                "Amount": f"{monthly:.2f}",
+                "CurrencyCode": "USD",
+                "Frequency": "Monthly",
+                "TargetCompany": config.ace.partner_company_name,
+            }
+        ]
+    if form.ace_sales_activities:
+        project["SalesActivities"] = list(form.ace_sales_activities)
+    if form.ace_competitor_name:
+        project["CompetitorName"] = form.ace_competitor_name
+        if (
+            form.ace_other_competitor_names
+            and form.ace_competitor_name == COMPETITOR_OTHER_SENTINEL
+        ):
+            project["OtherCompetitorNames"] = form.ace_other_competitor_names
+        else:
+            project.pop("OtherCompetitorNames", None)
+    if form.ace_additional_comments:
+        project["AdditionalComments"] = _scrub_text(form.ace_additional_comments, limit=255)
+    if form.ace_related_opportunity_id:
+        project["RelatedOpportunityIdentifier"] = form.ace_related_opportunity_id
+    payload["Project"] = project
+
+    # LifeCycle.
+    life_cycle = dict(payload.get("LifeCycle") or {})
+    if form.lifecycle_stage:
+        life_cycle["Stage"] = form.lifecycle_stage
+    if form.lifecycle_stage == "Closed Lost":
+        # AWS requires ClosedLostReason when Stage=Closed Lost. The form
+        # enforces this client-side; _validate_update_enums enforces it
+        # server-side. Belt-and-suspenders: if both checks are bypassed,
+        # refuse to set the Stage rather than send a half-formed payload
+        # AWS will reject with ValidationException.
+        if form.lifecycle_closed_lost_reason:
+            life_cycle["ClosedLostReason"] = form.lifecycle_closed_lost_reason
+        else:
+            life_cycle.pop("Stage", None)
+    else:
+        # Clear ClosedLostReason if BD walked the stage back from Closed Lost.
+        life_cycle.pop("ClosedLostReason", None)
+    if form.lifecycle_next_steps is not None:
+        text = _scrub_text(form.lifecycle_next_steps, limit=255)
+        if text:
+            life_cycle["NextSteps"] = text
+    if form.lifecycle_target_close_date:
+        life_cycle["TargetCloseDate"] = form.lifecycle_target_close_date[:10]
+    # AWS reviewer-owned fields: echo the current values back unchanged.
+    # UpdateOpportunity has PUT semantics -- popping these would clear them
+    # on the AWS side (verified: an update on O13753317 with these popped
+    # wiped ReviewStatus="Submitted" to null, 2026-05-27). The fields ARE
+    # in the boto3 Update input shape; AWS accepts the same value we just
+    # GET'd, which is a no-op for the reviewer's state machine.
+    payload["LifeCycle"] = life_cycle
+
+    # Marketing block. Mirror the create-path "Source=Marketing Activity or
+    # omit the block" rule -- AWS rejects companion fields when Source is None.
+    if form.marketing is not None:
+        source = (form.marketing.source or "").strip()
+        if source == "Marketing Activity":
+            mk: dict[str, Any] = {"Source": "Marketing Activity"}
+            if form.marketing.campaign_name:
+                mk["CampaignName"] = _scrub_text(form.marketing.campaign_name, limit=255)
+            if form.marketing.channels:
+                mk["Channels"] = list(form.marketing.channels)
+            if form.marketing.use_cases:
+                mk["UseCases"] = list(form.marketing.use_cases)
+            if form.marketing.aws_funding_used in ("Yes", "No"):
+                mk["AwsFundingUsed"] = form.marketing.aws_funding_used
+            payload["Marketing"] = mk
+        else:
+            payload.pop("Marketing", None)
 
     return payload
 

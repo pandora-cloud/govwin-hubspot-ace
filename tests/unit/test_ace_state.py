@@ -31,9 +31,7 @@ class TestACEMapping:
         assert record["client_token"] == "tok-1"
         assert record["hubspot_deal_id"] == "deal-1"
 
-    def test_update_merges_without_clobbering_prior_fields(
-        self, state: SyncStateManager
-    ) -> None:
+    def test_update_merges_without_clobbering_prior_fields(self, state: SyncStateManager) -> None:
         """Second update must not erase the fields written by the first."""
         state.update_ace_mapping(
             govwin_id="OPP1",
@@ -100,9 +98,7 @@ class TestInvitationLookup:
     def test_returns_none_when_no_match(self, state: SyncStateManager) -> None:
         assert state.find_govwin_by_invitation_id("nope") is None
 
-    def test_returns_govwin_id_when_invitation_matches(
-        self, state: SyncStateManager
-    ) -> None:
+    def test_returns_govwin_id_when_invitation_matches(self, state: SyncStateManager) -> None:
         state.update_ace_mapping(
             govwin_id="OPP1",
             ace_opportunity_id="O1",

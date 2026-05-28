@@ -123,9 +123,7 @@ class GovWinOpportunity(BaseModel):
     procurement: str | None = None
     source_url: str | None = Field(None, alias="sourceURL")
     duration: str | None = None
-    competition_types: list[dict[str, Any]] = Field(
-        default_factory=list, alias="competitionTypes"
-    )
+    competition_types: list[dict[str, Any]] = Field(default_factory=list, alias="competitionTypes")
     contract_types: list[dict[str, Any]] = Field(default_factory=list, alias="contractTypes")
     type_of_award: str | None = Field(None, alias="typeOfAward")
     cmmc_requirements: str | None = Field(None, alias="cmmcRequirements")
@@ -513,3 +511,73 @@ class AwsProductListResponse(BaseModel):
     """GET /ui-extension/aws-products response body."""
 
     products: list[AwsProductSummary] = Field(default_factory=list)
+
+
+class UpdateFormRequest(BaseModel):
+    """Payload posted by the HubSpot UI Extension to /ui-extension/update.
+
+    Driven by the SubmitForm component in mode="update". Only fires for
+    deals that already have a successful AWS opportunity bound (the form
+    enforces this client-side; the Lambda re-verifies).
+
+    Fields that the AWS API rejects on UpdateOpportunity are NOT present in
+    this model (Origin, OpportunityTeam, Tags). PartnerOpportunityIdentifier
+    is present only for sanity-check matching against the bound deal; the
+    Lambda rejects any attempt to actually change it.
+    """
+
+    deal_id: str
+    # Provided for verification only; must match the deal's current
+    # govwin_opp_id. The Lambda rejects any attempt to actually change the
+    # identifier because AWS enforces uniqueness for the lifetime of the
+    # catalog (see Option C learnings, 2026-05-27).
+    govwin_opp_id: str
+
+    # LifeCycle controls. Stage drives the AWS-side opportunity progression
+    # (Prospect → ... → Launched | Closed Lost). ClosedLostReason is required
+    # when stage == "Closed Lost"; the Lambda enforces the cross-field rule.
+    lifecycle_stage: str
+    lifecycle_closed_lost_reason: str | None = None
+    lifecycle_next_steps: str | None = None
+    lifecycle_target_close_date: str | None = None
+
+    # Standard editable fields (same shapes as SubmitFormRequest minus the
+    # immutable identifier and AWS-Account-locked-after-launch caveats).
+    govwin_agency: str | None = None
+    govwin_industry: str | None = None
+    description: str | None = None
+    dealname: str | None = None
+    amount: float | None = None
+
+    ace_partner_need: list[str] = Field(default_factory=list)
+    ace_delivery_model: list[str] = Field(default_factory=list)
+    ace_use_case: str | None = None
+    ace_opportunity_type: str | None = None
+    ace_sales_activities: list[str] = Field(default_factory=list)
+    ace_competitor_name: str | None = None
+    ace_other_competitor_names: str | None = None
+    ace_aws_account_id: str | None = None
+    ace_national_security: str | None = None
+
+    ace_solution_id: str | None = None
+    ace_aws_products: list[str] = Field(default_factory=list)
+
+    ace_additional_comments: str | None = None
+    ace_related_opportunity_id: str | None = None
+
+    marketing: SubmitFormMarketing | None = None
+
+    model_config = {"extra": "ignore"}
+
+
+class UpdateFormResponse(BaseModel):
+    """Response shape for /ui-extension/update."""
+
+    deal_id: str
+    govwin_opp_id: str
+    ace_opportunity_id: str
+    status: str  # "updated" | "queued"
+    lifecycle_stage: str | None = None
+    products_added: list[str] = Field(default_factory=list)
+    products_removed: list[str] = Field(default_factory=list)
+    message: str | None = None

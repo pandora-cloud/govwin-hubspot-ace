@@ -99,9 +99,7 @@ class TestUpdateWithRetry:
         assert result["LastModifiedDate"] == "T3"
         assert mock_boto.update_opportunity.call_count == 2
 
-    def test_raises_after_max_attempts(
-        self, ace: ACEClient, mock_boto: MagicMock
-    ) -> None:
+    def test_raises_after_max_attempts(self, ace: ACEClient, mock_boto: MagicMock) -> None:
         mock_boto.get_opportunity.return_value = {"LastModifiedDate": "T1"}
         mock_boto.update_opportunity.side_effect = _client_error("ConflictException")
         with patch("time.sleep"), pytest.raises(ACEAPIError) as exc:
@@ -134,9 +132,7 @@ def test_new_client_token_returns_uuid() -> None:
 
 
 class TestListActiveSolutions:
-    def test_returns_normalized_summaries(
-        self, ace: ACEClient, mock_boto: MagicMock
-    ) -> None:
+    def test_returns_normalized_summaries(self, ace: ACEClient, mock_boto: MagicMock) -> None:
         mock_boto.list_solutions.return_value = {
             "SolutionSummaries": [
                 {
@@ -165,19 +161,13 @@ class TestListActiveSolutions:
         assert kwargs["Status"] == ["Active"]
         assert kwargs["MaxResults"] == 100
 
-    def test_paginates_via_next_token(
-        self, ace: ACEClient, mock_boto: MagicMock
-    ) -> None:
+    def test_paginates_via_next_token(self, ace: ACEClient, mock_boto: MagicMock) -> None:
         page1 = {
-            "SolutionSummaries": [
-                {"Id": "S-1", "Name": "A", "Category": "X", "Status": "Active"}
-            ],
+            "SolutionSummaries": [{"Id": "S-1", "Name": "A", "Category": "X", "Status": "Active"}],
             "NextToken": "tok1",
         }
         page2 = {
-            "SolutionSummaries": [
-                {"Id": "S-2", "Name": "B", "Category": "Y", "Status": "Active"}
-            ],
+            "SolutionSummaries": [{"Id": "S-2", "Name": "B", "Category": "Y", "Status": "Active"}],
         }
         mock_boto.list_solutions.side_effect = [page1, page2]
         solutions = ace.list_active_solutions()
@@ -223,9 +213,7 @@ def test_update_with_retry_uses_known_last_modified_first(
     assert kwargs["LastModifiedDate"] == "T1"
 
 
-def test_update_with_retry_raises_when_lmd_missing(
-    ace: ACEClient, mock_boto: MagicMock
-) -> None:
+def test_update_with_retry_raises_when_lmd_missing(ace: ACEClient, mock_boto: MagicMock) -> None:
     mock_boto.get_opportunity.return_value = {}  # missing LastModifiedDate
     with pytest.raises(ACEAPIError) as exc:
         ace.update_with_retry("O1", {"a": "b"})
@@ -247,36 +235,44 @@ class TestScrubForUpdateMarketing:
 
     def test_missing_marketing_block_gets_default_source(self):
         from src.ace.client import ACEClient
+
         result = ACEClient.scrub_for_update({"Customer": {"Account": {"Industry": "Other"}}})
         assert result["Marketing"] == {"Source": "None"}
 
     def test_marketing_with_empty_source_emits_none(self):
         from src.ace.client import ACEClient
+
         result = ACEClient.scrub_for_update({"Marketing": {"Source": ""}})
         assert result["Marketing"] == {"Source": "None"}
 
     def test_marketing_with_explicit_none_source_strips_companions(self):
         from src.ace.client import ACEClient
-        result = ACEClient.scrub_for_update({
-            "Marketing": {
-                "Source": "None",
-                "UseCases": ["Migration"],
-                "CampaignName": "Q3 GovCloud Push",
-                "AwsFundingUsed": "Yes",
+
+        result = ACEClient.scrub_for_update(
+            {
+                "Marketing": {
+                    "Source": "None",
+                    "UseCases": ["Migration"],
+                    "CampaignName": "Q3 GovCloud Push",
+                    "AwsFundingUsed": "Yes",
+                }
             }
-        })
+        )
         assert result["Marketing"] == {"Source": "None"}
 
     def test_marketing_with_marketing_activity_keeps_companions(self):
         from src.ace.client import ACEClient
-        result = ACEClient.scrub_for_update({
-            "Marketing": {
-                "Source": "Marketing Activity",
-                "UseCases": ["Migration"],
-                "CampaignName": "Q3 GovCloud Push",
-                "AwsFundingUsed": "Yes",
+
+        result = ACEClient.scrub_for_update(
+            {
+                "Marketing": {
+                    "Source": "Marketing Activity",
+                    "UseCases": ["Migration"],
+                    "CampaignName": "Q3 GovCloud Push",
+                    "AwsFundingUsed": "Yes",
+                }
             }
-        })
+        )
         assert result["Marketing"]["Source"] == "Marketing Activity"
         assert result["Marketing"]["UseCases"] == ["Migration"]
         assert result["Marketing"]["CampaignName"] == "Q3 GovCloud Push"
@@ -288,7 +284,8 @@ class TestScrubForUpdateMarketing:
         than guess at AWS's coupling rules.
         """
         from src.ace.client import ACEClient
-        result = ACEClient.scrub_for_update({
-            "Marketing": {"Source": "Some Future Source", "UseCases": ["X"]}
-        })
+
+        result = ACEClient.scrub_for_update(
+            {"Marketing": {"Source": "Some Future Source", "UseCases": ["X"]}}
+        )
         assert result["Marketing"] == {"Source": "Some Future Source"}

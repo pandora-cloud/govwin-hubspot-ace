@@ -130,21 +130,25 @@ def test_links_contacts_as_dict():
 
 def test_extra_fields_ignored():
     """Create a model with unknown fields and verify they are silently dropped (extra='ignore')."""
-    opp = GovWinOpportunity.model_validate({
-        "id": "OPP99999",
-        "title": "Test",
-        "unknown_field_xyz": "should be ignored",
-        "another_extra": 12345,
-    })
+    opp = GovWinOpportunity.model_validate(
+        {
+            "id": "OPP99999",
+            "title": "Test",
+            "unknown_field_xyz": "should be ignored",
+            "another_extra": 12345,
+        }
+    )
     assert opp.id == "OPP99999"
     assert opp.title == "Test"
     assert not hasattr(opp, "unknown_field_xyz")
     assert not hasattr(opp, "another_extra")
 
-    contact = GovWinContact.model_validate({
-        "contactId": "C999",
-        "firstName": "Bob",
-        "extraField": "ignored",
-    })
+    contact = GovWinContact.model_validate(
+        {
+            "contactId": "C999",
+            "firstName": "Bob",
+            "extraField": "ignored",
+        }
+    )
     assert contact.contact_id == "C999"
     assert not hasattr(contact, "extraField")

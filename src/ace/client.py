@@ -48,6 +48,42 @@ def _is_retryable(exc: BaseException) -> bool:
     return code in {"ThrottlingException", "InternalServerException", "ServiceUnavailableException"}
 
 
+# Top-level fields of the AWS UpdateOpportunity input shape that the
+# scrub_for_update echo path preserves. Any field present here must also
+# be present in the boto3 model's UpdateOpportunityRequest shape, and
+# any field present in that shape but NOT here would be silently dropped
+# (= cleared on AWS, given PUT semantics). The CI test in
+# tests/unit/test_scrub_for_update_drift.py diffs this set against the
+# live model so a new AWS field surfaces immediately rather than after
+# a silent data-loss incident.
+#
+# Catalog, Identifier, and LastModifiedDate are passed by the caller and
+# do not need to be echoed from GetOpportunity output.
+UPDATE_OPPORTUNITY_ALLOWED_FIELDS: frozenset[str] = frozenset(
+    {
+        "PrimaryNeedsFromAws",
+        "NationalSecurity",
+        "Customer",
+        "Project",
+        "OpportunityType",
+        "Marketing",
+        "SoftwareRevenue",
+        "LifeCycle",
+        "PartnerOpportunityIdentifier",
+    }
+)
+
+# Fields the caller injects per-call rather than echoing from
+# GetOpportunity output; the drift test excludes them from the diff.
+UPDATE_OPPORTUNITY_CALLER_FIELDS: frozenset[str] = frozenset(
+    {
+        "Catalog",
+        "Identifier",
+        "LastModifiedDate",
+    }
+)
+
+
 class ACEClient:
     """Client for the AWS Partner Central Selling API."""
 
@@ -56,9 +92,7 @@ class ACEClient:
         self._catalog = config.ace.catalog
         # partnercentral-selling is exposed only in us-east-1; FIPS endpoint
         # is selected automatically. make_client enforces both.
-        self._client = boto3_client or make_client(
-            "partnercentral-selling", config.aws.region
-        )
+        self._client = boto3_client or make_client("partnercentral-selling", config.aws.region)
         self._rate_limiter = ACERateLimiter(
             reads_per_sec=config.ace.rate_limit_reads_per_sec,
             writes_per_sec=config.ace.rate_limit_writes_per_sec,
@@ -122,9 +156,7 @@ class ACEClient:
 
     def get_opportunity(self, identifier: str) -> dict[str, Any]:
         try:
-            return self._call_read(
-                "get_opportunity", Catalog=self._catalog, Identifier=identifier
-            )
+            return self._call_read("get_opportunity", Catalog=self._catalog, Identifier=identifier)
         except ClientError as exc:
             self._raise_api_error("GetOpportunity", exc)
 
@@ -235,12 +267,14 @@ class ACEClient:
                 params["NextToken"] = next_token
             response = self.list_solutions(**params)
             for summary in response.get("SolutionSummaries", []):
-                solutions.append({
-                    "Id": str(summary.get("Id", "")),
-                    "Name": str(summary.get("Name", "")),
-                    "Category": str(summary.get("Category", "")),
-                    "Status": str(summary.get("Status", "")),
-                })
+                solutions.append(
+                    {
+                        "Id": str(summary.get("Id", "")),
+                        "Name": str(summary.get("Name", "")),
+                        "Category": str(summary.get("Category", "")),
+                        "Status": str(summary.get("Status", "")),
+                    }
+                )
             next_token = response.get("NextToken")
             if not next_token:
                 break
@@ -355,18 +389,10 @@ class ACEClient:
         # The whitelist matches the boto3 input shape for UpdateOpportunity
         # exactly. PartnerOpportunityIdentifier MUST be echoed too: it
         # carries the GovWin cross-reference and AWS clears it without it.
-        allowed = {
-            "PrimaryNeedsFromAws",
-            "NationalSecurity",
-            "Customer",
-            "Project",
-            "OpportunityType",
-            "Marketing",
-            "SoftwareRevenue",
-            "LifeCycle",
-            "PartnerOpportunityIdentifier",
-        }
-        scrubbed = {k: v for k, v in current.items() if k in allowed}
+        # See tests/unit/test_scrub_for_update_drift.py for the CI guard
+        # that diffs this set against the live boto3 service model so a
+        # new AWS-added field doesn't silently get cleared on update.
+        scrubbed = {k: v for k, v in current.items() if k in UPDATE_OPPORTUNITY_ALLOWED_FIELDS}
 
         # AWS sometimes returns stub fields the boto3 client-side validator
         # rejects on UpdateOpportunity. Specifically:
@@ -386,7 +412,8 @@ class ACEClient:
             spend = project.get("ExpectedCustomerSpend")
             if isinstance(spend, list):
                 cleaned = [
-                    e for e in spend
+                    e
+                    for e in spend
                     if isinstance(e, dict)
                     and e.get("Amount")
                     and e.get("Frequency")
@@ -405,7 +432,8 @@ class ACEClient:
             contacts = customer.get("Contacts")
             if isinstance(contacts, list):
                 cleaned_contacts = [
-                    c for c in contacts
+                    c
+                    for c in contacts
                     if isinstance(c, dict)
                     and c.get("FirstName")
                     and c.get("LastName")

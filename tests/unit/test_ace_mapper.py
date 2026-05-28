@@ -32,9 +32,7 @@ def deal() -> dict[str, object]:
 
 class TestMapHubSpotDealToACECreatePayload:
     def test_happy_path(self, deal: dict[str, object], app_config: AppConfig) -> None:
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok-1"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok-1")
         assert payload["Catalog"] == "Sandbox"
         assert payload["ClientToken"] == "tok-1"
         assert payload["Origin"] == "Partner Referral"
@@ -72,9 +70,7 @@ class TestMapHubSpotDealToACECreatePayload:
         self, deal: dict[str, object], app_config: AppConfig
     ) -> None:
         deal["properties"]["govwin_ace_use_case"] = "Security & Compliance"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["Project"]["CustomerUseCase"] == "Security & Compliance"
 
     def test_sales_activities_seeded_by_default(
@@ -84,13 +80,12 @@ class TestMapHubSpotDealToACECreatePayload:
         will advance the opportunity to ReviewStatus=Submitted. Verify the
         mapper seeds a default so the review flow does not stall.
         """
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         activities = payload["Project"]["SalesActivities"]
         assert isinstance(activities, list) and len(activities) >= 1
         # Every element must be in the AWS-published enum.
         from src.ace.mapper import ALLOWED_SALES_ACTIVITIES
+
         assert all(a in ALLOWED_SALES_ACTIVITIES for a in activities)
 
     def test_use_case_other_falls_back_to_default(
@@ -102,9 +97,7 @@ class TestMapHubSpotDealToACECreatePayload:
         """
         deal["properties"]["govwin_ace_use_case"] = "Other"  # type: ignore[index]
         with caplog.at_level("WARNING"):
-            payload = map_hubspot_deal_to_ace_create_payload(
-                deal, app_config, client_token="tok"
-            )
+            payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["Project"]["CustomerUseCase"] == "Migration / Database Migration"
         assert any("Other" in r.message for r in caplog.records)
 
@@ -113,9 +106,7 @@ class TestMapHubSpotDealToACECreatePayload:
     ) -> None:
         """HubSpot stores short labels; AWS expects the Co-Sell-prefixed form."""
         deal["properties"]["govwin_ace_partner_need"] = "Technical Consultation"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["PrimaryNeedsFromAws"] == ["Co-Sell - Technical Consultation"]
 
     def test_other_solution_description_emitted_when_set(
@@ -124,13 +115,8 @@ class TestMapHubSpotDealToACECreatePayload:
         deal["properties"]["govwin_ace_other_solution_description"] = (  # type: ignore[index]
             "Partner federal cloud services"
         )
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
-        assert (
-            payload["Project"]["OtherSolutionDescription"]
-            == "Partner federal cloud services"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
+        assert payload["Project"]["OtherSolutionDescription"] == "Partner federal cloud services"
 
     def test_missing_partner_need_raises(
         self, deal: dict[str, object], app_config: AppConfig
@@ -166,9 +152,7 @@ class TestMapHubSpotDealToACECreatePayload:
         deal["properties"]["govwin_ace_partner_need"] = (  # type: ignore[index]
             "Co-Sell - Technical Consultation;Co-Sell - Pricing Assistance"
         )
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "Co-Sell - Technical Consultation" in payload["PrimaryNeedsFromAws"]
         assert "Co-Sell - Pricing Assistance" in payload["PrimaryNeedsFromAws"]
 
@@ -176,9 +160,7 @@ class TestMapHubSpotDealToACECreatePayload:
         self, deal: dict[str, object], app_config: AppConfig
     ) -> None:
         deal["properties"]["amount"] = "not-a-number"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "ExpectedCustomerSpend" not in payload["Project"]
 
     def test_flat_deal_payload_supported(self, app_config: AppConfig) -> None:
@@ -187,9 +169,7 @@ class TestMapHubSpotDealToACECreatePayload:
             "govwin_ace_partner_need": "Co-Sell - Deal Support",
             "govwin_ace_delivery_model": "Resell",
         }
-        payload = map_hubspot_deal_to_ace_create_payload(
-            flat, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(flat, app_config, client_token="tok")
         assert payload["Project"]["Title"] == "Flat Deal"
 
 
@@ -198,6 +178,7 @@ class TestResolveSolutionId:
         self, deal: dict[str, object], app_config: AppConfig
     ) -> None:
         from dataclasses import replace
+
         cfg = replace(app_config, ace=replace(app_config.ace, catalog="AWS"))
         assert resolve_solution_id(deal, cfg) == "S-1234567"
 
@@ -208,18 +189,15 @@ class TestResolveSolutionId:
         # app_config fixture uses Sandbox catalog by default.
         assert resolve_solution_id(deal, app_config) == ""
 
-    def test_per_deal_override_wins(
-        self, deal: dict[str, object], app_config: AppConfig
-    ) -> None:
+    def test_per_deal_override_wins(self, deal: dict[str, object], app_config: AppConfig) -> None:
         deal["properties"]["govwin_ace_solution_id"] = "S-0050888"  # type: ignore[index]
         assert resolve_solution_id(deal, app_config) == "S-0050888"
 
-    def test_no_default_returns_empty(
-        self, deal: dict[str, object], app_config: AppConfig
-    ) -> None:
+    def test_no_default_returns_empty(self, deal: dict[str, object], app_config: AppConfig) -> None:
         """When neither override nor default is set, returns "" (caller falls
         back to OtherSolutionDescription)."""
         from dataclasses import replace
+
         cfg = replace(app_config, ace=replace(app_config.ace, default_solution_id=""))
         assert resolve_solution_id(deal, cfg) == ""
 
@@ -374,9 +352,7 @@ class TestExtendedFieldMapping:
     def test_no_owner_omits_opportunity_team(
         self, deal: dict[str, object], app_config: AppConfig
     ) -> None:
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "OpportunityTeam" not in payload
 
     def test_marketing_block_emitted_when_source_is_marketing_activity(
@@ -385,9 +361,7 @@ class TestExtendedFieldMapping:
         deal["properties"]["govwin_ace_marketing_source"] = "Marketing Activity"  # type: ignore[index]
         deal["properties"]["govwin_ace_marketing_campaign_name"] = "AWS Re:Invent 2026"  # type: ignore[index]
         deal["properties"]["govwin_ace_marketing_dev_funded"] = "Yes"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["Marketing"]["Source"] == "Marketing Activity"
         assert payload["Marketing"]["CampaignName"] == "AWS Re:Invent 2026"
         assert payload["Marketing"]["AwsFundingUsed"] == "Yes"
@@ -399,17 +373,13 @@ class TestExtendedFieldMapping:
         Skip the whole block in that case (and when Source is unset)."""
         deal["properties"]["govwin_ace_marketing_source"] = "None"  # type: ignore[index]
         deal["properties"]["govwin_ace_marketing_dev_funded"] = "No"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "Marketing" not in payload
 
     def test_marketing_block_omitted_when_no_field_set(
         self, deal: dict[str, object], app_config: AppConfig
     ) -> None:
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "Marketing" not in payload
 
     def test_zero_amount_omits_expected_customer_spend(
@@ -419,9 +389,7 @@ class TestExtendedFieldMapping:
         AWS regex rejects strict-zero on Amount, so skip the spend entry
         entirely rather than emit a value AWS will reject."""
         deal["properties"]["amount"] = "0"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "ExpectedCustomerSpend" not in payload["Project"]
 
     def test_additional_details_pass_through(
@@ -432,9 +400,7 @@ class TestExtendedFieldMapping:
         deal["properties"]["govwin_ace_aws_account_id"] = "123456789012"  # type: ignore[index]
         deal["properties"]["govwin_ace_related_opportunity_id"] = "O11111111"  # type: ignore[index]
         deal["properties"]["govwin_ace_next_steps"] = "Schedule discovery call"  # type: ignore[index]
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["Project"]["CompetitorName"] == "Microsoft Azure"
         assert payload["Project"]["AdditionalComments"] == "BD lead Q3"
         assert payload["Customer"]["Account"]["AwsAccountId"] == "123456789012"
@@ -448,32 +414,27 @@ class TestExtendedFieldMapping:
         Frequency. We bill monthly, so divide by 12. Without this AWS sees
         12x reality."""
         deal["properties"]["amount"] = "1200000"  # type: ignore[index] -- $1.2M annual
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         spend = payload["Project"]["ExpectedCustomerSpend"][0]
         assert spend["Amount"] == "100000.00"  # 1.2M / 12
         assert spend["Frequency"] == "Monthly"
 
-    def test_aws_products_for_deal_splits_csv(
-        self, deal: dict[str, object]
-    ) -> None:
+    def test_aws_products_for_deal_splits_csv(self, deal: dict[str, object]) -> None:
         from src.ace.mapper import aws_products_for_deal
+
         deal["properties"]["govwin_ace_aws_products"] = "AmazonEC2Linux;AWSLambda;AmazonS3"  # type: ignore[index]
         assert aws_products_for_deal(deal) == ["AmazonEC2Linux", "AWSLambda", "AmazonS3"]
 
-    def test_aws_products_for_deal_empty_when_unset(
-        self, deal: dict[str, object]
-    ) -> None:
+    def test_aws_products_for_deal_empty_when_unset(self, deal: dict[str, object]) -> None:
         from src.ace.mapper import aws_products_for_deal
+
         assert aws_products_for_deal(deal) == []
 
-    def test_aws_products_for_deal_drops_other_escape_hatch(
-        self, deal: dict[str, object]
-    ) -> None:
+    def test_aws_products_for_deal_drops_other_escape_hatch(self, deal: dict[str, object]) -> None:
         """The local Other entry must never go to AWS; AssociateOpportunity
         rejects unknown Identifiers."""
         from src.ace.mapper import aws_products_for_deal
+
         deal["properties"]["govwin_ace_aws_products"] = "AWSLambda;Other;AmazonS3"  # type: ignore[index]
         assert aws_products_for_deal(deal) == ["AWSLambda", "AmazonS3"]
 
@@ -481,15 +442,15 @@ class TestExtendedFieldMapping:
         self, deal: dict[str, object]
     ) -> None:
         from src.ace.mapper import aws_products_for_deal
+
         deal["properties"]["govwin_ace_aws_products"] = "AWSLambda;AmazonS3;AWSLambda"  # type: ignore[index]
         assert aws_products_for_deal(deal) == ["AWSLambda", "AmazonS3"]
 
-    def test_aws_products_for_deal_truncates_to_aws_quota(
-        self, deal: dict[str, object]
-    ) -> None:
+    def test_aws_products_for_deal_truncates_to_aws_quota(self, deal: dict[str, object]) -> None:
         """AWS enforces a max of 20 AwsProducts associations per opportunity.
         See src.ace.mapper.MAX_AWS_PRODUCTS_PER_OPPORTUNITY."""
         from src.ace.mapper import MAX_AWS_PRODUCTS_PER_OPPORTUNITY, aws_products_for_deal
+
         # Build 25 unique identifiers and confirm we get exactly 20 back.
         ids = [f"AmazonService{i:02d}" for i in range(25)]
         deal["properties"]["govwin_ace_aws_products"] = ";".join(ids)  # type: ignore[index]
@@ -504,21 +465,25 @@ class TestPhoneNormalization:
 
     def test_e164_input_passes_through(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("+12025550100") == "+12025550100"
         assert _normalize_phone("+1 (202) 555-0100") == "+12025550100"
 
     def test_us_10_digit_gets_plus_one(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("202-555-0100") == "+12025550100"
         assert _normalize_phone("(202) 555-0100") == "+12025550100"
         assert _normalize_phone("2025550100") == "+12025550100"
 
     def test_us_11_digit_starting_with_1(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("1-202-555-0100") == "+12025550100"
 
     def test_unparseable_returns_none(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("ext 555") is None
         assert _normalize_phone("call later") is None
         assert _normalize_phone("0000") is None
@@ -527,24 +492,35 @@ class TestPhoneNormalization:
 
     def test_contact_with_unparseable_phone_drops_phone_only(self, app_config):
         from src.ace.mapper import map_hubspot_deal_to_ace_create_payload
+
         deal = {
             "properties": {
-                "dealname": "X", "amount": "120000", "closedate": "2026-12-31",
+                "dealname": "X",
+                "amount": "120000",
+                "closedate": "2026-12-31",
                 "description": "twenty characters needed for cbp ok",
-                "govwin_opp_id": "OPP1", "govwin_agency": "DoD",
+                "govwin_opp_id": "OPP1",
+                "govwin_agency": "DoD",
                 "govwin_industry": "Government",
                 "govwin_ace_partner_need": "Co-Sell - Technical Consultation",
                 "govwin_ace_delivery_model": "Professional Services",
             }
         }
         contacts = [
-            {"properties": {
-                "firstname": "Jane", "lastname": "Doe", "email": "jd@x.gov",
-                "phone": "ext 555",  # unparseable -- drop only the phone
-            }},
+            {
+                "properties": {
+                    "firstname": "Jane",
+                    "lastname": "Doe",
+                    "email": "jd@x.gov",
+                    "phone": "ext 555",  # unparseable -- drop only the phone
+                }
+            },
         ]
         payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="t", contacts=contacts,
+            deal,
+            app_config,
+            client_token="t",
+            contacts=contacts,
         )
         contact = payload["Customer"]["Contacts"][0]
         assert contact["Email"] == "jd@x.gov"
@@ -559,35 +535,48 @@ class TestSecurityHardening:
         valid ISO-2 code raises ACEMappingError rather than silently
         producing a wrong code (e.g. 'Internal Test' -> 'IN' which is
         India). Federal jurisdiction routing depends on this."""
-        company = {"id": "c1", "properties": {
-            "name": "X", "country": "Internal Test",
-        }}
+        company = {
+            "id": "c1",
+            "properties": {
+                "name": "X",
+                "country": "Internal Test",
+            },
+        }
         with pytest.raises(ACEMappingError, match="Cannot map country"):
             map_hubspot_deal_to_ace_create_payload(
-                deal, app_config, client_token="tok", company=company,
+                deal,
+                app_config,
+                client_token="tok",
+                company=company,
             )
 
     def test_country_full_name_resolves(self, deal, app_config):
         company = {"id": "c1", "properties": {"name": "X", "country": "Germany"}}
         payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok", company=company,
+            deal,
+            app_config,
+            client_token="tok",
+            company=company,
         )
         assert payload["Customer"]["Account"]["Address"]["CountryCode"] == "DE"
 
     def test_phone_repeated_digits_rejected(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("0000000000") is None
         assert _normalize_phone("1111111111") is None
         assert _normalize_phone("+1111111111111") is None
 
     def test_phone_extension_stripped(self):
         from src.ace.mapper import _normalize_phone
+
         assert _normalize_phone("+1 202 555 0100 x123") == "+12025550100"
         assert _normalize_phone("(202) 555-0100 ext 5") == "+12025550100"
         assert _normalize_phone("202-555-0100,99") == "+12025550100"
 
     def test_phone_nanp_area_code_validated(self):
         from src.ace.mapper import _normalize_phone
+
         # 10-digit US: area code must start [2-9]
         assert _normalize_phone("0000000000") is None
         assert _normalize_phone("1234567890") is None  # area code 1, invalid
@@ -598,33 +587,50 @@ class TestSecurityHardening:
         deal["properties"]["govwin_ace_marketing_source"] = "Marketing Activity"
         deal["properties"]["govwin_ace_marketing_campaign_name"] = "AWS\x00Re:Invent\x07"
         payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok",
+            deal,
+            app_config,
+            client_token="tok",
         )
         assert payload["Marketing"]["CampaignName"] == "AWSRe:Invent"
 
     def test_contacts_filtered_by_lifecyclestage(self, deal, app_config):
         contacts = [
             # forwardable: opportunity stage
-            {"id": "1", "properties": {
-                "firstname": "Jane", "lastname": "Doe",
-                "email": "jane.doe@energy.gov",
-                "lifecyclestage": "opportunity",
-            }},
+            {
+                "id": "1",
+                "properties": {
+                    "firstname": "Jane",
+                    "lastname": "Doe",
+                    "email": "jane.doe@energy.gov",
+                    "lifecyclestage": "opportunity",
+                },
+            },
             # not forwardable: subscriber (newsletter signup, not customer-side)
-            {"id": "2", "properties": {
-                "firstname": "Spam", "lastname": "User",
-                "email": "spam@x.com",
-                "lifecyclestage": "subscriber",
-            }},
+            {
+                "id": "2",
+                "properties": {
+                    "firstname": "Spam",
+                    "lastname": "User",
+                    "email": "spam@x.com",
+                    "lifecyclestage": "subscriber",
+                },
+            },
             # not forwardable: hyperscaler-contact (AWS-side, not customer)
-            {"id": "3", "properties": {
-                "firstname": "PDM", "lastname": "Person",
-                "email": "pdm@amazon.com",
-                "hs_lead_status": "HYPERSCALER_CONTACT",
-            }},
+            {
+                "id": "3",
+                "properties": {
+                    "firstname": "PDM",
+                    "lastname": "Person",
+                    "email": "pdm@amazon.com",
+                    "hs_lead_status": "HYPERSCALER_CONTACT",
+                },
+            },
         ]
         payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok", contacts=contacts,
+            deal,
+            app_config,
+            client_token="tok",
+            contacts=contacts,
         )
         out = payload["Customer"]["Contacts"]
         assert len(out) == 1
@@ -633,16 +639,21 @@ class TestSecurityHardening:
     def test_state_full_name_normalized_to_aws_enum(self, deal, app_config):
         """HubSpot stores 'District of Columbia' (full name) but AWS's
         enum requires 'Dist. of Columbia'."""
-        company = {"id": "c1", "properties": {
-            "name": "X", "country": "US", "state": "District of Columbia",
-        }}
+        company = {
+            "id": "c1",
+            "properties": {
+                "name": "X",
+                "country": "US",
+                "state": "District of Columbia",
+            },
+        }
         payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok", company=company,
+            deal,
+            app_config,
+            client_token="tok",
+            company=company,
         )
-        assert (
-            payload["Customer"]["Account"]["Address"]["StateOrRegion"]
-            == "Dist. of Columbia"
-        )
+        assert payload["Customer"]["Account"]["Address"]["StateOrRegion"] == "Dist. of Columbia"
 
 
 class TestLifeCycleStageMapping:
@@ -671,27 +682,19 @@ class TestLifeCycleStageMapping:
         self, deal, app_config, lifecycle, expected_stage
     ):
         deal["properties"]["lifecyclestage"] = lifecycle
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert payload["LifeCycle"]["Stage"] == expected_stage
 
-    def test_unknown_lifecycle_omits_stage_rather_than_misroute(
-        self, deal, app_config
-    ):
+    def test_unknown_lifecycle_omits_stage_rather_than_misroute(self, deal, app_config):
         """An unrecognized lifecycle must NOT default to a guess. Omitting
         Stage entirely lets AWS apply its own default (Prospect) and surfaces
         the data drift in CloudWatch logs rather than silently misrouting.
         """
         deal["properties"]["lifecyclestage"] = "completely-made-up-stage"
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "Stage" not in payload["LifeCycle"]
 
     def test_missing_lifecycle_omits_stage(self, deal, app_config):
         deal["properties"].pop("lifecyclestage", None)
-        payload = map_hubspot_deal_to_ace_create_payload(
-            deal, app_config, client_token="tok"
-        )
+        payload = map_hubspot_deal_to_ace_create_payload(deal, app_config, client_token="tok")
         assert "Stage" not in payload["LifeCycle"]
