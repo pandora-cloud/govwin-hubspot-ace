@@ -15,6 +15,7 @@ The `monitoring` Terraform module ships these alarms wired to the same SNS topic
 | `<dlq-name>-depth` (per DLQ) | `ApproximateNumberOfMessagesVisible >= 1` | A message exhausted SQS retries. | Inspect the DLQ; see [Stuck deal recovery](#stuck-deal-recovery) below. |
 | `<name-prefix>-scheduler-target-errors` | `Sum(TargetErrorCount) >= 1` over 5 min | EventBridge Scheduler failed to invoke the orchestrator. | Check the Scheduler's role can still assume the orchestrator's role; confirm the orchestrator function exists. |
 | `<name-prefix>-webhook-5xx-burst` | `Sum(5XXError) >= 5` over 5 min | The webhook receiver API Gateway returned 5xx repeatedly. | Tail the webhook receiver Lambda log group; usual cause is Secrets Manager unreachable or upstream SQS throttling. |
+| `<name-prefix>-update-in-ace-high-rate` | `Sum(Invocations) >= threshold * 5` per 5-min period, sustained 15 min | The update path is approaching the AWS Partner Central 60-writes/min ceiling. Threshold is `var.update_in_ace_fanout_threshold` per minute (default 30). | See [Scaling and webhook fan-out](#scaling-and-webhook-fan-out) below. |
 
 To list alarms in a console-friendly way:
 
@@ -187,6 +188,80 @@ The script:
 
 Run individual checks with `--suite dlq`, `--suite webhook`, `--suite eventbridge`, or `--suite sns`.
 
+## Scaling and webhook fan-out
+
+The HubSpot to AWS Partner Central update path is one-to-one by design:
+every property-change webhook fires one `update_in_ace` invocation and
+one AWS `UpdateOpportunity` call. This is fine at the steady-state load
+the project was tuned for (5-50 ops/day, 10-20 property edits per
+deal save, occasional bulk recategorize of fewer than 50 deals at a
+time).
+
+At higher steady-state load the per-partner 1-write/sec AWS quota
+becomes the bottleneck. The alarm
+`<name-prefix>-update-in-ace-high-rate` fires when sustained
+invocations approach the ceiling.
+
+### When the alarm fires
+
+1. Tail the update Lambda log group and grep the recent invocations
+   for distinct deal ids:
+
+   ```bash
+   aws logs tail /aws/lambda/<prefix>-update-in-ace --since 15m \
+     | grep -oE 'deal=[0-9]+' | sort -u | wc -l
+   ```
+
+   Compare to the total invocation count in the same window. If they
+   are close (most invocations are distinct deals), the cause is a
+   bulk operation, which is benign: the queue drains and the alarm
+   self-clears. If invocations are much higher than distinct deals,
+   you are seeing per-deal fan-out (10 BD edits on one save fire 10
+   `UpdateOpportunity` calls for the same deal).
+
+2. **Bulk operation** path: no action required other than waiting for
+   the alarm to OK. If your steady-state load legitimately exceeds the
+   default 30/min threshold, raise
+   `var.update_in_ace_fanout_threshold` to silence the alarm at the
+   new baseline.
+
+3. **Per-deal fan-out** path: implement webhook coalescing to collapse
+   one form save's N property changes into a single
+   `UpdateOpportunity` call. The change is:
+
+   - **Receiver** (`src/lambdas/hubspot_webhook_receiver.py`): group
+     update events by `deal_id` within each Lambda invocation before
+     enqueueing; emit one SQS message per `(deal_id, list[events])`.
+   - **update_in_ace** (`src/lambdas/update_in_ace.py`): the
+     `_apply_delta` dispatch table already supports applying multiple
+     property changes to one payload. `_process_event` would loop the
+     event list before the single `UpdateOpportunity` call.
+   - **Tests**: the existing single-event paths become a list-of-one
+     degenerate case; add coverage for the list-of-N path.
+
+   Scoping note: the fan-out only matters when the property changes
+   are on the **same deal** within one Lambda delivery. AWS Products
+   and Solution associations already coalesce at the diff layer
+   (`_handle_aws_products_diff` / `_handle_solution_diff`) because
+   list-valued properties fire one webhook per change to the full
+   list, not per element.
+
+### Tuning the threshold
+
+The default 30 invocations/minute averaged over 15 minutes is
+calibrated for the original Pandora deployment. To re-tune:
+
+- **Disable**: set `update_in_ace_fanout_threshold = 0` in
+  Terraform. The alarm is `count`-guarded out of the plan.
+- **Raise**: set a value matching your normal peak burst plus
+  headroom. For example, an OSS consumer running 200 BD ops/day might
+  see legitimate bursts of 80-100/min during bulk imports; set
+  `update_in_ace_fanout_threshold = 90` to avoid alarm noise.
+
+The AWS hard ceiling is 60 writes/min per partner; setting the
+threshold higher than that asks for `ThrottlingException`s instead
+of an alarm.
+
 ## Disaster recovery
 
 Recovery time objective: 1 hour. Recovery point objective: zero data loss for state that lives in DynamoDB (PITR), at most one orchestrator tick (default 1 hour) for in-flight GovWin discoveries.
@@ -197,7 +272,7 @@ Procedure:
 2. Restore DynamoDB from PITR or the most recent on-demand backup.
 3. Re-run `terraform apply` to recreate Lambdas, queues, and IAM.
 4. `make package && terraform apply` to push the same code version.
-5. Re-run `setup_hubspot_webhooks` to re-register webhook subscriptions on the existing HubSpot dev-platform app.
+5. Re-deploy the HubSpot project (`cd hubspot-app && hs project upload`) to re-register the webhook subscriptions and UI Extension card via the Dev Platform manifest.
 6. Verify with `scripts/verify_fips.py` and a manual orchestrator invocation.
 
 The HubSpot side (deals, properties, pipelines) is untouched by this procedure: HubSpot is the system of record, not us.

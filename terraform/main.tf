@@ -46,10 +46,11 @@ module "dynamodb" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  name_prefix          = local.name_prefix
-  enable_notifications = var.enable_notifications
-  notification_email   = var.notification_email
-  kms_key_arn          = module.kms.pipeline_key_arn
+  name_prefix                    = local.name_prefix
+  enable_notifications           = var.enable_notifications
+  notification_email             = var.notification_email
+  kms_key_arn                    = module.kms.pipeline_key_arn
+  update_in_ace_fanout_threshold = var.update_in_ace_fanout_threshold
 }
 
 # -----------------------------------------------------------------------------

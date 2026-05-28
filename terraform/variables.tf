@@ -156,6 +156,18 @@ variable "notification_email" {
   default     = ""
 }
 
+variable "update_in_ace_fanout_threshold" {
+  description = <<-EOT
+    update_in_ace invocations-per-minute that, when sustained over 15
+    minutes, fires the fan-out alarm. Default 30 is calibrated for the
+    original Pandora deployment (~3-5/min peak). Raise for higher
+    steady-state load; set to 0 to disable the alarm. See
+    docs/operations.md "Scaling and webhook fan-out".
+  EOT
+  type        = number
+  default     = 30
+}
+
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
