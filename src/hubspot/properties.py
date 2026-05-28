@@ -231,7 +231,10 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
         name="govwin_ace_delivery_model",
         label="ACE Delivery Model",
         type="enumeration",
-        fieldType="select",
+        # Multi-value: AWS's Project.DeliveryModels is a list. Mapper joins
+        # picks with ";" and HubSpot only accepts that wire format on a
+        # checkbox-style enumeration.
+        fieldType="checkbox",
         description="How the solution is delivered (manual entry for ACE submission)",
         options=[
             {"label": "SaaS or PaaS", "value": "SaaS or PaaS"},
@@ -294,50 +297,52 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
         # property is left blank.
         options=[
             {"label": v, "value": v}
-            for v in sorted([
-                "AI Machine Learning and Analytics",
-                "Archiving",
-                "Big Data: Data Warehouse / Data Integration / ETL / Data Lake / BI",
-                "Blockchain",
-                "Business Applications: Mainframe Modernization",
-                "Business Applications & Contact Center",
-                "Business Applications & SAP Production",
-                "Centralized Operations Management",
-                "Cloud Management Tools",
-                (
-                    "Cloud Management Tools & DevOps with Continuous Integration "
-                    "& Continuous Delivery (CICD)"
-                ),
-                "Configuration, Compliance & Auditing",
-                "Connected Services",
-                "Containers & Serverless",
-                "Content Delivery & Edge Services",
-                "Database",
-                "Edge Computing / End User Computing",
-                "Energy",
-                "Enterprise Governance & Controls",
-                "Enterprise Resource Planning",
-                "Financial Services",
-                "Healthcare and Life Sciences",
-                "High Performance Computing",
-                "Hybrid Application Platform",
-                "Industrial Software",
-                "IOT",
-                "Manufacturing, Supply Chain and Operations",
-                "Media & High performance computing (HPC)",
-                "Migration / Database Migration",
-                "Monitoring, logging and performance",
-                "Monitoring & Observability",
-                "Networking",
-                "Outpost",
-                "SAP",
-                "Security & Compliance",
-                "Storage & Backup",
-                "Training",
-                "VMC",
-                "VMWare",
-                "Web development & DevOps",
-            ])
+            for v in sorted(
+                [
+                    "AI Machine Learning and Analytics",
+                    "Archiving",
+                    "Big Data: Data Warehouse / Data Integration / ETL / Data Lake / BI",
+                    "Blockchain",
+                    "Business Applications: Mainframe Modernization",
+                    "Business Applications & Contact Center",
+                    "Business Applications & SAP Production",
+                    "Centralized Operations Management",
+                    "Cloud Management Tools",
+                    (
+                        "Cloud Management Tools & DevOps with Continuous Integration "
+                        "& Continuous Delivery (CICD)"
+                    ),
+                    "Configuration, Compliance & Auditing",
+                    "Connected Services",
+                    "Containers & Serverless",
+                    "Content Delivery & Edge Services",
+                    "Database",
+                    "Edge Computing / End User Computing",
+                    "Energy",
+                    "Enterprise Governance & Controls",
+                    "Enterprise Resource Planning",
+                    "Financial Services",
+                    "Healthcare and Life Sciences",
+                    "High Performance Computing",
+                    "Hybrid Application Platform",
+                    "Industrial Software",
+                    "IOT",
+                    "Manufacturing, Supply Chain and Operations",
+                    "Media & High performance computing (HPC)",
+                    "Migration / Database Migration",
+                    "Monitoring, logging and performance",
+                    "Monitoring & Observability",
+                    "Networking",
+                    "Outpost",
+                    "SAP",
+                    "Security & Compliance",
+                    "Storage & Backup",
+                    "Training",
+                    "VMC",
+                    "VMWare",
+                    "Web development & DevOps",
+                ]
+            )
         ],
     ),
     HubSpotProperty(
@@ -374,6 +379,21 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
         description=(
             "Latest AWS-side LifeCycle.ReviewStatus. Updated on every "
             "Opportunity Updated EventBridge event."
+        ),
+    ),
+    HubSpotProperty(
+        name="govwin_aws_cosell_products",
+        label="AWS Co-sell Products (AWS-side)",
+        type="string",
+        fieldType="text",
+        description=(
+            "Semicolon-joined list of AWS Product identifiers currently "
+            "associated with the AWS Partner Central opportunity. Mirror of "
+            "RelatedEntityIdentifiers.AwsProducts; written by handle_ace_event "
+            "on every inbound opportunity event. The Submit-to-AWS card "
+            "compares this against the BD-edited govwin_ace_aws_products and "
+            "shows a 'syncing' pill when they differ (during the async "
+            "Associate/Disassociate window after /ui-extension/update)."
         ),
     ),
     HubSpotProperty(
@@ -418,8 +438,11 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
         name="govwin_ace_marketing_channel",
         label="ACE Marketing Channel",
         type="enumeration",
-        fieldType="select",
-        description="Marketing channel that sourced the opportunity.",
+        # Multi-value: AWS's Channels[] is a list. The mapper joins picks with
+        # ";" before PATCH; HubSpot only accepts that wire format on a
+        # checkbox-style enumeration.
+        fieldType="checkbox",
+        description="Marketing channel(s) that sourced the opportunity.",
         options=[
             {"label": "AWS Marketing Central", "value": "AWS Marketing Central"},
             {"label": "Content Syndication", "value": "Content Syndication"},
@@ -430,6 +453,7 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
             {"label": "Print", "value": "Print"},
             {"label": "Search", "value": "Search"},
             {"label": "Social", "value": "Social"},
+            {"label": "Telemarketing", "value": "Telemarketing"},
             {"label": "TV", "value": "TV"},
             {"label": "Video", "value": "Video"},
             {"label": "Virtual Event", "value": "Virtual Event"},
@@ -445,6 +469,56 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
             {"label": "No", "value": "No"},
             {"label": "Yes", "value": "Yes"},
         ],
+    ),
+    HubSpotProperty(
+        name="govwin_ace_closed_lost_reason",
+        label="ACE Closed Lost Reason",
+        type="enumeration",
+        fieldType="select",
+        description=(
+            "BD's chosen reason when moving the AWS opp to Closed Lost. "
+            "Used by both the form's UpdateOpportunity payload and the "
+            "webhook-driven update_in_ace path's _ensure_closed_lost_pair_consistency "
+            "self-heal (reads this property when only the Stage webhook fires)."
+        ),
+        options=[
+            {"label": v, "value": v} for v in sorted([
+                "Customer Deficiency",
+                "Delay / Cancellation of Project",
+                "Legal / Tax / Regulatory",
+                "Lost to Competitor - Google",
+                "Lost to Competitor - Microsoft",
+                "Lost to Competitor - SoftLayer",
+                "Lost to Competitor - VMWare",
+                "Lost to Competitor - Other",
+                "No Opportunity",
+                "On Premises Deployment",
+                "Partner Gap",
+                "Price",
+                "Security / Compliance",
+                "Technical Limitations",
+                "Customer Experience",
+                "Other",
+                "People/Relationship/Governance",
+                "Product/Technology",
+                "Financial/Commercial",
+            ])
+        ],
+    ),
+    HubSpotProperty(
+        name="govwin_ace_lifecycle_stage",
+        label="ACE LifeCycle Stage",
+        type="string",
+        # Text rather than enumeration: handle_ace_event writes whatever
+        # AWS reports as the current LifeCycle.Stage; AWS may extend the
+        # enum at any time and we don't want to drop unknown values on
+        # the floor. The Update form reads this to pre-fill its stage
+        # dropdown so it never walks an Approved opp backward.
+        fieldType="text",
+        description=(
+            "AWS-side LifeCycle.Stage as last seen by handle_ace_event. "
+            "Source of truth for the Update form's stage pre-fill."
+        ),
     ),
     # ---------------------------------------------------------------------
     # Additional Details (BD-editable)
@@ -572,8 +646,7 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
         type="string",
         fieldType="textarea",
         description=(
-            "BD-curated next steps. Maps to LifeCycle.NextSteps; surfaces "
-            "in the AWS reviewer UI."
+            "BD-curated next steps. Maps to LifeCycle.NextSteps; surfaces in the AWS reviewer UI."
         ),
     ),
     HubSpotProperty(

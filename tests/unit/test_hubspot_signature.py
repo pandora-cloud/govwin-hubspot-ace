@@ -26,7 +26,7 @@ from src.hubspot.signature import (
     validate_signature,
 )
 
-#------Fixtures------
+# ------Fixtures------
 
 
 @pytest.fixture(autouse=True)
@@ -48,12 +48,10 @@ def _make_signature(
     secret: str,
 ) -> str:
     raw = method.encode() + url.encode() + body + str(timestamp_ms).encode()
-    return base64.b64encode(
-        hmac.new(secret.encode(), raw, hashlib.sha256).digest()
-    ).decode()
+    return base64.b64encode(hmac.new(secret.encode(), raw, hashlib.sha256).digest()).decode()
 
 
-#------get_signing_secret------
+# ------get_signing_secret------
 
 
 class TestGetSigningSecret:
@@ -106,7 +104,7 @@ class TestGetSigningSecret:
             get_signing_secret(client, "test/secret")
 
 
-#------validate_signature------
+# ------validate_signature------
 
 
 class TestValidateSignature:
@@ -152,9 +150,7 @@ class TestValidateSignature:
         ts_ms = int(time.time() * 1000) - 600_000  # 10 min ago
         body = args["raw_body"]
         args["timestamp_header"] = str(ts_ms)
-        args["signature_header"] = _make_signature(
-            "POST", args["url"], body, ts_ms, args["secret"]
-        )
+        args["signature_header"] = _make_signature("POST", args["url"], body, ts_ms, args["secret"])
         assert validate_signature(max_age_seconds=300, **args) is False
 
     def test_rejects_signature_too_far_in_future(self) -> None:
@@ -162,9 +158,7 @@ class TestValidateSignature:
         ts_ms = int(time.time() * 1000) + 600_000  # 10 min ahead
         body = args["raw_body"]
         args["timestamp_header"] = str(ts_ms)
-        args["signature_header"] = _make_signature(
-            "POST", args["url"], body, ts_ms, args["secret"]
-        )
+        args["signature_header"] = _make_signature("POST", args["url"], body, ts_ms, args["secret"])
         assert validate_signature(max_age_seconds=300, **args) is False
 
     def test_rejects_non_numeric_timestamp(self) -> None:
@@ -182,7 +176,5 @@ class TestValidateSignature:
         ts_ms = int(time.time() * 1000) - 250_000  # 250s ago, within default 300s
         body = args["raw_body"]
         args["timestamp_header"] = str(ts_ms)
-        args["signature_header"] = _make_signature(
-            "POST", args["url"], body, ts_ms, args["secret"]
-        )
+        args["signature_header"] = _make_signature("POST", args["url"], body, ts_ms, args["secret"])
         assert validate_signature(**args) is True

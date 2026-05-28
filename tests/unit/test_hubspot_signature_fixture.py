@@ -73,7 +73,7 @@ def test_fixture_rejected_when_body_tampered():
 
 
 def test_fixture_rejected_when_timestamp_outside_window():
-    body = b'{}'
+    body = b"{}"
     # 10 minutes in the past, well outside the 5-minute replay window
     ts_ms = int(time.time() * 1000) - 10 * 60 * 1000
     sig = sign(method="POST", url=_URL, body=body, secret=_SECRET, timestamp_ms=ts_ms)

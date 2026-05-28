@@ -26,7 +26,7 @@ import json
 import time
 from typing import Any
 
-#------Constants and module-level state------
+# ------Constants and module-level state------
 
 SECRET_CACHE_TTL_SECONDS = 300
 
@@ -39,7 +39,7 @@ class SignatureConfigError(Exception):
     """Raised when a webhook signing secret is missing or malformed in Secrets Manager."""
 
 
-#------Public API------
+# ------Public API------
 
 
 def get_signing_secret(secrets_client: Any, secret_name: str) -> str:
@@ -122,9 +122,7 @@ def validate_signature(
     if age_ms > max_age_seconds * 1000 or age_ms < -max_age_seconds * 1000:
         return False
     raw = method.encode() + url.encode() + raw_body + timestamp_header.encode()
-    expected = base64.b64encode(
-        hmac.new(secret.encode(), raw, hashlib.sha256).digest()
-    ).decode()
+    expected = base64.b64encode(hmac.new(secret.encode(), raw, hashlib.sha256).digest()).decode()
     return hmac.compare_digest(expected, signature_header)
 
 
