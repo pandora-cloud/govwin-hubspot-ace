@@ -373,12 +373,24 @@ def _hubspot_property_payload(req: SubmitFormRequest) -> dict[str, Any]:
 
 
 def _hubspot_update_property_payload(req: UpdateFormRequest) -> dict[str, Any]:
-    """Build the HubSpot deal PATCH payload from an UpdateFormRequest."""
+    """Build the HubSpot deal PATCH payload from an UpdateFormRequest.
+
+    On UPDATE the form is pre-populated with the AWS-side current values,
+    so an empty field on submission means BD explicitly cleared it. We
+    translate that to a HubSpot null (clears the property) rather than
+    dropping the field from the PATCH (which would leave HubSpot's stale
+    value in place and re-write it back to AWS on the next webhook).
+
+    ``None`` (Pydantic field-unset) still means "untouched, leave alone"
+    and is filtered out of the PATCH.
+    """
     props: dict[str, Any] = {}
 
     def _put(key: str, value: Any) -> None:
-        if value is not None and value != "":
-            props[key] = value
+        if value is None:
+            return
+        # Explicit clear: HubSpot treats JSON null as "clear property".
+        props[key] = value if value != "" else None
 
     _put("govwin_ace_next_steps", req.lifecycle_next_steps)
     if req.lifecycle_target_close_date:
@@ -416,12 +428,21 @@ def _closedate_to_epoch_ms(value: str) -> int | str:
 
 
 def _trigger_stage_id() -> str:
-    """Return the dealstage ID that fires the existing submit_to_ace webhook."""
+    """Return the dealstage ID that fires the submit_to_ace webhook.
+
+    Reads from the ``ACE_TRIGGER_STAGES`` env var (set by Terraform from
+    ``var.ace_trigger_stages``). Raises if the env var is unset because
+    falling back to a hardcoded id would silently route submissions to
+    whatever HubSpot pipeline happens to share that id -- a misconfigured
+    deployment must fail loud.
+    """
     raw = os.environ.get("ACE_TRIGGER_STAGES", "").strip()
     if not raw:
-        # Fall back to the production default we discovered during the
-        # 2025 deploy iteration.
-        return "3590200042"
+        raise RuntimeError(
+            "ACE_TRIGGER_STAGES env var is not configured; "
+            "set var.ace_trigger_stages in terraform.tfvars to the "
+            "numeric HubSpot stage id that should trigger ACE submission."
+        )
     return raw.split(",")[0].strip()
 
 
@@ -679,11 +700,11 @@ def _handle_update(raw_body: bytes) -> dict[str, Any]:
     # the new govwin_ace_aws_products semicolon-joined string, which fires
     # a property-change webhook that update_in_ace's
     # _handle_aws_products_diff consumes and turns into
-    # Associate/Disassociate calls. Doing it inline here turned the
+    # Associate/Disassociate calls. Doing it inline here would turn the
     # /update endpoint into a 1-write/sec-per-product loop that could
-    # overrun API Gateway's 29s timeout on diffs of 5+ items.
-    to_associate: list[str] = []
-    to_disassociate: list[str] = []
+    # overrun API Gateway's 29s timeout on diffs of 5+ items. The response
+    # below reflects this: products are NOT reported in the synchronous
+    # response since the actual associate count is not yet known.
 
     try:
         state.update_ace_mapping(
@@ -729,13 +750,11 @@ def _handle_update(raw_body: bytes) -> dict[str, Any]:
 
     logger.info(
         "ui-extension applied update deal=%s govwin=%s opp=%s stage=%s "
-        "products(+%d/-%d -- applied async via webhook -> update_in_ace)",
+        "(product associations apply async via webhook -> update_in_ace)",
         req.deal_id,
         req.govwin_opp_id,
         ace_opportunity_id,
         req.lifecycle_stage,
-        len(to_associate),
-        len(to_disassociate),
     )
     return ok(
         UpdateFormResponse(
@@ -744,11 +763,12 @@ def _handle_update(raw_body: bytes) -> dict[str, Any]:
             ace_opportunity_id=str(ace_opportunity_id),
             status="updated",
             lifecycle_stage=req.lifecycle_stage,
-            products_added=to_associate,
-            products_removed=to_disassociate,
+            products_added=[],
+            products_removed=[],
             message=(
                 f"Opportunity {ace_opportunity_id} updated. "
-                f"Products: +{len(to_associate)} / -{len(to_disassociate)}."
+                "Product associations are syncing asynchronously; "
+                "watch the deal card for the 'Products syncing' badge."
             ),
         ),
         status=200,

@@ -57,7 +57,6 @@ _ALLOWED_HUBSPOT_ORIGINS: frozenset[str] = frozenset(
         "https://app-jp1.hubspot.com",
         "https://app-ap1.hubspot.com",
         "https://app-na1-sandbox.hubspot.com",
-        "https://app.hubspotqa.com",
     }
 )
 
