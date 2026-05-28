@@ -34,18 +34,14 @@ def _setup_client(monkeypatch, opportunities: list[GovWinOpportunity]) -> MagicM
     client.rate_limiter.calls_in_window = len(opportunities)
     client.__enter__ = MagicMock(return_value=client)
     client.__exit__ = MagicMock(return_value=None)
-    monkeypatch.setattr(
-        govwin_orchestrator, "GovWinClient", lambda *_a, **_kw: client
-    )
+    monkeypatch.setattr(govwin_orchestrator, "GovWinClient", lambda *_a, **_kw: client)
     return client
 
 
 def _setup_state(monkeypatch, *, last_sync: str | None = None) -> MagicMock:
     state = MagicMock()
     state.get_last_sync_timestamp.return_value = last_sync
-    monkeypatch.setattr(
-        govwin_orchestrator, "SyncStateManager", lambda *_a, **_kw: state
-    )
+    monkeypatch.setattr(govwin_orchestrator, "SyncStateManager", lambda *_a, **_kw: state)
     return state
 
 
@@ -76,9 +72,7 @@ def test_misconfigured_queue_returns_status(monkeypatch):
 
 def test_marked_version_path_fans_out_to_sqs(monkeypatch, app_config, mock_aws_env):
     monkeypatch.setattr(govwin_orchestrator, "load_config", lambda: app_config)
-    monkeypatch.setenv(
-        "GOVWIN_SYNC_QUEUE_URL", "https://sqs/test"
-    )
+    monkeypatch.setenv("GOVWIN_SYNC_QUEUE_URL", "https://sqs/test")
     _auth_passthrough(monkeypatch)
     state = _setup_state(monkeypatch)
     _filter_passthrough(monkeypatch)
@@ -103,9 +97,7 @@ def test_marked_version_path_fans_out_to_sqs(monkeypatch, app_config, mock_aws_e
     assert all("id" in entry for entry in body["opportunity_batch"])
 
 
-def test_date_range_path_does_not_advance_cursor_eagerly(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_date_range_path_does_not_advance_cursor_eagerly(monkeypatch, app_config, mock_aws_env):
     """The orchestrator must NOT advance the global SYNC_CURSOR row when it
     dispatches batches. Per-opp watermarks (written by the worker after a
     successful sync) are the source of truth; advancing the global cursor
@@ -129,9 +121,7 @@ def test_date_range_path_does_not_advance_cursor_eagerly(
     state.set_last_sync_timestamp.assert_not_called()
 
 
-def test_empty_marked_results_short_circuits_no_sqs(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_empty_marked_results_short_circuits_no_sqs(monkeypatch, app_config, mock_aws_env):
     monkeypatch.setattr(govwin_orchestrator, "load_config", lambda: app_config)
     monkeypatch.setenv("GOVWIN_SYNC_QUEUE_URL", "https://sqs/test")
     _auth_passthrough(monkeypatch)
@@ -169,9 +159,7 @@ def test_sqs_failure_logged_and_other_batches_continue(
     assert any("sqs.send_message failed" in r.message for r in caplog.records)
 
 
-def test_batch_serialization_drops_entries_without_id(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_batch_serialization_drops_entries_without_id(monkeypatch, app_config, mock_aws_env):
     monkeypatch.setattr(govwin_orchestrator, "load_config", lambda: app_config)
     monkeypatch.setenv("GOVWIN_SYNC_QUEUE_URL", "https://sqs/test")
     _auth_passthrough(monkeypatch)

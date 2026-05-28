@@ -91,28 +91,34 @@ def mock_aws_env(app_config: AppConfig):
 
         secrets.create_secret(
             Name=app_config.aws.govwin_secret_name,
-            SecretString=json.dumps({
-                "client_id": "test-client-id",
-                "client_secret": "test-client-secret",
-                "username": "test@example.com",
-                "password": "test-password",
-            }),
+            SecretString=json.dumps(
+                {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "username": "test@example.com",
+                    "password": "test-password",
+                }
+            ),
         )
 
         secrets.create_secret(
             Name=app_config.aws.hubspot_secret_name,
-            SecretString=json.dumps({
-                "private_app_token": "test-hubspot-token",
-            }),
+            SecretString=json.dumps(
+                {
+                    "private_app_token": "test-hubspot-token",
+                }
+            ),
         )
 
         secrets.create_secret(
             Name=app_config.aws.govwin_tokens_secret_name,
-            SecretString=json.dumps({
-                "access_token": "",
-                "refresh_token": "",
-                "expires_at": 0,
-            }),
+            SecretString=json.dumps(
+                {
+                    "access_token": "",
+                    "refresh_token": "",
+                    "expires_at": 0,
+                }
+            ),
         )
 
         yield
@@ -177,6 +183,7 @@ SAMPLE_GOV_ENTITY_JSON = {
 # ---------------------------------------------------------------------------
 # HTTP Mock Fixtures (respx)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def govwin_mock():

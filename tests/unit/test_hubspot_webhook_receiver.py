@@ -20,9 +20,7 @@ TARGET_URL = "https://api.example.com/hubspot"
 def _signed_headers(method: str, url: str, body: bytes) -> dict[str, str]:
     ts = str(int(time.time() * 1000))
     raw = method.encode() + url.encode() + body + ts.encode()
-    sig = base64.b64encode(
-        hmac.new(SECRET.encode(), raw, hashlib.sha256).digest()
-    ).decode()
+    sig = base64.b64encode(hmac.new(SECRET.encode(), raw, hashlib.sha256).digest()).decode()
     return {
         "x-hubspot-signature-v3": sig,
         "x-hubspot-request-timestamp": ts,
@@ -54,14 +52,14 @@ def _reset_secret_cache():
 @pytest.fixture
 def mock_clients() -> tuple[MagicMock, MagicMock]:
     secrets = MagicMock()
-    secrets.get_secret_value.return_value = {
-        "SecretString": json.dumps({"client_secret": SECRET})
-    }
+    secrets.get_secret_value.return_value = {"SecretString": json.dumps({"client_secret": SECRET})}
     sqs = MagicMock()
     sqs.send_message_batch.return_value = {"Successful": [{"Id": "0"}], "Failed": []}
-    with patch.object(receiver, "_secrets_client", secrets), \
-         patch.object(receiver, "_sqs_client", sqs), \
-         patch.object(receiver, "_ensure_clients", lambda *_: None):
+    with (
+        patch.object(receiver, "_secrets_client", secrets),
+        patch.object(receiver, "_sqs_client", sqs),
+        patch.object(receiver, "_ensure_clients", lambda *_: None),
+    ):
         yield secrets, sqs
 
 
@@ -102,11 +100,15 @@ def _stub_state_replay_check(monkeypatch):
 
 
 def test_valid_signature_returns_200(mock_secrets, mock_sqs) -> None:
-    body = json.dumps([{
-        "objectId": 1,
-        "subscriptionType": "object.propertyChange",
-        "propertyName": "dealstage",
-    }])
+    body = json.dumps(
+        [
+            {
+                "objectId": 1,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "dealstage",
+            }
+        ]
+    )
     mock_sqs.send_message_batch.return_value = {
         "Successful": [{"Id": "0"}],
         "Failed": [],
@@ -137,9 +139,7 @@ def test_replay_old_timestamp_rejected(mock_secrets, mock_sqs) -> None:
     body = "[]"
     old_ts = str(int((time.time() - 10 * 60) * 1000))
     raw = b"POST" + TARGET_URL.encode() + body.encode() + old_ts.encode()
-    sig = base64.b64encode(
-        hmac.new(SECRET.encode(), raw, hashlib.sha256).digest()
-    ).decode()
+    sig = base64.b64encode(hmac.new(SECRET.encode(), raw, hashlib.sha256).digest()).decode()
     headers = {
         "x-hubspot-signature-v3": sig,
         "x-hubspot-request-timestamp": old_ts,
@@ -210,11 +210,15 @@ def test_routes_dealstage_vs_amount_to_separate_queues(mock_secrets, mock_sqs) -
 
 
 def test_irrelevant_property_is_dropped(mock_secrets, mock_sqs) -> None:
-    body = json.dumps([{
-        "objectId": 1,
-        "subscriptionType": "object.propertyChange",
-        "propertyName": "hs_lastmodifieddate",
-    }])
+    body = json.dumps(
+        [
+            {
+                "objectId": 1,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "hs_lastmodifieddate",
+            }
+        ]
+    )
     headers = _signed_headers("POST", TARGET_URL, body.encode())
     response = receiver.handler(_api_event("POST", body, headers), context=None)
     assert response["statusCode"] == 200
@@ -275,15 +279,19 @@ def test_secret_cache_refreshes_after_ttl(mock_secrets, mock_sqs) -> None:
     assert mock_secrets.get_secret_value.call_count == 2
 
 
-def test_replay_within_window_returns_409(
-    mock_secrets, mock_sqs, _stub_state_replay_check
-) -> None:
+def test_replay_within_window_returns_409(mock_secrets, mock_sqs, _stub_state_replay_check) -> None:
     """A replayed signature within the 2x max-age window is rejected with 409,
     even though the signature itself is still cryptographically valid.
     """
     body = json.dumps(
-        [{"objectId": 1, "subscriptionType": "object.propertyChange",
-          "propertyName": "dealstage", "propertyValue": "submit_to_aws"}]
+        [
+            {
+                "objectId": 1,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "dealstage",
+                "propertyValue": "submit_to_aws",
+            }
+        ]
     )
     headers = _signed_headers("POST", TARGET_URL, body.encode())
 

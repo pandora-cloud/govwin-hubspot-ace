@@ -99,9 +99,7 @@ _VALID_ACE_CATALOGS = {"AWS", "Sandbox"}
 
 def _validated_catalog(value: str) -> str:
     if value not in _VALID_ACE_CATALOGS:
-        raise ValueError(
-            f"ACE_CATALOG must be one of {sorted(_VALID_ACE_CATALOGS)}, got {value!r}"
-        )
+        raise ValueError(f"ACE_CATALOG must be one of {sorted(_VALID_ACE_CATALOGS)}, got {value!r}")
     return value
 
 
@@ -147,9 +145,7 @@ def load_config() -> AppConfig:
             default_involvement_type=os.environ.get("ACE_DEFAULT_INVOLVEMENT_TYPE", "Co-Sell"),
             default_visibility=os.environ.get("ACE_DEFAULT_VISIBILITY", "Full"),
             default_origin=os.environ.get("ACE_DEFAULT_ORIGIN", "Partner Referral"),
-            partner_company_name=os.environ.get(
-                "ACE_PARTNER_COMPANY_NAME", "Partner Company"
-            ),
+            partner_company_name=os.environ.get("ACE_PARTNER_COMPANY_NAME", "Partner Company"),
         ),
         environment=os.environ.get("ENVIRONMENT", "prod"),
     )

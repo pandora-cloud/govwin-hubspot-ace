@@ -117,9 +117,7 @@ def test_map_contact_to_hubspot():
 
 def test_map_opportunity_smart_tag_string():
     """smart_tag arrives as a plain string and should pass through to govwin_smart_tags."""
-    opp = GovWinOpportunity.model_validate(
-        {"id": "OPN1", "title": "T", "smartTag": "Cyber; Cloud"}
-    )
+    opp = GovWinOpportunity.model_validate({"id": "OPN1", "title": "T", "smartTag": "Cyber; Cloud"})
     bundle = GovWinOpportunityBundle(opportunity=opp)
     props = map_opportunity_to_deal(bundle)["properties"]
     assert props["govwin_smart_tags"] == "Cyber; Cloud"
@@ -162,9 +160,7 @@ def test_map_opportunity_close_date_falls_back_to_response_date():
 
 def test_map_opportunity_zero_value_omits_amount():
     """Production behavior: $0 deals must not set the amount field at all."""
-    opp = GovWinOpportunity.model_validate(
-        {"id": "OPP1", "title": "Zero", "oppValue": 0}
-    )
+    opp = GovWinOpportunity.model_validate({"id": "OPP1", "title": "Zero", "oppValue": 0})
     bundle = GovWinOpportunityBundle(opportunity=opp)
     props = map_opportunity_to_deal(bundle)["properties"]
     # opp_value = 0 evaluates falsy in `if opp.opp_value is not None` → amount is "0"
@@ -174,9 +170,7 @@ def test_map_opportunity_zero_value_omits_amount():
 
 def test_map_opportunity_large_value_178m():
     """Regression for the production $178M test case."""
-    opp = GovWinOpportunity.model_validate(
-        {"id": "OPP1", "title": "Big", "oppValue": 178000.0}
-    )
+    opp = GovWinOpportunity.model_validate({"id": "OPP1", "title": "Big", "oppValue": 178000.0})
     bundle = GovWinOpportunityBundle(opportunity=opp)
     props = map_opportunity_to_deal(bundle)["properties"]
     # GovWin stores in thousands; HubSpot wants the full dollar amount
@@ -202,11 +196,13 @@ def test_to_hubspot_timestamp_invalid_returns_none():
 
 
 def test_map_contact_no_email():
-    contact = GovWinContact.model_validate({
-        "contactId": "C002",
-        "firstName": "John",
-        "lastName": "Doe",
-    })
+    contact = GovWinContact.model_validate(
+        {
+            "contactId": "C002",
+            "firstName": "John",
+            "lastName": "Doe",
+        }
+    )
     result = map_contact_to_hubspot(contact)
     props = result["properties"]
 

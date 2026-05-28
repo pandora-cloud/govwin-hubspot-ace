@@ -131,9 +131,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # are still valid (the form just shows an empty picker for that field).
     try:
         aws_product_options = _aws_product_options()
-        _patch_property_options(
-            DEAL_PROPERTIES, "govwin_ace_aws_products", aws_product_options
-        )
+        _patch_property_options(DEAL_PROPERTIES, "govwin_ace_aws_products", aws_product_options)
         logger.info("seeded %d AWS Products options", len(aws_product_options))
     except (KeyError, json.JSONDecodeError) as exc:
         logger.warning("failed to seed AWS Products options: %s", exc)
@@ -153,9 +151,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     "value": "_NONE_REGISTERED_",
                 }
             ]
-        _patch_property_options(
-            DEAL_PROPERTIES, "govwin_ace_solution_id", solution_options
-        )
+        _patch_property_options(DEAL_PROPERTIES, "govwin_ace_solution_id", solution_options)
         logger.info("seeded %d Solution options", len(solution_options))
     except (KeyError, HubSpotAPIError, ACEAPIError) as exc:
         logger.warning("failed to seed Solution options: %s", exc)

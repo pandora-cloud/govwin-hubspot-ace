@@ -32,11 +32,7 @@ def _record(message_id: str, ids: list[str]) -> dict[str, Any]:
     return {
         "messageId": message_id,
         "body": json.dumps(
-            {
-                "opportunity_batch": [
-                    {"id": i, "updateDate": "2026-04-01T00:00:00Z"} for i in ids
-                ]
-            }
+            {"opportunity_batch": [{"id": i, "updateDate": "2026-04-01T00:00:00Z"} for i in ids]}
         ),
     }
 
@@ -61,21 +57,15 @@ def _patch_clients(
     govwin.get_opportunity_bundle.side_effect = _bundle_lookup
     govwin.__enter__ = MagicMock(return_value=govwin)
     govwin.__exit__ = MagicMock(return_value=None)
-    monkeypatch.setattr(
-        govwin_worker, "GovWinClient", lambda *_a, **_kw: govwin
-    )
+    monkeypatch.setattr(govwin_worker, "GovWinClient", lambda *_a, **_kw: govwin)
     monkeypatch.setattr(govwin_worker, "GovWinAuth", lambda *_a, **_kw: MagicMock())
 
     hubspot = MagicMock()
     hubspot.__enter__ = MagicMock(return_value=hubspot)
     hubspot.__exit__ = MagicMock(return_value=None)
-    monkeypatch.setattr(
-        govwin_worker, "HubSpotClient", lambda *_a, **_kw: hubspot
-    )
+    monkeypatch.setattr(govwin_worker, "HubSpotClient", lambda *_a, **_kw: hubspot)
 
-    monkeypatch.setattr(
-        govwin_worker, "SyncStateManager", lambda *_a, **_kw: MagicMock()
-    )
+    monkeypatch.setattr(govwin_worker, "SyncStateManager", lambda *_a, **_kw: MagicMock())
 
     orch = MagicMock()
     orch.sync_opportunity_batch.return_value = sync_stats or {
@@ -85,9 +75,7 @@ def _patch_clients(
         "associations_created": 0,
         "errors": [],
     }
-    monkeypatch.setattr(
-        govwin_worker, "SyncOrchestrator", lambda **_kw: orch
-    )
+    monkeypatch.setattr(govwin_worker, "SyncOrchestrator", lambda **_kw: orch)
     return govwin, hubspot
 
 
@@ -128,9 +116,7 @@ def test_rate_limit_deferred_as_batch_failure(monkeypatch, app_config, mock_aws_
     assert result["batchItemFailures"] == [{"itemIdentifier": "m1"}]
 
 
-def test_per_id_fetch_error_recorded_but_does_not_fail_batch(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_per_id_fetch_error_recorded_but_does_not_fail_batch(monkeypatch, app_config, mock_aws_env):
     monkeypatch.setattr(govwin_worker, "load_config", lambda: app_config)
     _patch_clients(
         monkeypatch,
@@ -209,9 +195,7 @@ def test_decode_batch_returns_empty_for_unexpected_shape():
     assert refs == []
 
 
-def test_sync_errors_become_batch_item_failures(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_sync_errors_become_batch_item_failures(monkeypatch, app_config, mock_aws_env):
     """B1 fix: a HubSpot 5xx during company/deal upsert is captured by the
     orchestrator into stats['errors'], and the worker must promote that to
     batchItemFailures so SQS redelivers. Otherwise the batch is silently lost
@@ -237,9 +221,7 @@ def test_sync_errors_become_batch_item_failures(
     assert result["results"][0]["sync_failed"] is True
 
 
-def test_fetch_errors_alone_do_not_trigger_batch_failure(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_fetch_errors_alone_do_not_trigger_batch_failure(monkeypatch, app_config, mock_aws_env):
     """Pre-flight per-id problems (invalid id, GovWin 404) are captured in
     fetch_errors but NOT promoted to batchItemFailures: retrying won't help.
     """
@@ -274,9 +256,7 @@ def test_four_letter_opp_id_accepted(monkeypatch, app_config, mock_aws_env):
     )
 
 
-def test_invalid_json_publishes_alert_then_drops(
-    monkeypatch, app_config, mock_aws_env
-):
+def test_invalid_json_publishes_alert_then_drops(monkeypatch, app_config, mock_aws_env):
     """M6 fix: poison-pill JSON is permanently dropped (no retry), but an
     SNS alert fires so the on-call sees it.
     """

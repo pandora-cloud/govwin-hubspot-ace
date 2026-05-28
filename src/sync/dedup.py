@@ -64,7 +64,4 @@ def batch_opportunities(
     batch_size: int = 10,
 ) -> list[list[GovWinOpportunity]]:
     """Split opportunities into batches for Step Function Map state processing."""
-    return [
-        opportunities[i : i + batch_size]
-        for i in range(0, len(opportunities), batch_size)
-    ]
+    return [opportunities[i : i + batch_size] for i in range(0, len(opportunities), batch_size)]

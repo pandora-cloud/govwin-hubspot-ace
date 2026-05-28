@@ -27,9 +27,7 @@ def fake_secrets_client(fake_secret_value):
     return client
 
 
-def test_handler_dry_run_skips_hubspot_mutations(
-    monkeypatch, app_config, fake_secrets_client
-):
+def test_handler_dry_run_skips_hubspot_mutations(monkeypatch, app_config, fake_secrets_client):
     """dryRun=True must NOT call configure_webhook_settings or create any
     subscription, but must still resolve the app_id and report what it
     *would* have done.
@@ -41,9 +39,7 @@ def test_handler_dry_run_skips_hubspot_mutations(
     hubspot_mock = MagicMock()
     hubspot_mock.__enter__.return_value = hubspot_mock
     hubspot_mock.__exit__.return_value = False
-    monkeypatch.setattr(
-        setup_hubspot_webhooks, "HubSpotClient", lambda _config: hubspot_mock
-    )
+    monkeypatch.setattr(setup_hubspot_webhooks, "HubSpotClient", lambda _config: hubspot_mock)
 
     event = {
         "targetUrl": "https://example.execute-api.us-east-1.amazonaws.com/hubspot",
@@ -60,9 +56,7 @@ def test_handler_dry_run_skips_hubspot_mutations(
     hubspot_mock.create_webhook_subscription.assert_not_called()
 
 
-def test_handler_dry_run_accepts_snake_case_alias(
-    monkeypatch, app_config, fake_secrets_client
-):
+def test_handler_dry_run_accepts_snake_case_alias(monkeypatch, app_config, fake_secrets_client):
     """dry_run is the documented snake_case alias of dryRun."""
     monkeypatch.setattr(setup_hubspot_webhooks, "load_config", lambda: app_config)
     monkeypatch.setattr(
@@ -71,9 +65,7 @@ def test_handler_dry_run_accepts_snake_case_alias(
     hubspot_mock = MagicMock()
     hubspot_mock.__enter__.return_value = hubspot_mock
     hubspot_mock.__exit__.return_value = False
-    monkeypatch.setattr(
-        setup_hubspot_webhooks, "HubSpotClient", lambda _config: hubspot_mock
-    )
+    monkeypatch.setattr(setup_hubspot_webhooks, "HubSpotClient", lambda _config: hubspot_mock)
 
     result = setup_hubspot_webhooks.handler(
         {"targetUrl": "https://x.example.com/hubspot", "dry_run": True},

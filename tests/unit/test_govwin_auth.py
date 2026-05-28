@@ -63,11 +63,13 @@ class TestAuthenticate:
         secrets = boto3.client("secretsmanager", region_name="us-east-1")
         secrets.put_secret_value(
             SecretId="test/govwin-tokens",
-            SecretString=json.dumps({
-                "access_token": "old-access-token",
-                "refresh_token": "valid-refresh-token",
-                "expires_at": time.time() - 100,  # Expired
-            }),
+            SecretString=json.dumps(
+                {
+                    "access_token": "old-access-token",
+                    "refresh_token": "valid-refresh-token",
+                    "expires_at": time.time() - 100,  # Expired
+                }
+            ),
         )
 
         govwin_mock.post("/oauth/token").mock(

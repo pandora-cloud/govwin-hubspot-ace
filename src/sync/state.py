@@ -36,9 +36,7 @@ class SyncStateManager:
     def get_last_sync_timestamp(self) -> str | None:
         """Get the timestamp of the last successful sync."""
         try:
-            response = self._state_table.get_item(
-                Key={"pk": "SYNC_CURSOR", "sk": "METADATA"}
-            )
+            response = self._state_table.get_item(Key={"pk": "SYNC_CURSOR", "sk": "METADATA"})
             item = response.get("Item")
             return _as_str(item.get("last_sync_timestamp")) if item else None
         except ClientError:
@@ -115,9 +113,7 @@ class SyncStateManager:
         except ClientError:
             return None
 
-    def batch_get_opp_update_dates(
-        self, govwin_opp_ids: list[str]
-    ) -> dict[str, str]:
+    def batch_get_opp_update_dates(self, govwin_opp_ids: list[str]) -> dict[str, str]:
         """Get stored updateDates for multiple opportunities at once."""
         result: dict[str, str] = {}
 
@@ -132,12 +128,8 @@ class SyncStateManager:
 
             try:
                 while request_items:
-                    response = self._dynamodb.batch_get_item(
-                        RequestItems=request_items
-                    )
-                    items = response.get("Responses", {}).get(
-                        self._config.aws.sync_state_table, []
-                    )
+                    response = self._dynamodb.batch_get_item(RequestItems=request_items)
+                    items = response.get("Responses", {}).get(self._config.aws.sync_state_table, [])
                     for item in items:
                         pk_value = item["pk"]
                         opp_id = pk_value.replace("OPP#", "") if isinstance(pk_value, str) else None
@@ -161,9 +153,7 @@ class SyncStateManager:
     # Entity Mappings
     # -----------------------------------------------------------------------
 
-    def get_entity_hubspot_id(
-        self, govwin_type: str, govwin_id: str
-    ) -> str | None:
+    def get_entity_hubspot_id(self, govwin_type: str, govwin_id: str) -> str | None:
         """Get the HubSpot ID for a GovWin entity."""
         try:
             response = self._mappings_table.get_item(
@@ -267,9 +257,7 @@ class SyncStateManager:
 
         names = {f"#k{i}": k for i, k in enumerate(updates)}
         values = {f":v{i}": v for i, (_, v) in enumerate(updates.items())}
-        set_expr = ", ".join(
-            f"{name} = :v{i}" for i, name in enumerate(names)
-        )
+        set_expr = ", ".join(f"{name} = :v{i}" for i, name in enumerate(names))
         self._mappings_table.update_item(
             Key={"pk": f"ACE#{govwin_id}", "sk": "MAPPING"},
             UpdateExpression=f"SET {set_expr}",
@@ -281,9 +269,7 @@ class SyncStateManager:
         # and find_govwin_by_hubspot_deal_id can use O(1) GetItem instead
         # of an expensive table Scan.
         if ace_engagement_invitation_id:
-            self._put_reverse_index(
-                f"INV#{ace_engagement_invitation_id}", govwin_id
-            )
+            self._put_reverse_index(f"INV#{ace_engagement_invitation_id}", govwin_id)
         if hubspot_deal_id:
             self._put_reverse_index(f"DEAL#{hubspot_deal_id}", govwin_id)
 
@@ -391,9 +377,7 @@ class SyncStateManager:
     def is_event_seen(self, event_id: str) -> bool:
         """Return True if we have already processed this EventBridge event id."""
         try:
-            response = self._mappings_table.get_item(
-                Key={"pk": f"EVT#{event_id}", "sk": "SEEN"}
-            )
+            response = self._mappings_table.get_item(Key={"pk": f"EVT#{event_id}", "sk": "SEEN"})
             return response.get("Item") is not None
         except ClientError:
             return False
@@ -423,9 +407,7 @@ class SyncStateManager:
                 return False
             raise
 
-    def reserve_webhook_signature(
-        self, signature_fingerprint: str, ttl_seconds: int = 600
-    ) -> bool:
+    def reserve_webhook_signature(self, signature_fingerprint: str, ttl_seconds: int = 600) -> bool:
         """Atomically reserve a webhook signature to defeat replay attacks.
 
         Returns True on first sighting (caller should accept the delivery)

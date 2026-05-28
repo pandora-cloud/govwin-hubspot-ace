@@ -48,11 +48,7 @@ def _ensure_sqs(region: str) -> Any:
 
 
 def _serialize_batch(batch: list[Any]) -> list[dict[str, str | None]]:
-    return [
-        {"id": opp.id, "updateDate": opp.update_date}
-        for opp in batch
-        if opp.id
-    ]
+    return [{"id": opp.id, "updateDate": opp.update_date} for opp in batch if opp.id]
 
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -94,9 +90,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             if last_sync:
                 from_date = last_sync
             else:
-                lookback = datetime.now(UTC) - timedelta(
-                    days=config.sync.initial_lookback_days
-                )
+                lookback = datetime.now(UTC) - timedelta(days=config.sync.initial_lookback_days)
                 from_date = lookback.strftime("%m/%d/%Y")
             logger.info("discover.search from=%s", from_date)
             opportunities = client.search_all_opportunities(

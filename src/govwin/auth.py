@@ -186,11 +186,13 @@ class GovWinAuth:
         try:
             self._secrets_client.put_secret_value(
                 SecretId=self._config.aws.govwin_tokens_secret_name,
-                SecretString=json.dumps({
-                    "access_token": "",
-                    "refresh_token": "",
-                    "expires_at": 0,
-                }),
+                SecretString=json.dumps(
+                    {
+                        "access_token": "",
+                        "refresh_token": "",
+                        "expires_at": 0,
+                    }
+                ),
             )
         except ClientError:
             pass  # Best-effort; in-memory invalidation is the primary mechanism

@@ -21,8 +21,13 @@ from src.sync.orchestrator import SyncOrchestrator
 from src.sync.state import SyncStateManager
 
 
-def _bundle(opp_id: str, *, agency_id: int | None = 100, agency_name: str = "DoD",
-            contacts: list[dict] | None = None) -> GovWinOpportunityBundle:
+def _bundle(
+    opp_id: str,
+    *,
+    agency_id: int | None = 100,
+    agency_name: str = "DoD",
+    contacts: list[dict] | None = None,
+) -> GovWinOpportunityBundle:
     opp = GovWinOpportunity.model_validate(
         {
             "id": opp_id,
@@ -99,9 +104,7 @@ def test_company_upsert_failure_does_not_block_deal_sync(
     assert any("Company upsert failed" in e for e in stats["errors"])
 
 
-def test_skipped_deals_detected_via_set_difference(
-    app_config, hubspot_mock_client, state_manager
-):
+def test_skipped_deals_detected_via_set_difference(app_config, hubspot_mock_client, state_manager):
     """When the batch API returns fewer results than submitted, missing govwin_ids are reported."""
     bundles = [_bundle("OPP1"), _bundle("OPP2"), _bundle("OPP3")]
     hubspot_mock_client.batch_upsert_companies.return_value = [
@@ -125,16 +128,12 @@ def test_skipped_deals_detected_via_set_difference(
     assert "OPP2" in skipped_msgs[0]
 
 
-def test_contact_lookup_uses_contact_id_not_email(
-    app_config, hubspot_mock_client, state_manager
-):
+def test_contact_lookup_uses_contact_id_not_email(app_config, hubspot_mock_client, state_manager):
     """Associations must look up contacts by contact_id (the key DynamoDB mappings use)."""
     bundles = [
         _bundle(
             "OPP1",
-            contacts=[
-                {"contactId": "C-42", "email": "jane@dod.gov", "firstName": "Jane"}
-            ],
+            contacts=[{"contactId": "C-42", "email": "jane@dod.gov", "firstName": "Jane"}],
         )
     ]
     hubspot_mock_client.batch_upsert_companies.return_value = []
@@ -155,7 +154,8 @@ def test_contact_lookup_uses_contact_id_not_email(
     assert stats["associations_created"] >= 1
     # Find the deals→contacts association call
     assoc_calls = [
-        c for c in hubspot_mock_client.batch_create_associations.call_args_list
+        c
+        for c in hubspot_mock_client.batch_create_associations.call_args_list
         if c.args[1] == "contacts"
     ]
     assert assoc_calls, "Expected at least one deals→contacts association call"
@@ -182,9 +182,7 @@ def test_handles_bundle_with_no_agency(app_config, hubspot_mock_client, state_ma
     hubspot_mock_client.batch_upsert_companies.assert_not_called()
 
 
-def test_resync_same_opp_uses_same_govwin_id(
-    app_config, hubspot_mock_client, state_manager
-):
+def test_resync_same_opp_uses_same_govwin_id(app_config, hubspot_mock_client, state_manager):
     """An opp with a changed updateDate is upserted via the same govwin_id key both times.
 
     HubSpot's ``govwin_id`` property is ``hasUniqueValue=true``; the deal upsert always

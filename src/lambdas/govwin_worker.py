@@ -44,9 +44,7 @@ _OPP_ID_PATTERN = re.compile(r"^[A-Z]{2,4}\d+$")
 _sns_client: Any | None = None
 
 
-def _publish_failure_alert(
-    *, config: Any, message_id: str, summary: str, detail: str
-) -> None:
+def _publish_failure_alert(*, config: Any, message_id: str, summary: str, detail: str) -> None:
     """Best-effort SNS alert for terminal sync failures. Never raises."""
     topic_arn = config.aws.sns_topic_arn
     if not topic_arn:
@@ -219,7 +217,5 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 )
                 failures.append({"itemIdentifier": message_id})
 
-    logger.info(
-        "worker.complete records=%d failures=%d", len(results), len(failures)
-    )
+    logger.info("worker.complete records=%d failures=%d", len(results), len(failures))
     return {"results": results, "batchItemFailures": failures}

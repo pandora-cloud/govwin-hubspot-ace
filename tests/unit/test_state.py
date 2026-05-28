@@ -115,9 +115,7 @@ class TestTTLBehavior:
 
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         table = dynamodb.Table(app_config.aws.entity_mappings_table)
-        response = table.get_item(
-            Key={"pk": "GOVENTITY#100", "sk": "HUBSPOT_MAPPING"}
-        )
+        response = table.get_item(Key={"pk": "GOVENTITY#100", "sk": "HUBSPOT_MAPPING"})
         item = response["Item"]
 
         assert "ttl" in item
@@ -149,9 +147,7 @@ class TestWebhookReplayProtection:
         # caller must reject.
         assert state_manager.reserve_webhook_signature("fingerprint-xyz") is False
 
-    def test_reserve_distinct_fingerprints_independent(
-        self, state_manager: SyncStateManager
-    ):
+    def test_reserve_distinct_fingerprints_independent(self, state_manager: SyncStateManager):
         assert state_manager.reserve_webhook_signature("fp1") is True
         assert state_manager.reserve_webhook_signature("fp2") is True
         assert state_manager.reserve_webhook_signature("fp1") is False

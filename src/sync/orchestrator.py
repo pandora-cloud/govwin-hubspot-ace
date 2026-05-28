@@ -138,18 +138,15 @@ class SyncOrchestrator:
 
         # Detect skipped deals via set-difference (batch API doesn't guarantee order)
         if len(deal_results) < len(bundles):
-            returned_ids = {
-                r.get("properties", {}).get("govwin_id")
-                for r in deal_results
-            }
-            submitted_ids = {
-                b.opportunity.id for b in bundles if b.opportunity.id
-            }
+            returned_ids = {r.get("properties", {}).get("govwin_id") for r in deal_results}
+            submitted_ids = {b.opportunity.id for b in bundles if b.opportunity.id}
             skipped_ids = submitted_ids - returned_ids
             if skipped_ids:
                 logger.warning(
                     "Deal upsert returned %d results for %d bundles, skipped: %s",
-                    len(deal_results), len(bundles), skipped_ids,
+                    len(deal_results),
+                    len(bundles),
+                    skipped_ids,
                 )
                 for opp_id in skipped_ids:
                     errors.append(f"Deal upsert skipped: {opp_id}")
@@ -166,9 +163,7 @@ class SyncOrchestrator:
             # Deal <-> Company
             entity = bundle.opportunity.gov_entity
             if entity and entity.id:
-                company_hs_id = self._state.get_entity_hubspot_id(
-                    "GOVENTITY", str(entity.id)
-                )
+                company_hs_id = self._state.get_entity_hubspot_id("GOVENTITY", str(entity.id))
                 if company_hs_id:
                     deal_company_assocs.append((deal_hs_id, company_hs_id))
 
@@ -183,13 +178,9 @@ class SyncOrchestrator:
                     deal_contact_assocs.append((deal_hs_id, contact_hs_id))
 
         if deal_company_assocs:
-            self._hubspot.batch_create_associations(
-                "deals", "companies", deal_company_assocs
-            )
+            self._hubspot.batch_create_associations("deals", "companies", deal_company_assocs)
         if deal_contact_assocs:
-            self._hubspot.batch_create_associations(
-                "deals", "contacts", deal_contact_assocs
-            )
+            self._hubspot.batch_create_associations("deals", "contacts", deal_contact_assocs)
 
         stats["associations_created"] = len(deal_company_assocs) + len(deal_contact_assocs)
 

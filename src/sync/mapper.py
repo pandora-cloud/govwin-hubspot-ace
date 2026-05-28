@@ -77,6 +77,7 @@ def sanitize_html(text: str | None) -> str | None:
 # Date extraction helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract_date_value(date_field: dict[str, Any] | str | None) -> str | None:
     """Extract a date string from GovWin's date field format."""
     if not date_field:
@@ -118,6 +119,7 @@ def _extract_link_href(links: Any) -> str | None:
 # Opportunity -> Deal mapper
 # ---------------------------------------------------------------------------
 
+
 def map_opportunity_to_deal(
     bundle: GovWinOpportunityBundle,
     pipeline_id: str | None = None,
@@ -127,10 +129,7 @@ def map_opportunity_to_deal(
     opp = bundle.opportunity
 
     # Determine close date from projected award or response date
-    close_date = (
-        _extract_date_value(opp.p_award_date_to)
-        or _extract_date_value(opp.response_date)
-    )
+    close_date = _extract_date_value(opp.p_award_date_to) or _extract_date_value(opp.response_date)
 
     # Calculate amount (GovWin stores in thousands)
     amount = None
@@ -214,6 +213,7 @@ def map_opportunity_to_deal(
 # GovEntity -> Company mapper
 # ---------------------------------------------------------------------------
 
+
 def map_gov_entity_to_company(
     entity: GovWinGovEntity,
 ) -> dict[str, Any]:
@@ -237,6 +237,7 @@ def map_gov_entity_to_company(
 # ---------------------------------------------------------------------------
 # Contact -> Contact mapper
 # ---------------------------------------------------------------------------
+
 
 def map_contact_to_hubspot(contact: GovWinContact) -> dict[str, Any]:
     """Map a GovWin contact to a HubSpot contact upsert payload."""

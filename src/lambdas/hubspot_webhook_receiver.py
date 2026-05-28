@@ -183,9 +183,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # We hash rather than use the signature directly so a leaked CloudWatch
     # log cannot be used to extend the replay window indefinitely; the
     # fingerprint is one-way and rotates on every legitimate request.
-    fingerprint = hashlib.sha256(
-        (signature + "|" + timestamp).encode("utf-8")
-    ).hexdigest()
+    fingerprint = hashlib.sha256((signature + "|" + timestamp).encode("utf-8")).hexdigest()
     state = SyncStateManager(config)
     if not state.reserve_webhook_signature(
         fingerprint, ttl_seconds=config.ace.webhook_max_age_seconds * 2

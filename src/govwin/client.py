@@ -168,9 +168,7 @@ class GovWinClient:
 
         data = self._get("opportunities", params=params)
         meta = GovWinMeta.model_validate(data.get("meta", {}))
-        opps = [
-            GovWinOpportunity.model_validate(o) for o in data.get("opportunities", [])
-        ]
+        opps = [GovWinOpportunity.model_validate(o) for o in data.get("opportunities", [])]
         return opps, meta
 
     def get_marked_opportunities(
@@ -195,9 +193,7 @@ class GovWinClient:
 
         data = self._get("opportunities", params=params)
         meta = GovWinMeta.model_validate(data.get("meta", {}))
-        opps = [
-            GovWinOpportunity.model_validate(o) for o in data.get("opportunities", [])
-        ]
+        opps = [GovWinOpportunity.model_validate(o) for o in data.get("opportunities", [])]
         return opps, meta
 
     def get_all_marked_opportunities(
@@ -228,13 +224,13 @@ class GovWinClient:
 
         logger.info(
             "Retrieved %d marked opportunities (version=%s, total: %d)",
-            len(all_opps), marked_version, total_available,
+            len(all_opps),
+            marked_version,
+            total_available,
         )
         return all_opps
 
-    def search_all_opportunities(
-        self, **kwargs: Any
-    ) -> list[GovWinOpportunity]:
+    def search_all_opportunities(self, **kwargs: Any) -> list[GovWinOpportunity]:
         """Search with automatic pagination, returning all matching opportunities."""
         all_opps: list[GovWinOpportunity] = []
         offset = 0
@@ -242,9 +238,7 @@ class GovWinClient:
         total_available = 0
 
         while True:
-            opps, meta = self.search_opportunities(
-                max_results=page_size, offset=offset, **kwargs
-            )
+            opps, meta = self.search_opportunities(max_results=page_size, offset=offset, **kwargs)
             all_opps.extend(opps)
             total_available = meta.paging.total_count
 
@@ -263,9 +257,7 @@ class GovWinClient:
             return None
         return GovWinOpportunity.model_validate(opps[0])
 
-    def get_opportunities_by_ids(
-        self, global_opp_ids: list[str]
-    ) -> list[GovWinOpportunity]:
+    def get_opportunities_by_ids(self, global_opp_ids: list[str]) -> list[GovWinOpportunity]:
         """Get multiple opportunities by IDs (max 10 per request)."""
         results: list[GovWinOpportunity] = []
         for i in range(0, len(global_opp_ids), 10):
@@ -273,8 +265,7 @@ class GovWinClient:
             ids_str = ",".join(batch)
             data = self._get(f"opportunities/{ids_str}")
             results.extend(
-                GovWinOpportunity.model_validate(o)
-                for o in data.get("opportunities", [])
+                GovWinOpportunity.model_validate(o) for o in data.get("opportunities", [])
             )
         return results
 
@@ -304,9 +295,7 @@ class GovWinClient:
         raw = self._get_opp_attribute(global_opp_id, "contracts")
         return [GovWinContract.model_validate(c) for c in raw]
 
-    def get_opportunity_places_of_performance(
-        self, global_opp_id: str
-    ) -> list[dict[str, Any]]:
+    def get_opportunity_places_of_performance(self, global_opp_id: str) -> list[dict[str, Any]]:
         return self._get_opp_attribute(global_opp_id, "placesOfPerformance")
 
     def get_opportunity_bundle(self, global_opp_id: str) -> GovWinOpportunityBundle | None:
@@ -353,9 +342,7 @@ class GovWinClient:
             params["type"] = entity_type
 
         data = self._get("govEntities", params=params)
-        return [
-            GovWinGovEntity.model_validate(e) for e in data.get("govEntities", [])
-        ]
+        return [GovWinGovEntity.model_validate(e) for e in data.get("govEntities", [])]
 
     # -----------------------------------------------------------------------
     # Companies
@@ -382,6 +369,4 @@ class GovWinClient:
             params["naics"] = naics
 
         data = self._get("companies", params=params)
-        return [
-            GovWinCompany.model_validate(c) for c in data.get("companies", [])
-        ]
+        return [GovWinCompany.model_validate(c) for c in data.get("companies", [])]

@@ -53,9 +53,7 @@ class TestSearchOpportunities:
             )
         )
 
-        opps, meta = client.search_opportunities(
-            opp_type="ALL", max_results=100, offset=0
-        )
+        opps, meta = client.search_opportunities(opp_type="ALL", max_results=100, offset=0)
 
         assert len(opps) == 1
         assert opps[0].id == "OPP001"
@@ -97,11 +95,7 @@ class TestGetOpportunityBundle:
         govwin_mock.get("/opportunities/OPP001").mock(
             return_value=httpx.Response(
                 200,
-                json={
-                    "opportunities": [
-                        {"id": "OPP001", "title": "Test Opp", "status": "RFP"}
-                    ]
-                },
+                json={"opportunities": [{"id": "OPP001", "title": "Test Opp", "status": "RFP"}]},
             )
         )
         govwin_mock.get("/opportunities/OPP001/contacts").mock(
@@ -149,9 +143,7 @@ class TestErrorHandling:
         """Fill rate limiter and verify GovWinRateLimitError raised."""
         # Fill the rate limiter to capacity
         limiter = client.rate_limiter
-        limiter._call_timestamps = [
-            __import__("time").time()
-        ] * limiter._effective_limit
+        limiter._call_timestamps = [__import__("time").time()] * limiter._effective_limit
 
         with pytest.raises(GovWinRateLimitError):
             client.get_opportunity("OPP001")

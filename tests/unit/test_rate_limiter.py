@@ -1,6 +1,5 @@
 """Tests for the GovWin rate limiter."""
 
-
 from src.govwin.rate_limiter import TokenBucketRateLimiter
 
 
