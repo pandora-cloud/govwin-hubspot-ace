@@ -21,11 +21,7 @@ class TestBatchUpsertDeals:
         hubspot_mock.post("/crm/v3/objects/deals/batch/upsert").mock(
             return_value=httpx.Response(
                 200,
-                json={
-                    "results": [
-                        {"id": "hs-deal-001", "properties": {"govwin_id": "OPP001"}}
-                    ]
-                },
+                json={"results": [{"id": "hs-deal-001", "properties": {"govwin_id": "OPP001"}}]},
             )
         )
 

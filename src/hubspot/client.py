@@ -45,6 +45,42 @@ class HubSpotRateLimitError(HubSpotAPIError):
     """Raised when HubSpot rate limit is hit."""
 
 
+def _redact_hubspot_error_body(body: str) -> str:
+    """Return a 4xx body trimmed AND with propertyValue fields redacted.
+
+    HubSpot's property-validation responses echo the rejected value back
+    inside ``propertyValue`` (and sometimes ``localizedErrorMessage``).
+    Those fields can contain deal descriptions, company names, customer
+    quotes, and any other CUI-eligible content BD types into the deal.
+    We keep the diagnostic skeleton (errors[].code, errors[].message,
+    propertyName, isValid) and drop the value echoes so CloudWatch never
+    captures the rejected payload itself.
+
+    Best-effort: a non-JSON body (HTML error page, etc.) is returned
+    truncated; we don't try to parse non-JSON.
+    """
+    trimmed = (body or "").strip()
+    if not trimmed:
+        return ""
+    if not (trimmed.startswith("{") or trimmed.startswith("[")):
+        return trimmed[:512]
+    try:
+        parsed = json.loads(trimmed)
+    except json.JSONDecodeError:
+        return trimmed[:512]
+
+    redact_keys = {"propertyValue", "localizedErrorMessage"}
+
+    def _scrub(node: Any) -> Any:
+        if isinstance(node, dict):
+            return {k: ("<redacted>" if k in redact_keys else _scrub(v)) for k, v in node.items()}
+        if isinstance(node, list):
+            return [_scrub(v) for v in node]
+        return node
+
+    return json.dumps(_scrub(parsed))[:1024]
+
+
 class HubSpotClient:
     """Client for the HubSpot CRM API v3."""
 
@@ -125,9 +161,22 @@ class HubSpotClient:
             raise HubSpotRateLimitError("Rate limit exceeded")
 
         if response.status_code >= 400:
-            logger.debug("HubSpot error response %d: %s", response.status_code, response.text)
+            # Promote 4xx responses to WARNING for visibility, but redact
+            # field values that HubSpot sometimes echoes (deal description,
+            # company name, etc.) -- those can include PII or CUI we don't
+            # want copied to CloudWatch. Keep the error / message / property-
+            # name keys which describe WHY it failed, drop the propertyValue
+            # which can echo the deal payload verbatim.
+            body_excerpt = _redact_hubspot_error_body(response.text or "")
+            logger.warning(
+                "HubSpot %s %s -> %d body=%s",
+                method,
+                path,
+                response.status_code,
+                body_excerpt,
+            )
             raise HubSpotAPIError(
-                f"HubSpot API error {response.status_code}",
+                f"HubSpot API error {response.status_code}: {body_excerpt}",
                 status_code=response.status_code,
             )
 
@@ -212,9 +261,7 @@ class HubSpotClient:
         # we don't ship so the operator can decide whether to retire them.
         if prop.options is not None:
             try:
-                existing = self._get(
-                    f"crm/v3/properties/{object_type}/{prop.name}"
-                )
+                existing = self._get(f"crm/v3/properties/{object_type}/{prop.name}")
                 existing_options = existing.get("options") or []
                 ours_by_value = {o["value"]: o for o in prop.options}
                 merged: list[dict[str, Any]] = list(prop.options)
@@ -227,7 +274,10 @@ class HubSpotClient:
                 if bd_added:
                     logger.warning(
                         "%s.%s: preserving %d BD-added option(s) not in code: %s",
-                        object_type, prop.name, len(bd_added), bd_added[:10],
+                        object_type,
+                        prop.name,
+                        len(bd_added),
+                        bd_added[:10],
                     )
                 update_payload["options"] = merged
             except HubSpotAPIError as e:
@@ -238,7 +288,9 @@ class HubSpotClient:
                 logger.warning(
                     "Could not read existing options for %s on %s "
                     "(falling back to wholesale replace): %s",
-                    prop.name, object_type, e,
+                    prop.name,
+                    object_type,
+                    e,
                 )
         try:
             self._patch(
@@ -253,7 +305,9 @@ class HubSpotClient:
             # the whole bootstrap.
             logger.warning(
                 "Could not patch existing property %s on %s: %s",
-                prop.name, object_type, e,
+                prop.name,
+                object_type,
+                e,
             )
 
     def ensure_all_properties(self) -> None:
@@ -290,7 +344,9 @@ class HubSpotClient:
                 self._cache_stage_ids(pipeline)
                 logger.info(
                     "Using pipeline '%s' (ID: %s, %d stages)",
-                    PIPELINE_NAME, self._pipeline_id, len(self._stage_label_to_id),
+                    PIPELINE_NAME,
+                    self._pipeline_id,
+                    len(self._stage_label_to_id),
                 )
                 return self._pipeline_id
 
@@ -330,7 +386,8 @@ class HubSpotClient:
             logger.warning(
                 "Unmapped GovWin status %r — falling back to %r. "
                 "Add it to GOVWIN_STATUS_TO_STAGE in src/hubspot/properties.py.",
-                govwin_status, DEFAULT_STAGE_LABEL,
+                govwin_status,
+                DEFAULT_STAGE_LABEL,
             )
             stage_label = DEFAULT_STAGE_LABEL
         return self._stage_label_to_id.get(stage_label)
@@ -371,9 +428,7 @@ class HubSpotClient:
 
         return results
 
-    def get_deal(
-        self, deal_id: str, properties: list[str] | None = None
-    ) -> dict[str, Any]:
+    def get_deal(self, deal_id: str, properties: list[str] | None = None) -> dict[str, Any]:
         """Fetch a single deal by HubSpot object id with the requested properties."""
         params: dict[str, Any] = {}
         if properties:
@@ -426,9 +481,7 @@ class HubSpotClient:
         return the first one found.
         """
         try:
-            assoc = self._get(
-                f"crm/v3/objects/deals/{deal_id}/associations/companies"
-            )
+            assoc = self._get(f"crm/v3/objects/deals/{deal_id}/associations/companies")
         except HubSpotAPIError as exc:
             if exc.status_code == 404:
                 return None
@@ -454,27 +507,19 @@ class HubSpotClient:
         return more associations.
         """
         try:
-            assoc = self._get(
-                f"crm/v3/objects/deals/{deal_id}/associations/contacts"
-            )
+            assoc = self._get(f"crm/v3/objects/deals/{deal_id}/associations/contacts")
         except HubSpotAPIError as exc:
             if exc.status_code == 404:
                 return []
             raise
-        ids = [
-            str(a.get("id"))
-            for a in (assoc.get("results") or [])
-            if a.get("id")
-        ][:limit]
+        ids = [str(a.get("id")) for a in (assoc.get("results") or []) if a.get("id")][:limit]
         contacts: list[dict[str, Any]] = []
         params: dict[str, Any] = {}
         if properties:
             params["properties"] = ",".join(properties)
         for cid in ids:
             try:
-                contacts.append(
-                    self._get(f"crm/v3/objects/contacts/{cid}", params=params)
-                )
+                contacts.append(self._get(f"crm/v3/objects/contacts/{cid}", params=params))
             except HubSpotAPIError as exc:
                 if exc.status_code == 404:
                     continue  # contact archived between association read and fetch
@@ -623,7 +668,8 @@ class HubSpotClient:
         # Split: contacts with email use email as idProperty, others use govwin_contact_id
         email_contacts = [c for c in contacts if c.get("properties", {}).get("email")]
         id_contacts = [
-            c for c in contacts
+            c
+            for c in contacts
             if not c.get("properties", {}).get("email")
             and c.get("properties", {}).get("govwin_contact_id")
         ]
@@ -693,7 +739,10 @@ class HubSpotClient:
         except HubSpotAPIError:
             logger.warning(
                 "Failed to create association %s/%s -> %s/%s",
-                from_type, from_id, to_type, to_id,
+                from_type,
+                from_id,
+                to_type,
+                to_id,
             )
 
     def batch_create_associations(
@@ -738,7 +787,9 @@ class HubSpotClient:
             except HubSpotAPIError:
                 logger.warning(
                     "Failed to batch create associations %s -> %s (batch index %d)",
-                    from_type, to_type, i,
+                    from_type,
+                    to_type,
+                    i,
                 )
 
     # -----------------------------------------------------------------------
