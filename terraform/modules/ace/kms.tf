@@ -55,7 +55,7 @@ data "aws_iam_policy_document" "pipeline_kms" {
   # on behalf of the Lambdas that own the queues/topic. Without this,
   # SQS managed encryption fails with KMSAccessDeniedException.
   statement {
-    sid     = "AllowSQSService"
+    sid = "AllowSQSService"
     actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
@@ -69,7 +69,7 @@ data "aws_iam_policy_document" "pipeline_kms" {
   }
 
   statement {
-    sid     = "AllowSNSService"
+    sid = "AllowSNSService"
     actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
@@ -85,7 +85,7 @@ data "aws_iam_policy_document" "pipeline_kms" {
   # EventBridge writing to SQS / publishing to SNS uses scheduler.amazonaws.com
   # and events.amazonaws.com as the principal.
   statement {
-    sid     = "AllowEventBridgeAndSchedulerServices"
+    sid = "AllowEventBridgeAndSchedulerServices"
     actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey",
@@ -108,7 +108,7 @@ data "aws_iam_policy_document" "pipeline_kms" {
   # EncryptionContext so the grant is only usable for our own log groups,
   # not arbitrary cross-account groups.
   statement {
-    sid     = "AllowCloudWatchLogsService"
+    sid = "AllowCloudWatchLogsService"
     actions = [
       "kms:Decrypt",
       "kms:Encrypt",
@@ -140,7 +140,7 @@ data "aws_iam_policy_document" "pipeline_kms" {
   # in our own region, so even a cross-region principal that somehow
   # obtained kms:Decrypt cannot use this key for a foreign DDB call.
   statement {
-    sid     = "AllowDynamoDBService"
+    sid = "AllowDynamoDBService"
     actions = [
       "kms:Decrypt",
       "kms:Encrypt",

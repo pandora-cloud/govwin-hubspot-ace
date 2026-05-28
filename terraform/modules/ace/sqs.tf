@@ -1,9 +1,9 @@
 # SQS queues for the HubSpot -> ACE async pipeline.
 
 resource "aws_sqs_queue" "submit_dlq" {
-  name                       = "${var.name_prefix}-ace-submit-dlq"
-  message_retention_seconds  = 14 * 24 * 3600 # 14 days
-  visibility_timeout_seconds = 60
+  name                              = "${var.name_prefix}-ace-submit-dlq"
+  message_retention_seconds         = 14 * 24 * 3600 # 14 days
+  visibility_timeout_seconds        = 60
   kms_master_key_id                 = aws_kms_key.pipeline.arn
   kms_data_key_reuse_period_seconds = 300
 }
@@ -24,8 +24,8 @@ resource "aws_sqs_queue" "submit" {
 }
 
 resource "aws_sqs_queue" "update_dlq" {
-  name                      = "${var.name_prefix}-ace-update-dlq"
-  message_retention_seconds = 14 * 24 * 3600
+  name                              = "${var.name_prefix}-ace-update-dlq"
+  message_retention_seconds         = 14 * 24 * 3600
   kms_master_key_id                 = aws_kms_key.pipeline.arn
   kms_data_key_reuse_period_seconds = 300
 }
