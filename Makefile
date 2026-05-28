@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run
+.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -51,6 +51,35 @@ lock: ## Regenerate requirements.lock with hashes from uv.lock
 audit: ## Audit dependencies for known CVEs
 	@command -v pip-audit >/dev/null 2>&1 || uv tool install pip-audit
 	pip-audit -r requirements.lock --disable-pip
+
+# ---------------------------------------------------------------------------
+# DLQ operations
+# ---------------------------------------------------------------------------
+
+# Override via: make dlq-status PROFILE=myprof PREFIX=myproject-stg
+PROFILE ?= pcmgmt
+PREFIX  ?= govwin-hubspot-prod
+REGION  ?= us-east-1
+
+dlq-status: ## Print depth for every project DLQ (PROFILE, PREFIX, REGION overridable)
+	@for q in $(PREFIX)-dlq $(PREFIX)-ace-submit-dlq $(PREFIX)-ace-update-dlq $(PREFIX)-govwin-sync-dlq; do \
+		url=$$(aws sqs get-queue-url --queue-name $$q --profile $(PROFILE) --region $(REGION) --query QueueUrl --output text 2>/dev/null); \
+		if [ -z "$$url" ]; then echo "$$q: (queue not found)"; continue; fi; \
+		count=$$(aws sqs get-queue-attributes --queue-url $$url --attribute-names ApproximateNumberOfMessages --profile $(PROFILE) --region $(REGION) --query Attributes.ApproximateNumberOfMessages --output text); \
+		echo "$$q: $$count msgs"; \
+	done
+
+dlq-redrive: ## Start an SQS redrive task for one DLQ (QUEUE=<dlq-name> required)
+	@if [ -z "$(QUEUE)" ]; then echo "usage: make dlq-redrive QUEUE=$(PREFIX)-ace-submit-dlq [PROFILE=...]"; exit 1; fi
+	@src_url=$$(aws sqs get-queue-url --queue-name $(QUEUE) --profile $(PROFILE) --region $(REGION) --query QueueUrl --output text); \
+	src_arn=$$(aws sqs get-queue-attributes --queue-url $$src_url --attribute-names QueueArn --profile $(PROFILE) --region $(REGION) --query Attributes.QueueArn --output text); \
+	echo "Starting redrive from $$src_arn..."; \
+	aws sqs start-message-move-task --source-arn $$src_arn --profile $(PROFILE) --region $(REGION); \
+	echo "Track progress: aws sqs list-message-move-tasks --source-arn $$src_arn --profile $(PROFILE) --region $(REGION)"
+
+reconcile: ## Walk DDB + HubSpot + AWS for one govwin id (GOVWIN_ID=... required)
+	@if [ -z "$(GOVWIN_ID)" ]; then echo "usage: make reconcile GOVWIN_ID=OPP12345 [CATALOG=Sandbox|AWS]"; exit 1; fi
+	@PYTHONPATH=. .venv/bin/python scripts/reconcile.py $(if $(CATALOG),--catalog $(CATALOG),) $(GOVWIN_ID)
 
 clean: ## Remove build artifacts
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache

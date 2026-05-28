@@ -33,7 +33,6 @@ import os
 import sys
 import time
 import uuid
-from typing import Any
 
 import httpx
 
@@ -137,7 +136,10 @@ def suite_sns(args: argparse.Namespace) -> int:
     response = sns.publish(
         TopicArn=topic_arn,
         Subject="[fault-inject] probe message"[:100],
-        Message="This is a fault-injection probe. If you are receiving this, your SNS subscription works.",
+        Message=(
+            "This is a fault-injection probe. "
+            "If you are receiving this, your SNS subscription works."
+        ),
     )
     _print(
         "sns:probe published",
