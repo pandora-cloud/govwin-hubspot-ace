@@ -157,6 +157,42 @@ def test_self_heal_refuses_when_partner_id_mismatches(state_mock, hubspot_mock, 
     state_mock.update_ace_mapping.assert_not_called()
 
 
+def test_self_heal_refuses_cross_deal_rebind(state_mock, hubspot_mock, ace_mock) -> None:
+    """A partially-populated DDB ACE# row bound to a DIFFERENT
+    hubspot_deal_id must NOT be rebound via the BD-editable
+    govwin_aws_cosell_id deal property. Refusing the rebind protects
+    against the H1 attack scenario where an attacker with HubSpot edit
+    access + AWS Sandbox console access could redirect updates between
+    deals by collision-matching PartnerOpportunityIdentifier values.
+    """
+    # ACE# row exists with hubspot_deal_id set, but the incoming event
+    # comes from a different deal. ace_opportunity_id is empty (partial
+    # state -- this is the only way the self-heal path runs at all).
+    state_mock.get_ace_mapping.return_value = {
+        "hubspot_deal_id": "111111111111",
+    }
+    # Resolution returns the govwin_id of the bound row.
+    state_mock.find_govwin_by_hubspot_deal_id.return_value = "DEMO-CACHE-MISS-001"
+
+    config = MagicMock()
+    config.ace.catalog = "Sandbox"
+
+    result = update_mod._process_event(
+        _event(),
+        config=config,
+        state=state_mock,
+        ace=ace_mock,
+        hubspot=hubspot_mock,
+    )
+
+    assert result["status"] == "skipped"
+    assert "cross-deal rebind" in result["reason"]
+    # Did NOT call get_deal for the cosell_id recovery (refused before reaching it).
+    assert hubspot_mock.get_deal.call_count == 0
+    # Did NOT call AWS GetOpportunity for verify either.
+    assert ace_mock.get_opportunity.call_count == 0
+
+
 def test_self_heal_survives_hubspot_get_deal_failure(state_mock, hubspot_mock, ace_mock) -> None:
     """When the self-heal HubSpot lookup fails, we land in "skipped" (not retried)."""
     state_mock.find_govwin_by_hubspot_deal_id.return_value = "DEMO-CACHE-MISS-001"

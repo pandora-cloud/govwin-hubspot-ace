@@ -418,11 +418,11 @@ def _handle_industry(payload: dict[str, Any], value: Any, _: str) -> bool:
     # Route through the create-path normalizer so Industry + OtherIndustry
     # stay in sync. Without popping OtherIndustry when the new Industry is
     # a closed-enum value, AWS rejects with ValidationException.
-    from src.ace.mapper import _normalize_industry
+    from src.ace.mapper import normalize_industry
 
     cust = dict(payload.get("Customer") or {})
     account = dict(cust.get("Account") or {})
-    industry_enum, other = _normalize_industry(text)
+    industry_enum, other = normalize_industry(text)
     account["Industry"] = industry_enum
     if other:
         account["OtherIndustry"] = other
@@ -707,6 +707,12 @@ def _process_event(
 
     govwin_id = _resolve_govwin_id(state, hubspot, deal_id)
     if not govwin_id:
+        logger.warning(
+            "update_in_ace: skipping deal=%s prop=%s -- deal has no govwin_opp_id "
+            "and no reverse-index entry; the deal is not part of this integration",
+            deal_id,
+            prop,
+        )
         return {"status": "skipped", "reason": "no govwin mapping"}
 
     mapping = state.get_ace_mapping(govwin_id) or {}
@@ -719,6 +725,37 @@ def _process_event(
         # the DDB cache and proceed; if not, the opp truly doesn't exist
         # yet (the user is trying to update before create completed --
         # legitimate "skipped" case).
+        #
+        # Refuse the self-heal if the DDB ACE# row was previously bound
+        # to a DIFFERENT hubspot_deal_id. That partial-row state means
+        # the mapping is associated with another deal; backfilling here
+        # would silently redirect updates between deals (see security
+        # review H1).
+        existing_deal_id = str(mapping.get("hubspot_deal_id") or "")
+        if existing_deal_id and existing_deal_id != deal_id:
+            logger.warning(
+                "update_in_ace: self-heal refused -- govwin=%s mapping is already "
+                "bound to a different deal=%s (incoming deal=%s); refusing to "
+                "rebind via the BD-editable govwin_aws_cosell_id property",
+                govwin_id,
+                existing_deal_id,
+                deal_id,
+            )
+            try:
+                _publish_update_error_alert(
+                    config=config,
+                    deal_id=deal_id,
+                    prop=str(prop),
+                    error=(
+                        f"Self-heal refused: govwin_opp_id={govwin_id} is already "
+                        f"bound to deal {existing_deal_id} in DynamoDB; this "
+                        f"event came from deal {deal_id}. A deal property edit "
+                        f"may be attempting to rebind across deals."
+                    ),
+                )
+            except Exception:  # noqa: BLE001 -- best-effort
+                logger.exception("update_in_ace: SNS publish for cross-deal rebind refusal failed")
+            return {"status": "skipped", "reason": "cross-deal rebind refused"}
         try:
             deal = hubspot.get_deal(deal_id, properties=["govwin_aws_cosell_id"])
             ace_id = (deal.get("properties") or {}).get("govwin_aws_cosell_id")

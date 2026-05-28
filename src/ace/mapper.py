@@ -328,7 +328,7 @@ ALLOWED_INDUSTRIES: frozenset[str] = frozenset(
 )
 
 
-def _normalize_industry(value: str | None) -> tuple[str, str | None]:
+def normalize_industry(value: str | None) -> tuple[str, str | None]:
     """Map an arbitrary HubSpot industry to an AWS-accepted enum value.
 
     Returns ``(industry, other_industry)``. When the supplied value is in
@@ -645,7 +645,7 @@ def _customer_block(deal: dict[str, Any], company: dict[str, Any] | None = None)
         or "Unknown Federal Agency"
     )
     industry_raw = _company_prop(company, "industry") or _get(deal, "govwin_industry")
-    industry, other_industry = _normalize_industry(industry_raw)
+    industry, other_industry = normalize_industry(industry_raw)
     website = (
         _company_prop(company, "website")
         or _company_prop(company, "domain")
@@ -1209,7 +1209,7 @@ def map_update_form_to_ace_payload(
         account = dict(cust.get("Account") or {})
         # Reuse the create-path industry normalizer so "Government" -> the
         # AWS enum value (and OtherIndustry when applicable) stays consistent.
-        industry_enum, other = _normalize_industry(form.govwin_industry)
+        industry_enum, other = normalize_industry(form.govwin_industry)
         account["Industry"] = industry_enum
         if other:
             account["OtherIndustry"] = other

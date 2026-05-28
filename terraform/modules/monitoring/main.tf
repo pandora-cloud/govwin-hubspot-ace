@@ -54,6 +54,13 @@ locals {
   scheduler_name = "${var.name_prefix}-govwin-sync"
 }
 
+# Notifications topic. Subscribers should be terminal sinks only (email,
+# Slack, PagerDuty). NO Lambda subscriber may write back to HubSpot from
+# an SNS-delivered message; doing so would open a feedback loop with
+# handle_ace_event -> HubSpot PATCH -> property webhook -> update_in_ace
+# -> UpdateOpportunity -> EventBridge -> handle_ace_event. The audit
+# alert handler in hubspot_webhook_receiver.py guards one direction of
+# that loop; keeping the SNS topic a leaf guards the other.
 resource "aws_sns_topic" "sync_notifications" {
   name              = "${var.name_prefix}-notifications"
   kms_master_key_id = var.kms_key_arn

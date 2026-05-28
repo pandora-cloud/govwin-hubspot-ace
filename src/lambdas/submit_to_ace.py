@@ -46,9 +46,6 @@ _PERMANENT_ERROR_CODES: set[str] = {
 }
 
 
-_sns_client: Any | None = None
-
-
 def _publish_permanent_error_alert(
     *,
     config: Any,
@@ -100,10 +97,6 @@ def _publish_permanent_error_alert(
         message=message,
         error_detail=error,
     )
-
-
-# Backwards-compat alias for any test importing the old name.
-_publish_mapping_error_alert = _publish_permanent_error_alert
 
 
 def _trigger_stages() -> set[str]:
