@@ -217,7 +217,7 @@ Only flip to production when ALL of these are true:
 - [ ] Email notifications are wired (`enable_notifications = true`, `notification_email` set).
 - [ ] The SNS topic subscription is confirmed (you've clicked the confirmation link).
 - [ ] CloudWatch alarms on the DLQ depth and on the orchestrator/worker error count exist (the `monitoring` module ships these by default).
-- [ ] An on-call engineer has acknowledged the runbook in `docs/phase4-runbook.md`.
+- [ ] An on-call engineer has acknowledged the operations runbook in `docs/operations.md`.
 
 After flipping, run scenario 11 once more in production catalog with a single real low-stakes opportunity, then withdraw or let AWS process it normally.
 
@@ -263,7 +263,7 @@ Run by the integration owner (typically your BD lead) once the pipeline is live.
 | 9 | Re-mark | Re-mark the unmarked opp from #8. Trigger sync. | Same deal is updated, no duplicate appears. |
 | 10 | DLQ replay | Temporarily revoke a credential, trigger sync, restore. | Failure lands in `*-dlq` SQS queue with sanitized JSON; an alert is sent via SNS; restoring credentials clears the next run. |
 
-## ACE sandbox smoke matrix (Phase 4.1)
+## ACE sandbox smoke matrix
 
 Run before flipping `ace_catalog` from `Sandbox` to `AWS`. Each test is scriptable and self-cleans by archiving the sandbox opportunities afterward. `scripts/sandbox_smoke.py` automates scenarios 1-10; scenario 11 is the manual one-shot in Step 6 above.
 
@@ -342,7 +342,6 @@ These numbers reflect what "passing" looks like for an established federal AWS p
 ## Reference docs
 
 - `docs/architecture.md`: pipeline diagrams, DynamoDB schema, rate-limit strategy.
-- `docs/phase4-runbook.md`: the original 11-scenario smoke matrix and Phase 4.2 production smoke.
 - `docs/operations.md`: alarms, stuck-deal recovery, fault-injection, DR notes.
 - `docs/reference/aws-partner-central/`: API references, EventBridge event types, sandbox notes.
 - `docs/reference/hubspot/private-app-webhooks.md`: HubSpot signature validation deep dive.

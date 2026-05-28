@@ -1,6 +1,6 @@
 # Operations runbook
 
-This is the day-2 reference for operating a deployed instance of the integration. Pair it with [docs/testing-in-your-account.md](testing-in-your-account.md) for the deployment-time playbook and [docs/phase4-runbook.md](phase4-runbook.md) for the sandbox -> production cutover.
+This is the day-2 reference for operating a deployed instance of the integration. Pair it with [docs/testing-in-your-account.md](testing-in-your-account.md) for the deployment-time playbook.
 
 Assumed `name_prefix`: `govwin-hubspot-prod`. Substitute your project's name prefix where noted.
 

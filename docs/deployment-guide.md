@@ -360,7 +360,7 @@ If `list-solutions` returns nothing, register one in the Partner Central UI unde
 
 ### 9b. Create the HubSpot developer-platform app
 
-The legacy private-app UI is gone in HubSpot 2025.2+; the new path is the developer-platform projects framework. **Important: the repo already ships a complete `hubspot-app/` project, so you do NOT run `hs project create` — the project file already exists.** You only need to authenticate the HubSpot CLI to your account, then upload:
+HubSpot's developer-platform projects framework owns the webhook subscriptions and the Submit-to-AWS UI Extension card. **The repo already ships a complete `hubspot-app/` project, so you do NOT run `hs project create` — the project files already exist.** Authenticate the HubSpot CLI to your account, then upload:
 
 ```bash
 npm install -g @hubspot/cli
@@ -431,7 +431,7 @@ Run the sandbox smoke matrix (see [Testing in your own AWS account](testing-in-y
 ace_catalog = "AWS"
 ```
 
-`terraform apply` rebuilds the IAM policy without the `Catalog: Sandbox` condition. Production smoke is a single low-stakes opportunity end-to-end (Phase 4.2 of the rollout plan).
+`terraform apply` rebuilds the IAM policy without the `Catalog: Sandbox` condition. Production smoke is a single low-stakes opportunity end-to-end.
 
 ## Updating
 

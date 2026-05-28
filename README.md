@@ -367,7 +367,6 @@ docs/
   ace-integration.md         # ACE submission workflow
   testing-in-your-account.md # Full test pyramid + sandbox smoke + production rollout reference
   operations.md              # Alarms, stuck-deal recovery, fault-injection, DR
-  phase4-runbook.md          # Phase 4.1 sandbox + Phase 4.2 production smoke runbook
   diagrams/                  # Architecture and pipeline diagrams (SVG + drawio)
 ```
 
@@ -389,13 +388,6 @@ docs/
 
 - [Testing in your AWS account](docs/testing-in-your-account.md) - The full test pyramid (unit -> static -> LocalStack -> validate -> dry-run -> sandbox smoke -> production smoke), the 11-scenario smoke matrix, MFA / Sandbox-Solution gotchas, criteria for flipping to the AWS catalog
 - [Operations](docs/operations.md) - CloudWatch alarms, stuck-deal recovery, fault-injection, scaling + fan-out detection, disaster recovery
-- [Phase 4 runbook](docs/phase4-runbook.md) - Sandbox bring-up + production cutover
-
-**Subsystem runbooks** in `docs/operations/`
-
-- [`kms-relocation-runbook.md`](docs/operations/kms-relocation-runbook.md) - State-move guide for the pipeline CMK consolidation
-- [`ui-extension-split-runbook.md`](docs/operations/ui-extension-split-runbook.md) - Lambda split deploy walkthrough
-- [`ui-extension-deployment.md`](docs/operations/ui-extension-deployment.md) - HubSpot UI Extension card deployment
 
 ## Security
 
