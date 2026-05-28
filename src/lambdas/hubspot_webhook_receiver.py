@@ -43,12 +43,22 @@ _sqs_client: Any | None = None
 
 
 def _ensure_clients(region: str) -> None:
-    """Lazy-initialize boto3 clients (avoids no-region errors at import time)."""
+    """Lazy-initialize boto3 clients (avoids no-region errors at import time).
+
+    Includes the SNS client used by the audit-event path so the first
+    audit publish does not pay boto3 + FIPS endpoint init inside the
+    5-10s receiver budget.
+    """
     global _secrets_client, _sqs_client
     if _secrets_client is None:
         _secrets_client = make_client("secretsmanager", region)
     if _sqs_client is None:
         _sqs_client = make_client("sqs", region)
+    # Pre-warm the SNS client behind src.alerts so the first audit-event
+    # publish on this container does not pay cold-init cost.
+    from src.alerts import ensure_sns_client
+
+    ensure_sns_client(region)
 
 
 class _ConfigError(Exception):

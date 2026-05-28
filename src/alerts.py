@@ -34,6 +34,21 @@ logger = logging.getLogger(__name__)
 _sns_client: Any | None = None
 
 
+def ensure_sns_client(region: str) -> None:
+    """Pre-warm the SNS boto3 client at module load.
+
+    Call from a Lambda's ``_ensure_clients`` to avoid paying the boto3 +
+    FIPS endpoint cold-init cost inside the first call to
+    :func:`publish_alert`. The cost is real for CMK-encrypted topics
+    where the first publish also triggers KMS ``GenerateDataKey``.
+
+    :param region: AWS region for the SNS client.
+    """
+    global _sns_client
+    if _sns_client is None:
+        _sns_client = make_client("sns", region)
+
+
 def publish_alert(
     *,
     config: Any,

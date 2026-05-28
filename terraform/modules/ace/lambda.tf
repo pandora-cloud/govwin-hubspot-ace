@@ -41,7 +41,13 @@ resource "aws_lambda_function" "hubspot_webhook_receiver" {
   handler                        = "src.lambdas.hubspot_webhook_receiver.handler"
   runtime                        = "python3.12"
   architectures                  = ["arm64"]
-  timeout                        = 5
+  # 10s, not 5s: HubSpot's documented 5s budget assumes the receiver does
+  # only signature validation + SQS enqueue. The audit-event path also
+  # publishes to SNS inline, and the first publish from a fresh Lambda
+  # container pays boto3 + FIPS + KMS GenerateDataKey for the CMK-
+  # encrypted topic. 10s is well below HubSpot's tolerance threshold
+  # for occasional slow responses while leaving margin for cold start.
+  timeout                        = 10
   memory_size                    = 256
   reserved_concurrent_executions = 20
   filename                       = var.lambda_source_zip
