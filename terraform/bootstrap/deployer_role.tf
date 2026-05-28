@@ -601,6 +601,17 @@ resource "aws_iam_role_policy" "deployer_kms" {
           "kms:UpdateKeyDescription",
           "kms:EnableKeyRotation",
           "kms:DisableKeyRotation",
+          # Grants. CreateGrant is required so DynamoDB (and other AWS
+          # service principals that use the key on the deployer's behalf)
+          # can register the per-table grant when the table is configured
+          # for CMK SSE. Without this, "terraform apply" fails the DDB
+          # SSE update with AccessDeniedException on the CMK relocation.
+          # RetireGrant + ListGrants round out the lifecycle so a future
+          # tear-down can also revoke + audit grants the deployer
+          # registered.
+          "kms:CreateGrant",
+          "kms:RetireGrant",
+          "kms:ListGrants",
         ]
         Resource = "*"
         Condition = {
