@@ -89,8 +89,8 @@ class TestEventDedup:
     def test_unseen_event_returns_false(self, state: SyncStateManager) -> None:
         assert state.is_event_seen("evt-x") is False
 
-    def test_seen_after_mark(self, state: SyncStateManager) -> None:
-        state.mark_event_seen("evt-x")
+    def test_seen_after_atomic_mark(self, state: SyncStateManager) -> None:
+        assert state.mark_event_seen_atomic("evt-x") is True
         assert state.is_event_seen("evt-x") is True
 
 

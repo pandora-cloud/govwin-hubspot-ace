@@ -440,13 +440,3 @@ class SyncStateManager:
                 return False
             raise
 
-    def mark_event_seen(self, event_id: str, ttl_seconds: int = 86400) -> None:
-        """Mark an EventBridge event id as processed (non-atomic; legacy)."""
-        self._mappings_table.put_item(
-            Item={
-                "pk": f"EVT#{event_id}",
-                "sk": "SEEN",
-                "seen_at": datetime.now(UTC).isoformat(),
-                "ttl": int(time.time()) + ttl_seconds,
-            }
-        )
