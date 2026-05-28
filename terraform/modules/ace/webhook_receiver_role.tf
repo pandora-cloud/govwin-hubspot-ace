@@ -89,6 +89,28 @@ data "aws_iam_policy_document" "webhook_receiver" {
     }
   }
 
+  # SNS Publish on the notifications topic. Used by the audit-event
+  # path in hubspot_webhook_receiver to alert when an integration-owned
+  # property (e.g. govwin_aws_cosell_id) is changed by a non-integration
+  # source. Scoped to the single topic; the role cannot publish to any
+  # other topic in the account.
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [var.sns_topic_arn]
+  }
+
+  # KMS for the pipeline CMK that encrypts the SNS notifications topic.
+  # SNS Publish on a CMK-encrypted topic requires GenerateDataKey +
+  # Decrypt on the key.
+  statement {
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [var.kms_key_arn]
+  }
+
   # X-Ray. Cannot be resource-scoped (AWS-mandated wildcard).
   statement {
     actions   = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"]
