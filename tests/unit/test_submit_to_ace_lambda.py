@@ -54,12 +54,12 @@ def deal_payload() -> dict:
 def _patches(deal_payload: dict, ace_responses: dict | None = None):
     """Build the standard patch stack for submit_to_ace.handler."""
     ace = MagicMock()
-    ace.create_opportunity.return_value = (
-        ace_responses or {}
-    ).get("create", {"Id": "O-NEW", "LastModifiedDate": "2026-04-29T00:00:00Z"})
-    ace.start_engagement_from_opportunity_task.return_value = (
-        ace_responses or {}
-    ).get("start", {"TaskId": "T1", "EngagementInvitationId": "EI1"})
+    ace.create_opportunity.return_value = (ace_responses or {}).get(
+        "create", {"Id": "O-NEW", "LastModifiedDate": "2026-04-29T00:00:00Z"}
+    )
+    ace.start_engagement_from_opportunity_task.return_value = (ace_responses or {}).get(
+        "start", {"TaskId": "T1", "EngagementInvitationId": "EI1"}
+    )
 
     state = MagicMock()
     state.get_ace_mapping.return_value = None
@@ -81,9 +81,11 @@ def _patches(deal_payload: dict, ace_responses: dict | None = None):
 
 def test_submit_runs_three_call_flow(event_factory, deal_payload) -> None:
     ace, state, hubspot = _patches(deal_payload)
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert ace.create_opportunity.call_count == 1
     assert ace.associate_opportunity.call_count == 1
@@ -105,9 +107,11 @@ def test_get_owner_failure_does_not_abort_submission(event_factory, deal_payload
     ace, state, hubspot = _patches(deal_payload)
     deal_payload["properties"]["hubspot_owner_id"] = "160603727"
     hubspot.get_owner.side_effect = HubSpotAPIError("Forbidden", status_code=403)
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert ace.create_opportunity.call_count == 1
     assert result["results"][0]["status"] == "submitted"
@@ -117,9 +121,11 @@ def test_get_owner_failure_does_not_abort_submission(event_factory, deal_payload
 
 def test_skips_when_dealstage_not_in_trigger_list(event_factory, deal_payload) -> None:
     ace, state, hubspot = _patches(deal_payload)
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         event = event_factory(property_value="appointmentscheduled")
         result = submit_to_ace.handler(event, context=None)
     assert result["results"][0]["status"] == "skipped"
@@ -132,9 +138,11 @@ def test_resumes_when_opportunity_already_created(event_factory, deal_payload) -
         "ace_opportunity_id": "O-EXISTING",
         "last_modified_date": "2026-04-28T00:00:00Z",
     }
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         submit_to_ace.handler(event_factory(), context=None)
     # Should NOT recreate, but should still associate + start engagement
     assert ace.create_opportunity.call_count == 0
@@ -144,9 +152,11 @@ def test_resumes_when_opportunity_already_created(event_factory, deal_payload) -
 
 def test_skips_when_govwin_id_missing(event_factory) -> None:
     ace, state, hubspot = _patches({"id": "1", "properties": {"dealname": "x"}})
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert result["results"][0]["status"] == "skipped"
     assert ace.create_opportunity.call_count == 0
@@ -155,9 +165,11 @@ def test_skips_when_govwin_id_missing(event_factory) -> None:
 def test_failure_records_batch_item_failure(event_factory, deal_payload) -> None:
     ace, state, hubspot = _patches(deal_payload)
     ace.create_opportunity.side_effect = RuntimeError("boom")
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert result["batchItemFailures"] == [{"itemIdentifier": "m1"}]
 
@@ -166,9 +178,11 @@ def test_invalid_json_body_dropped_not_retried() -> None:
     """Invalid JSON is a permanent error; do not loop the message via SQS."""
     event = {"Records": [{"messageId": "bad", "body": "{not json"}]}
     ace, state, hubspot = _patches({})
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event, context=None)
     assert result["batchItemFailures"] == []
 
@@ -183,9 +197,11 @@ def test_resume_from_engagement_skips_all_three_calls(event_factory, deal_payloa
         "last_modified_date": "2026-04-29T00:00:00Z",
         "client_token": "tok-old",
     }
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert ace.create_opportunity.call_count == 0
     assert ace.associate_opportunity.call_count == 0
@@ -198,9 +214,11 @@ def test_permanent_validation_error_is_dropped(event_factory, deal_payload) -> N
 
     ace, state, hubspot = _patches(deal_payload)
     ace.create_opportunity.side_effect = ACEAPIError("bad", code="ValidationException")
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     # Permanent errors must not be retried via SQS.
     assert result["batchItemFailures"] == []
@@ -211,9 +229,11 @@ def test_transient_throttling_is_retried(event_factory, deal_payload) -> None:
 
     ace, state, hubspot = _patches(deal_payload)
     ace.create_opportunity.side_effect = ACEAPIError("slow", code="ThrottlingException")
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert result["batchItemFailures"] == [{"itemIdentifier": "m1"}]
 
@@ -224,18 +244,22 @@ def test_invalid_objectid_skipped(event_factory, deal_payload) -> None:
         "Records": [
             {
                 "messageId": "m1",
-                "body": json.dumps({
-                    "objectId": "../etc/passwd",
-                    "subscriptionType": "object.propertyChange",
-                    "propertyName": "dealstage",
-                    "propertyValue": "submit_to_aws",
-                }),
+                "body": json.dumps(
+                    {
+                        "objectId": "../etc/passwd",
+                        "subscriptionType": "object.propertyChange",
+                        "propertyName": "dealstage",
+                        "propertyValue": "submit_to_aws",
+                    }
+                ),
             }
         ]
     }
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(bad_event, context=None)
     assert result["results"][0]["status"] == "skipped"
 
@@ -245,9 +269,11 @@ def test_associate_conflict_is_treated_as_success(event_factory, deal_payload) -
 
     ace, state, hubspot = _patches(deal_payload)
     ace.associate_opportunity.side_effect = ACEAPIError("dup", code="ConflictException")
-    with patch.object(submit_to_ace, "ACEClient", return_value=ace), \
-         patch.object(submit_to_ace, "SyncStateManager", return_value=state), \
-         patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot):
+    with (
+        patch.object(submit_to_ace, "ACEClient", return_value=ace),
+        patch.object(submit_to_ace, "SyncStateManager", return_value=state),
+        patch.object(submit_to_ace, "HubSpotClient", return_value=hubspot),
+    ):
         result = submit_to_ace.handler(event_factory(), context=None)
     assert result["results"][0]["status"] == "submitted"
     assert ace.start_engagement_from_opportunity_task.call_count == 1

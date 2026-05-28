@@ -22,8 +22,6 @@ import logging
 import os
 from typing import Any
 
-from botocore.exceptions import ClientError
-
 from src.ace.client import ACEAPIError, ACEClient
 from src.ace.mapper import (
     ACEMappingError,
@@ -32,7 +30,6 @@ from src.ace.mapper import (
     resolve_solution_id,
 )
 from src.ace.validators import is_valid_govwin_id, is_valid_hubspot_object_id
-from src.aws_clients import make_client
 from src.config import load_config
 from src.hubspot.client import HubSpotAPIError, HubSpotClient
 from src.sync.state import SyncStateManager
@@ -52,34 +49,61 @@ _PERMANENT_ERROR_CODES: set[str] = {
 _sns_client: Any | None = None
 
 
-def _publish_mapping_error_alert(
-    *, config: Any, deal_id: str, govwin_id: str, error: str
+def _publish_permanent_error_alert(
+    *,
+    config: Any,
+    deal_id: str,
+    govwin_id: str,
+    aws_step: str = "AWS write",
+    error: str,
 ) -> None:
-    """Publish an SNS alert when a deal cannot be mapped to a valid ACE
-    payload, so the BD team gets a visible signal instead of a silent drop.
-    Best-effort: failures here do not fail the SQS message.
+    """Thin wrapper that builds the message + delegates to src.alerts.
+
+    The actual SNS publish + error-detail redaction lives in
+    ``src.alerts.publish_alert``. This Lambda's wrapper exists to keep
+    the call sites readable and pin the per-step intro copy that's
+    specific to the submit pipeline.
     """
-    topic_arn = config.aws.sns_topic_arn
-    if not topic_arn:
-        logger.info("sns: no topic configured; skipping mapping-error alert")
-        return
-    global _sns_client
-    if _sns_client is None:
-        _sns_client = make_client("sns", config.aws.region)
-    subject = f"ACE submission rejected (deal {deal_id})"[:100]
+    from src.alerts import publish_alert
+
+    subject = f"ACE {aws_step} rejected (deal {deal_id})"
+    intro = {
+        "mapping": (
+            "A HubSpot deal could not be mapped to a valid CreateOpportunity "
+            "payload. The deal needs to be corrected in HubSpot before resubmission."
+        ),
+        "CreateOpportunity": (
+            "AWS Partner Central rejected the initial CreateOpportunity "
+            "submission. The opportunity does not exist on the AWS side."
+        ),
+        "AssociateOpportunity": (
+            "AWS Partner Central rejected an AssociateOpportunity call. The "
+            "opportunity exists but a Solution or Product association failed."
+        ),
+        "StartEngagementFromOpportunityTask": (
+            "AWS Partner Central rejected StartEngagementFromOpportunityTask. "
+            "The opportunity exists but is not in the AWS reviewer queue."
+        ),
+    }.get(aws_step, f"AWS Partner Central rejected the {aws_step} call.")
     message = (
-        "A HubSpot deal could not be submitted to AWS Partner Central because "
-        "the integration could not map it to a valid CreateOpportunity payload. "
-        "The deal needs to be corrected in HubSpot before resubmission.\n\n"
+        f"{intro}\n\n"
         f"HubSpot deal id: {deal_id}\n"
         f"GovWin opp id: {govwin_id}\n"
         f"Catalog: {config.ace.catalog}\n"
-        f"Reason: {error}\n"
+        f"AWS step: {aws_step}\n"
+        "Full detail (with field values redacted) is appended below; the\n"
+        "unredacted detail stays in CloudWatch."
     )
-    try:
-        _sns_client.publish(TopicArn=topic_arn, Subject=subject, Message=message)
-    except ClientError as exc:
-        logger.exception("sns publish failed for mapping-error alert: %s", exc)
+    publish_alert(
+        config=config,
+        subject=subject,
+        message=message,
+        error_detail=error,
+    )
+
+
+# Backwards-compat alias for any test importing the old name.
+_publish_mapping_error_alert = _publish_permanent_error_alert
 
 
 def _trigger_stages() -> set[str]:
@@ -131,17 +155,29 @@ _DEAL_PROPERTIES_FOR_MAPPING = [
 ]
 
 _COMPANY_PROPERTIES_FOR_MAPPING = [
-    "name", "industry", "domain", "website",
-    "address", "city", "state", "zip", "country",
+    "name",
+    "industry",
+    "domain",
+    "website",
+    "address",
+    "city",
+    "state",
+    "zip",
+    "country",
 ]
 
 _CONTACT_PROPERTIES_FOR_MAPPING = [
-    "firstname", "lastname", "email", "phone", "jobtitle",
+    "firstname",
+    "lastname",
+    "email",
+    "phone",
+    "jobtitle",
     # PII gate: only forward contacts whose lifecyclestage flags
     # customer-side intent. Hyperscaler-Contact records (AWS-side
     # participants the EventBridge handler created) are filtered out
     # via hs_lead_status.
-    "lifecyclestage", "hs_lead_status",
+    "lifecyclestage",
+    "hs_lead_status",
 ]
 
 
@@ -160,12 +196,8 @@ def _load_associated_records(
     the submission. The mapper handles missing associated records by
     falling back to GovWin-derived deal properties.
     """
-    company = hubspot.get_associated_company(
-        deal_id, properties=_COMPANY_PROPERTIES_FOR_MAPPING
-    )
-    contacts = hubspot.get_associated_contacts(
-        deal_id, properties=_CONTACT_PROPERTIES_FOR_MAPPING
-    )
+    company = hubspot.get_associated_company(deal_id, properties=_COMPANY_PROPERTIES_FOR_MAPPING)
+    contacts = hubspot.get_associated_contacts(deal_id, properties=_CONTACT_PROPERTIES_FOR_MAPPING)
     owner_id = ""
     props = deal.get("properties") or deal
     if isinstance(props, dict):
@@ -234,15 +266,25 @@ def _process_event(
             )
         except ACEMappingError as exc:
             logger.warning("ACE mapping failed for deal %s: %s", deal_id, exc)
-            _publish_mapping_error_alert(
+            _publish_permanent_error_alert(
                 config=config,
                 deal_id=deal_id,
                 govwin_id=govwin_id,
+                aws_step="mapping",
                 error=str(exc),
             )
             return {"status": "rejected", "reason": str(exc)}
 
-        response = ace.create_opportunity(payload)
+        try:
+            response = ace.create_opportunity(payload)
+        except ACEAPIError as create_exc:
+            # Annotate the exception with the AWS step that failed so the
+            # outer handler's writeback can craft a step-specific message
+            # AND so a single source of truth for the rejection text wins
+            # (previously the inner block wrote a detailed reason that the
+            # outer block then overwrote with a generic one).
+            create_exc.aws_step = "CreateOpportunity"  # type: ignore[attr-defined]
+            raise
         ace_opportunity_id = response["Id"]
         last_modified_date = response.get("LastModifiedDate")
         state.update_ace_mapping(
@@ -257,10 +299,13 @@ def _process_event(
         # the opportunity in their CRM. handle_ace_event will update
         # govwin_aws_cosell_status on subsequent ReviewStatus changes.
         try:
-            hubspot.update_deal(deal_id, {
-                "govwin_aws_cosell_id": str(ace_opportunity_id),
-                "govwin_aws_cosell_status": "Pending Submission",
-            })
+            hubspot.update_deal(
+                deal_id,
+                {
+                    "govwin_aws_cosell_id": str(ace_opportunity_id),
+                    "govwin_aws_cosell_status": "Pending Submission",
+                },
+            )
         except Exception:  # noqa: BLE001 -- write-back is best-effort
             logger.exception(
                 "submit_to_ace: write-back of aws_cosell_id failed for deal %s",
@@ -284,6 +329,9 @@ def _process_event(
             logger.info("ace.associated solution=%s opp=%s", solution_id, ace_opportunity_id)
         except ACEAPIError as exc:
             if exc.code != "ConflictException":
+                # Tag the step so the outer permanent-error handler can
+                # SNS-alert with the right subject + body.
+                exc.aws_step = "AssociateOpportunity"  # type: ignore[attr-defined]
                 raise
             # AWS does not return the existing associated solution from the
             # error, so we cannot distinguish "same solution" from "different
@@ -333,30 +381,40 @@ def _process_event(
                 )
                 product_failures.append(f"{product_id}: {exc.code}")
         if product_failures:
-            _publish_mapping_error_alert(
-                config=config,
-                deal_id=deal_id,
-                govwin_id=govwin_id,
-                error=(
-                    f"AWS Products association failed for {len(product_failures)} "
-                    f"value(s) on opp={ace_opportunity_id}: "
-                    + "; ".join(product_failures)
-                    + ". Check govwin_ace_aws_products on the deal "
-                    "(Identifiers must match aws_products.json from "
-                    "github.com/aws-samples/partner-crm-integration-samples)."
-                ),
+            # Intentionally NOT publishing the BD-facing SNS alert here.
+            # CreateOpportunity already succeeded -- the opp exists in AWS,
+            # the deal is advancing through the pipeline, and only a subset
+            # of the product associations were rejected. Reusing the
+            # "submission rejected" alert template here is misleading
+            # (we got a near-miss alert that read like a hard failure
+            # during the 2026-05-27 E2E test). The failing identifiers
+            # are still logged at WARNING above so they're discoverable
+            # in CloudWatch when BD asks why an associated product is
+            # missing on the AWS-side opportunity. Common cause: a product
+            # in our shipped catalog (resources/aws_products.json, sourced
+            # from the production AWS Partner Central catalog) is not yet
+            # carried by the Sandbox catalog.
+            logger.info(
+                "ace.associate partial failures on opp=%s (informational, "
+                "opp creation already succeeded): %d/%d products rejected: %s",
+                ace_opportunity_id,
+                len(product_failures),
+                len(aws_products),
+                "; ".join(product_failures),
             )
 
     # Step 4: StartEngagementFromOpportunityTask. Reuse a persisted task token
     # so that an SQS retry hits the same idempotency key on the AWS side.
     if not mapping.get("ace_task_id"):
-        task_token = state.reserve_task_client_token(
-            govwin_id, ACEClient.new_client_token()
-        )
-        task_response = ace.start_engagement_from_opportunity_task(
-            opportunity_identifier=str(ace_opportunity_id),
-            client_token=task_token,
-        )
+        task_token = state.reserve_task_client_token(govwin_id, ACEClient.new_client_token())
+        try:
+            task_response = ace.start_engagement_from_opportunity_task(
+                opportunity_identifier=str(ace_opportunity_id),
+                client_token=task_token,
+            )
+        except ACEAPIError as exc:
+            exc.aws_step = "StartEngagementFromOpportunityTask"  # type: ignore[attr-defined]
+            raise
         state.update_ace_mapping(
             govwin_id=govwin_id,
             ace_engagement_invitation_id=task_response.get("EngagementInvitationId"),
@@ -410,24 +468,60 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                         message_id,
                         str(exc),
                     )
-                    # Permanent errors silently delete the SQS message
-                    # (SQS sees a clean return). Without an SNS alert, the
-                    # only visibility is a single CloudWatch warning -- a
-                    # stuck deal is invisible to BD. Publish to SNS so
-                    # the on-call sees the rejection. Best-effort: a
-                    # publish failure does not propagate.
+                    deal_id = str((hs_event or {}).get("objectId") or "?")
+                    # Resolve govwin_id from the deal so the SNS alert and
+                    # HubSpot writeback both reference the real id rather
+                    # than "(unknown)". get_deal failures are non-fatal --
+                    # the alert still goes out with whatever we have.
+                    govwin_id_for_alert = "(unknown)"
+                    if is_valid_hubspot_object_id(deal_id):
+                        try:
+                            deal_obj = hubspot.get_deal(deal_id, properties=["govwin_opp_id"])
+                            govwin_id_for_alert = (deal_obj.get("properties") or deal_obj).get(
+                                "govwin_opp_id"
+                            ) or "(missing on deal)"
+                        except Exception:  # noqa: BLE001 -- best-effort
+                            logger.exception("submit_to_ace: get_deal for SNS alert failed")
+                    # Resolve which AWS step failed. CreateOpportunity tags
+                    # the exception via aws_step (see _process_event); other
+                    # steps don't tag yet but we can infer from the call
+                    # stack info logged at warning time. Default to a
+                    # generic label.
+                    aws_step = getattr(exc, "aws_step", "AWS write")
+                    # SNS alert. Best-effort; a publish failure does not
+                    # propagate (the SQS message is still dropped to avoid
+                    # poison-message loops).
                     try:
-                        deal_id = str((hs_event or {}).get("objectId") or "?")
-                        _publish_mapping_error_alert(
+                        _publish_permanent_error_alert(
                             config=config,
                             deal_id=deal_id,
-                            govwin_id="(unknown - AWS rejected before lookup)",
+                            govwin_id=govwin_id_for_alert,
+                            aws_step=aws_step,
                             error=f"AWS {exc.code}: {exc}",
                         )
                     except Exception:  # noqa: BLE001 -- alert is best-effort
-                        logger.exception(
-                            "submit_to_ace: SNS publish for permanent error failed"
-                        )
+                        logger.exception("submit_to_ace: SNS publish for permanent error failed")
+                    # HubSpot writeback so the deal record reflects the
+                    # rejection. Writes the AWS error blob (trimmed to
+                    # HubSpot single-line text-property max of 480 chars)
+                    # so BD sees the actual reason instead of a generic
+                    # "see email" message. Was previously a generic
+                    # message that overwrote a more detailed inner writeback.
+                    if is_valid_hubspot_object_id(deal_id):
+                        reason_blob = f"AWS rejected {aws_step} ({exc.code}): {exc}"[:480]
+                        try:
+                            hubspot.update_deal(
+                                deal_id,
+                                {
+                                    "govwin_aws_cosell_status": "Action Required",
+                                    "govwin_ace_next_steps": reason_blob,
+                                },
+                            )
+                        except Exception:  # noqa: BLE001 -- writeback is best-effort
+                            logger.exception(
+                                "submit_to_ace: rejection writeback failed for deal %s",
+                                deal_id,
+                            )
                     continue
                 logger.warning(
                     "submit_to_ace: transient %s for message %s; retrying via SQS",

@@ -84,9 +84,11 @@ def _invitation_event(
 
 
 def test_opportunity_updated_with_approved_status(state_mock, ace_mock, hubspot_mock) -> None:
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "updated"
     assert result["stage"] == "Approved by AWS"
@@ -101,9 +103,11 @@ def test_opportunity_updated_with_approved_status(state_mock, ace_mock, hubspot_
 
 def test_opportunity_updated_skips_when_no_partner_id(state_mock, ace_mock, hubspot_mock) -> None:
     ace_mock.get_opportunity.return_value = {"Id": "O1"}
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "skipped"
 
@@ -120,9 +124,11 @@ def test_opportunity_updated_skips_when_review_status_unmapped(
         "PartnerOpportunityIdentifier": "OPP1",
         "LifeCycle": {"ReviewStatus": "Pending Submission"},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "no-op"
     assert "Pending Submission" in result["reason"]
@@ -134,43 +140,45 @@ def test_opportunity_updated_skips_when_review_status_unmapped(
     assert "dealstage" not in body
 
 
-def test_opportunity_updated_routes_submitted_to_aws(
-    state_mock, ace_mock, hubspot_mock
-) -> None:
+def test_opportunity_updated_routes_submitted_to_aws(state_mock, ace_mock, hubspot_mock) -> None:
     """Submitted is the AWS-side status right after StartEngagement; should
     route to the 'Submitted to AWS' HubSpot stage label."""
     ace_mock.get_opportunity.return_value = {
         "PartnerOpportunityIdentifier": "OPP1",
         "LifeCycle": {"ReviewStatus": "Submitted"},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "updated"
     assert result["stage"] == "Submitted to AWS"
 
 
-def test_opportunity_updated_routes_in_review_lowercase(
-    state_mock, ace_mock, hubspot_mock
-) -> None:
+def test_opportunity_updated_routes_in_review_lowercase(state_mock, ace_mock, hubspot_mock) -> None:
     """boto3 enum uses 'In review' (lowercase 'r'); confirm key matches."""
     ace_mock.get_opportunity.return_value = {
         "PartnerOpportunityIdentifier": "OPP1",
         "LifeCycle": {"ReviewStatus": "In review"},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "updated"
     assert result["stage"] == "Under AWS Review"
 
 
 def test_invitation_accepted_updates_stage(state_mock, ace_mock, hubspot_mock) -> None:
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(
             _invitation_event("Engagement Invitation Accepted"), context=None
         )
@@ -179,9 +187,11 @@ def test_invitation_accepted_updates_stage(state_mock, ace_mock, hubspot_mock) -
 
 
 def test_invitation_rejected_moves_to_closed_lost(state_mock, ace_mock, hubspot_mock) -> None:
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(
             _invitation_event("Engagement Invitation Rejected"), context=None
         )
@@ -189,9 +199,11 @@ def test_invitation_rejected_moves_to_closed_lost(state_mock, ace_mock, hubspot_
 
 
 def test_invitation_created_receiver_is_logged_only(state_mock, ace_mock, hubspot_mock) -> None:
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(
             _invitation_event("Engagement Invitation Created", participant="Receiver"),
             context=None,
@@ -202,22 +214,59 @@ def test_invitation_created_receiver_is_logged_only(state_mock, ace_mock, hubspo
 
 def test_dedup_short_circuits_processing(state_mock, ace_mock, hubspot_mock) -> None:
     state_mock.mark_event_seen_atomic.return_value = False  # already-seen
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "duplicate"
     ace_mock.get_opportunity.assert_not_called()
     hubspot_mock.update_deal.assert_not_called()
 
 
-def test_unmapped_partner_opportunity_skipped(state_mock, ace_mock, hubspot_mock) -> None:
+def test_unmapped_partner_opportunity_self_heals_from_hubspot(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """DDB miss + HubSpot search hit => backfill mapping and proceed."""
     state_mock.get_ace_mapping.return_value = None
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    hubspot_mock.search_deal_by_govwin_id.return_value = {"id": "deal-found-via-search"}
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(_opportunity_event(), context=None)
+    # The handler proceeded past the lookup (didn't return a skipped status
+    # for missing mapping). DDB backfill was attempted with the recovered
+    # deal id.
+    assert result["status"] != "skipped" or "orphan" not in result.get("reason", "")
+    state_mock.update_ace_mapping.assert_any_call(
+        govwin_id="OPP1", hubspot_deal_id="deal-found-via-search"
+    )
+
+
+def test_orphan_opportunity_returns_orphan_status_after_self_heal_fails(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """DDB miss + HubSpot search empty => orphan status; no deal update.
+
+    The SNS publish is wired in production via config.aws.sns_topic_arn
+    (verified manually during the 2026-05-27 E2E pass with deal
+    326811999945). This unit test just confirms the handler routes the
+    event through the orphan branch and does NOT touch HubSpot when self-
+    heal exhausts.
+    """
+    state_mock.get_ace_mapping.return_value = None
+    hubspot_mock.search_deal_by_govwin_id.return_value = None
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "skipped"
+    assert "orphan" in result.get("reason", "").lower()
     hubspot_mock.update_deal.assert_not_called()
 
 
@@ -228,18 +277,22 @@ def test_unhandled_detail_type_skipped(state_mock, ace_mock, hubspot_mock) -> No
         "source": "aws.partnercentral-selling",
         "detail": {},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(event, context=None)
     assert result["status"] == "skipped"
 
 
 def test_invitation_without_mapping_skipped(state_mock, ace_mock, hubspot_mock) -> None:
     state_mock.find_govwin_by_invitation_id.return_value = None
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(
             _invitation_event("Engagement Invitation Accepted"), context=None
         )
@@ -250,9 +303,11 @@ def test_stage_label_missing_in_pipeline_warns_and_skips(
     state_mock, ace_mock, hubspot_mock
 ) -> None:
     hubspot_mock.get_stage_id_by_label.return_value = None
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "skipped"
     # Unified write-back: when the stage label doesn't resolve, dealstage
@@ -261,18 +316,18 @@ def test_stage_label_missing_in_pipeline_warns_and_skips(
     assert "dealstage" not in hubspot_mock.update_deal.call_args.args[1]
 
 
-def test_archived_deal_is_skipped_no_alert(
-    state_mock, ace_mock, hubspot_mock, caplog
-) -> None:
+def test_archived_deal_is_skipped_no_alert(state_mock, ace_mock, hubspot_mock, caplog) -> None:
     """An EventBridge event for a HubSpot-archived deal must be a clean
     no-op: no update_deal call, no SNS-worthy log level, no exception. The
     BD team has dispositioned the deal in HubSpot; further AWS-side state
     changes are expected to be ignored.
     """
     hubspot_mock.is_deal_archived.return_value = True
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         with caplog.at_level("INFO"):
             result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "skipped"
@@ -285,8 +340,7 @@ def test_archived_deal_is_skipped_no_alert(
     # Nothing higher than INFO should fire -- this is an expected end-state.
     high_severity = [r for r in caplog.records if r.levelno >= 30]
     assert not high_severity, (
-        f"unexpected WARNING/ERROR for archived deal: "
-        f"{[r.message for r in high_severity]}"
+        f"unexpected WARNING/ERROR for archived deal: {[r.message for r in high_severity]}"
     )
 
 
@@ -298,9 +352,11 @@ def test_archived_deal_skipped_for_invitation_events_too(
     hubspot_mock.is_deal_archived.return_value = True
     state_mock.find_govwin_by_invitation_id.return_value = "OPP1"
     state_mock.get_ace_mapping.return_value = {"hubspot_deal_id": "deal123"}
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         result = handle_ace_event.handler(
             _invitation_event("Engagement Invitation Accepted"), context=None
         )
@@ -337,9 +393,11 @@ def test_hyperscaler_contact_rejects_non_aws_email_domain(
             "engagementInvitation": invitation,
         },
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         with caplog.at_level("WARNING"):
             handle_ace_event.handler(event, context=None)
     # Neither non-AWS email triggered upsert.
@@ -356,11 +414,16 @@ def test_hyperscaler_contact_skips_overwrite_of_real_existing_contact(
     existing HubSpot contact that wasn't previously created by this
     Lambda. Only the deal/company association is added."""
     invitation = {
-        "id": "inv-2", "engagementId": "eng-2", "participantType": "Sender",
-        "invitationContacts": [{
-            "email": "shared@amazon.com",
-            "firstName": "AWS", "lastName": "Person",
-        }],
+        "id": "inv-2",
+        "engagementId": "eng-2",
+        "participantType": "Sender",
+        "invitationContacts": [
+            {
+                "email": "shared@amazon.com",
+                "firstName": "AWS",
+                "lastName": "Person",
+            }
+        ],
     }
     state_mock.find_govwin_by_invitation_id.return_value = "OPP1"
     state_mock.get_ace_mapping.return_value = {"hubspot_deal_id": "deal-1"}
@@ -376,9 +439,11 @@ def test_hyperscaler_contact_skips_overwrite_of_real_existing_contact(
         "source": "aws.partnercentral-selling",
         "detail": {"catalog": "AWS", "engagementInvitation": invitation},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         handle_ace_event.handler(event, context=None)
     # No upsert: real contact protected.
     hubspot_mock.upsert_contact.assert_not_called()
@@ -390,7 +455,9 @@ def test_hyperscaler_contact_email_masked_in_logs(
     state_mock, ace_mock, hubspot_mock, caplog
 ) -> None:
     invitation = {
-        "id": "inv-3", "engagementId": "eng-3", "participantType": "Sender",
+        "id": "inv-3",
+        "engagementId": "eng-3",
+        "participantType": "Sender",
         "invitationContacts": [{"email": "evil@evil.example", "firstName": "X", "lastName": "Y"}],
     }
     state_mock.find_govwin_by_invitation_id.return_value = "OPP1"
@@ -402,9 +469,11 @@ def test_hyperscaler_contact_email_masked_in_logs(
         "source": "aws.partnercentral-selling",
         "detail": {"catalog": "AWS", "engagementInvitation": invitation},
     }
-    with patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock), \
-         patch.object(handle_ace_event, "ACEClient", return_value=ace_mock), \
-         patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock):
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
         with caplog.at_level("WARNING"):
             handle_ace_event.handler(event, context=None)
     log_text = " ".join(r.message for r in caplog.records)
