@@ -227,6 +227,91 @@ def test_irrelevant_property_is_dropped(mock_secrets, mock_sqs) -> None:
     assert mock_sqs.send_message_batch.call_count == 0
 
 
+def test_audit_property_from_integration_does_not_alert(mock_secrets, mock_sqs) -> None:
+    """handle_ace_event writes govwin_aws_cosell_id via the integration
+    token; HubSpot stamps changeSource=INTEGRATION on those events. The
+    receiver must NOT publish an SNS alert for legitimate Lambda writes."""
+    body = json.dumps(
+        [
+            {
+                "objectId": 326811999945,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "govwin_aws_cosell_id",
+                "propertyValue": "O13753208",
+                "changeSource": "INTEGRATION",
+            }
+        ]
+    )
+    headers = _signed_headers("POST", TARGET_URL, body.encode())
+    with patch("src.alerts.publish_alert") as mock_publish:
+        response = receiver.handler(_api_event("POST", body, headers), context=None)
+    assert response["statusCode"] == 200
+    body_json = json.loads(response["body"])
+    assert body_json["audit"] == 0
+    assert body_json["dropped"] == 0
+    mock_publish.assert_not_called()
+
+
+def test_audit_property_from_crm_ui_alerts(mock_secrets, mock_sqs) -> None:
+    """A BD hand-edit of govwin_aws_cosell_id in the HubSpot UI must fire
+    an SNS alert so the operator can reconcile before the next save trips
+    the update_in_ace self-heal verify."""
+    body = json.dumps(
+        [
+            {
+                "objectId": 326811999945,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "govwin_aws_cosell_id",
+                "propertyValue": "O99999999",
+                "changeSource": "CRM_UI",
+                "sourceId": "user-42",
+            }
+        ]
+    )
+    headers = _signed_headers("POST", TARGET_URL, body.encode())
+    with patch("src.alerts.publish_alert") as mock_publish:
+        response = receiver.handler(_api_event("POST", body, headers), context=None)
+    assert response["statusCode"] == 200
+    body_json = json.loads(response["body"])
+    assert body_json["audit"] == 1
+    assert body_json["dropped"] == 0
+    mock_publish.assert_called_once()
+    call_kwargs = mock_publish.call_args.kwargs
+    assert "326811999945" in call_kwargs["subject"]
+    assert "govwin_aws_cosell_id" in call_kwargs["message"]
+    assert "CRM_UI" in call_kwargs["message"]
+
+
+def test_audit_property_alert_failure_does_not_break_webhook(
+    mock_secrets, mock_sqs
+) -> None:
+    """SNS publish errors during an audit event must NOT take down the
+    webhook response; HubSpot would retry and we'd just alert twice on
+    success (acceptable trade-off documented in receiver)."""
+    body = json.dumps(
+        [
+            {
+                "objectId": 326811999945,
+                "subscriptionType": "object.propertyChange",
+                "propertyName": "govwin_aws_cosell_id",
+                "propertyValue": "O99999999",
+                "changeSource": "CRM_UI",
+            }
+        ]
+    )
+    headers = _signed_headers("POST", TARGET_URL, body.encode())
+    with patch(
+        "src.alerts.publish_alert",
+        side_effect=RuntimeError("SNS unreachable"),
+    ):
+        response = receiver.handler(_api_event("POST", body, headers), context=None)
+    assert response["statusCode"] == 200
+    # audit counter does NOT increment on publish failure -- we only
+    # count successful alerts.
+    body_json = json.loads(response["body"])
+    assert body_json["audit"] == 0
+
+
 def test_oversized_body_rejected(mock_secrets, mock_sqs) -> None:
     body = json.dumps([{"x": "y" * (2 * 1024 * 1024)}])
     headers = _signed_headers("POST", TARGET_URL, body.encode())

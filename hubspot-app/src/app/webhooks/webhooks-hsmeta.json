@@ -161,6 +161,12 @@
         {
           "subscriptionType": "object.propertyChange",
           "objectType": "deal",
+          "propertyName": "govwin_aws_cosell_id",
+          "active": true
+        },
+        {
+          "subscriptionType": "object.propertyChange",
+          "objectType": "deal",
           "propertyName": "govwin_industry",
           "active": true
         }

@@ -68,20 +68,45 @@ UPDATE_TRIGGER_PROPERTIES: frozenset[str] = frozenset(
     }
 )
 
+# Properties whose change should fire a security-audit alert when the
+# change source is anything other than the Lambda integration token.
+# These are AWS-side identifiers the handle_ace_event Lambda writes back;
+# a BD hand-edit would either be a typo (eventually caught by the
+# update_in_ace self-heal verify, but only on the next save) or a
+# malicious redirect of the Lambda's UpdateOpportunity to a foreign
+# AWS opportunity. Surfacing the hand-edit immediately via SNS gives
+# the operator a real-time signal instead of waiting for the next save
+# to trip the verify path.
+#
+# Only add identifiers here whose hand-editing would be either
+# anomalous (handle_ace_event is the only legitimate writer) or
+# security-relevant. Display-only status mirrors (e.g.
+# govwin_aws_cosell_status) are NOT in this set because a hand-edit
+# there is wrong but not exploitable.
+AUDIT_ONLY_PROPERTIES: frozenset[str] = frozenset(
+    {
+        "govwin_aws_cosell_id",
+    }
+)
+
 # All properties the HubSpot app subscribes to. Order doesn't matter,
 # but the order here maps 1:1 to the order in webhooks-hsmeta.json.
+# AUDIT_ONLY_PROPERTIES are included so hand-edits surface via webhook
+# delivery; the receiver discriminates by changeSource before alerting.
 ALL_SUBSCRIBED_PROPERTIES: tuple[str, ...] = (
     SUBMIT_TRIGGER_PROPERTY,
-    *sorted(UPDATE_TRIGGER_PROPERTIES),
+    *sorted(UPDATE_TRIGGER_PROPERTIES | AUDIT_ONLY_PROPERTIES),
 )
 
 
 def classify_property_change(property_name: str | None) -> str:
-    """Return "submit", "update", or "drop" for a property-change event."""
+    """Return "submit", "update", "audit", or "drop" for a property-change event."""
     if not property_name:
         return "drop"
     if property_name == SUBMIT_TRIGGER_PROPERTY:
         return "submit"
     if property_name in UPDATE_TRIGGER_PROPERTIES:
         return "update"
+    if property_name in AUDIT_ONLY_PROPERTIES:
+        return "audit"
     return "drop"

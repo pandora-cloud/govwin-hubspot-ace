@@ -214,6 +214,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     submit_events: list[Any] = []
     update_events: list[Any] = []
+    audit_events: list[Any] = []
     dropped = 0
     for ev in events:
         target = _route_event(ev)
@@ -221,20 +222,87 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             submit_events.append(ev)
         elif target == "update":
             update_events.append(ev)
+        elif target == "audit":
+            audit_events.append(ev)
         else:
             dropped += 1
 
     enqueued_submit = _send_sqs_batches(submit_queue, submit_events)
     enqueued_update = _send_sqs_batches(update_queue, update_events)
+    audited = _process_audit_events(audit_events, config=config)
     logger.info(
-        "hubspot webhook accepted: submit=%d update=%d dropped=%d",
+        "hubspot webhook accepted: submit=%d update=%d audit=%d dropped=%d",
         enqueued_submit,
         enqueued_update,
+        audited,
         dropped,
     )
     return {
         "statusCode": 200,
         "body": json.dumps(
-            {"submit": enqueued_submit, "update": enqueued_update, "dropped": dropped}
+            {
+                "submit": enqueued_submit,
+                "update": enqueued_update,
+                "audit": audited,
+                "dropped": dropped,
+            }
         ),
     }
+
+
+# Sources HubSpot stamps on property changes coming from our own
+# integration token. Anything else (CRM_UI, API, AUTOMATION_PLATFORM,
+# WORKFLOWS, IMPORT, MIGRATION, etc.) is by definition a non-Lambda
+# writer and worth alerting on for the AUDIT_ONLY_PROPERTIES set.
+_INTEGRATION_CHANGE_SOURCES: frozenset[str] = frozenset({"INTEGRATION", "INTEGRATIONS_PLATFORM"})
+
+
+def _process_audit_events(events: list[Any], *, config: Any) -> int:
+    """Inline SNS alert for hand-edits of audit-only deal properties.
+
+    Audit events are handled inline in the receiver (no SQS detour)
+    because they are rare, the receiver already loads the SNS topic
+    via config, and the alert is purely advisory. A failure to publish
+    is logged but does not fail the webhook response: HubSpot would
+    retry the delivery, the integration source filter would re-evaluate
+    on retry, and we'd alert twice instead of zero times -- acceptable.
+    """
+    if not events:
+        return 0
+    from src.alerts import publish_alert
+
+    sent = 0
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        change_source = str(ev.get("changeSource") or "").upper()
+        if change_source in _INTEGRATION_CHANGE_SOURCES:
+            # Legitimate write from our own Lambda (handle_ace_event
+            # mirrors the AWS opp id onto the deal). Not an alert event.
+            continue
+        deal_id = str(ev.get("objectId") or "?")
+        prop = str(ev.get("propertyName") or "?")
+        new_value = str(ev.get("propertyValue") or "")[:80]
+        try:
+            publish_alert(
+                config=config,
+                subject=f"AWS Co-sell ID hand-edited on HubSpot deal {deal_id}",
+                message=(
+                    "A HubSpot property the integration owns was changed from a "
+                    "non-integration source. The next deal save on this record "
+                    "will trip the update_in_ace self-heal verify and refuse the "
+                    "AWS write; this alert surfaces the edit immediately so the "
+                    "operator can reconcile before BD attempts another update.\n\n"
+                    f"HubSpot deal id: {deal_id}\n"
+                    f"Property: {prop}\n"
+                    f"Change source: {change_source or 'unknown'}\n"
+                    f"New value (first 80 chars): {new_value!r}\n"
+                    f"Source id: {ev.get('sourceId', '')}"
+                ),
+            )
+            sent += 1
+        except Exception:  # noqa: BLE001 -- alert is advisory
+            logger.exception(
+                "audit alert publish failed for deal=%s prop=%s", deal_id, prop
+            )
+    return sent
