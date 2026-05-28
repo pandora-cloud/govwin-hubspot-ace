@@ -16,6 +16,13 @@ locals {
     ACE_DEFAULT_VISIBILITY       = var.ace_default_visibility
     ACE_PARTNER_COMPANY_NAME     = var.ace_partner_company_name
     ACE_TRIGGER_STAGES           = var.ace_trigger_stages
+    # HubSpot integration app id. The audit-event handler in the webhook
+    # receiver compares ev.sourceId against this value: an INTEGRATION-
+    # sourced change to govwin_aws_cosell_id whose sourceId does NOT
+    # match our app id means a different HubSpot integration installed
+    # on the same portal wrote the property, which is still
+    # operator-relevant and worth an alert.
+    HUBSPOT_INTEGRATION_APP_ID = var.hubspot_webhook_app_id
     # Federal compliance: force FIPS 140-validated TLS endpoints on every
     # AWS API call from inside the Lambda. NIST 800-53 SC-13.
     AWS_USE_FIPS_ENDPOINT      = "true"

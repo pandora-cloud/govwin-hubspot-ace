@@ -176,17 +176,18 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     # Replay protection: signature is valid AND fresh, but the same signed
     # body could be replayed within the freshness window (HubSpot allows up
-    # to 5 minutes for clock skew). We hash the (signature, timestamp)
-    # tuple and reserve it in DynamoDB with TTL = 2x the max age. A second
-    # delivery with the same hash within that window is dropped.
+    # to 5 minutes for clock skew). We reserve a fingerprint in DynamoDB
+    # with TTL equal to the freshness window; replays past that window
+    # already fail the signature timestamp check, so a longer TTL provides
+    # no marginal protection.
     #
-    # We hash rather than use the signature directly so a leaked CloudWatch
-    # log cannot be used to extend the replay window indefinitely; the
-    # fingerprint is one-way and rotates on every legitimate request.
+    # We hash (signature, timestamp) rather than use the signature directly
+    # so a leaked CloudWatch log cannot be used to fingerprint legitimate
+    # requests; the fingerprint is one-way and rotates per request.
     fingerprint = hashlib.sha256((signature + "|" + timestamp).encode("utf-8")).hexdigest()
     state = SyncStateManager(config)
     if not state.reserve_webhook_signature(
-        fingerprint, ttl_seconds=config.ace.webhook_max_age_seconds * 2
+        fingerprint, ttl_seconds=config.ace.webhook_max_age_seconds
     ):
         logger.warning(
             "hubspot webhook rejected: replay detected for fingerprint=%s...",
@@ -250,10 +251,17 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     }
 
 
-# Sources HubSpot stamps on property changes coming from our own
-# integration token. Anything else (CRM_UI, API, AUTOMATION_PLATFORM,
-# WORKFLOWS, IMPORT, MIGRATION, etc.) is by definition a non-Lambda
-# writer and worth alerting on for the AUDIT_ONLY_PROPERTIES set.
+# Sources HubSpot stamps on property changes coming from any
+# integration token (not just ours). Anything else (CRM_UI, API,
+# AUTOMATION_PLATFORM, WORKFLOWS, IMPORT, MIGRATION, etc.) is by
+# definition a non-integration writer and worth alerting on for the
+# AUDIT_ONLY_PROPERTIES set.
+#
+# For INTEGRATION-source events we additionally cross-check sourceId
+# against ``HUBSPOT_INTEGRATION_APP_ID`` so an INTEGRATION event from a
+# DIFFERENT app installed on the same HubSpot portal still triggers an
+# alert -- another integration writing to govwin_aws_cosell_id is
+# operator-relevant even if it isn't a hand-edit.
 _INTEGRATION_CHANGE_SOURCES: frozenset[str] = frozenset({"INTEGRATION", "INTEGRATIONS_PLATFORM"})
 
 
@@ -271,33 +279,48 @@ def _process_audit_events(events: list[Any], *, config: Any) -> int:
         return 0
     from src.alerts import publish_alert
 
+    expected_app_id = (os.environ.get("HUBSPOT_INTEGRATION_APP_ID") or "").strip()
     sent = 0
     for ev in events:
         if not isinstance(ev, dict):
             continue
         change_source = str(ev.get("changeSource") or "").upper()
-        if change_source in _INTEGRATION_CHANGE_SOURCES:
+        source_id = str(ev.get("sourceId") or "")
+        if change_source in _INTEGRATION_CHANGE_SOURCES and (
+            not expected_app_id or source_id == expected_app_id
+        ):
             # Legitimate write from our own Lambda (handle_ace_event
             # mirrors the AWS opp id onto the deal). Not an alert event.
+            # When HUBSPOT_INTEGRATION_APP_ID is unset (test / local),
+            # accept any INTEGRATION source to avoid false alerts.
             continue
         deal_id = str(ev.get("objectId") or "?")
         prop = str(ev.get("propertyName") or "?")
         new_value = str(ev.get("propertyValue") or "")[:80]
+        is_foreign_integration = change_source in _INTEGRATION_CHANGE_SOURCES
+        subject = (
+            f"AWS Co-sell ID written by foreign HubSpot integration "
+            f"(deal {deal_id}, app {source_id})"
+            if is_foreign_integration
+            else f"AWS Co-sell ID hand-edited on HubSpot deal {deal_id}"
+        )
         try:
             publish_alert(
                 config=config,
-                subject=f"AWS Co-sell ID hand-edited on HubSpot deal {deal_id}",
+                subject=subject,
                 message=(
-                    "A HubSpot property the integration owns was changed from a "
-                    "non-integration source. The next deal save on this record "
-                    "will trip the update_in_ace self-heal verify and refuse the "
-                    "AWS write; this alert surfaces the edit immediately so the "
-                    "operator can reconcile before BD attempts another update.\n\n"
+                    "A HubSpot property the integration owns was changed by a "
+                    "writer that is not this integration. The next deal save "
+                    "on this record will trip the update_in_ace self-heal "
+                    "verify and refuse the AWS write; this alert surfaces the "
+                    "edit immediately so the operator can reconcile before BD "
+                    "attempts another update.\n\n"
                     f"HubSpot deal id: {deal_id}\n"
                     f"Property: {prop}\n"
                     f"Change source: {change_source or 'unknown'}\n"
                     f"New value (first 80 chars): {new_value!r}\n"
-                    f"Source id: {ev.get('sourceId', '')}"
+                    f"Source id: {source_id!r}\n"
+                    f"Expected app id: {expected_app_id or '<unset>'}"
                 ),
             )
             sent += 1

@@ -69,11 +69,34 @@ def _redact_hubspot_error_body(body: str) -> str:
     except json.JSONDecodeError:
         return trimmed[:512]
 
-    redact_keys = {"propertyValue", "localizedErrorMessage"}
+    # Keys whose values may echo customer-typed content. Full-redact.
+    # AWS Partner Central ValidationException + HubSpot 4xx use
+    # different key names for similar content; redact both.
+    full_redact_keys = {
+        "propertyValue",
+        "localizedErrorMessage",
+        "CompanyName",
+        "Email",
+        "Phone",
+        "WebsiteUrl",
+        "Reason",
+    }
+    # Keys whose values can carry an interpolated rejected string;
+    # trim long values but don't fully redact (operators need the
+    # diagnostic text).
+    trim_keys = {"message", "Message", "ErrorMessage"}
 
     def _scrub(node: Any) -> Any:
         if isinstance(node, dict):
-            return {k: ("<redacted>" if k in redact_keys else _scrub(v)) for k, v in node.items()}
+            scrubbed: dict[str, Any] = {}
+            for k, v in node.items():
+                if k in full_redact_keys:
+                    scrubbed[k] = "<redacted>"
+                elif k in trim_keys and isinstance(v, str):
+                    scrubbed[k] = v[:200]
+                else:
+                    scrubbed[k] = _scrub(v)
+            return scrubbed
         if isinstance(node, list):
             return [_scrub(v) for v in node]
         return node

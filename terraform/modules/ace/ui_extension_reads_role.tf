@@ -59,12 +59,18 @@ data "aws_iam_policy_document" "ui_extension_reads" {
 
   # DynamoDB on the entity-mappings table is needed even for "reads"
   # because the shared _ui_extension_common module's replay-protection
-  # path issues a conditional PutItem on the WHK# fingerprint to detect
-  # signed-request replays. Without this grant, every request would
-  # 500 at the reservation step.
+  # path issues a conditional PutItem on the WHK# fingerprint. The
+  # LeadingKeys condition restricts the grant to the WHK# pk prefix so
+  # a compromised reads Lambda cannot poison rows under ACE#, OPP#,
+  # DEAL#, or INV#.
   statement {
     actions   = ["dynamodb:PutItem"]
     resources = [var.entity_mappings_table_arn]
+    condition {
+      test     = "ForAllValues:StringLike"
+      variable = "dynamodb:LeadingKeys"
+      values   = ["WHK#*"]
+    }
   }
 
   # KMS for the pipeline CMK. DynamoDB CMK at-rest requires Decrypt /

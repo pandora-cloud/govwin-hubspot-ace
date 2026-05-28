@@ -74,12 +74,19 @@ data "aws_iam_policy_document" "webhook_receiver" {
   }
 
   # DynamoDB PutItem on the entity-mappings table for the WHK# replay-
-  # protection record. Conditional put (attribute_not_exists) is what
-  # provides the dedup guarantee; read access intentionally denied so a
-  # compromised receiver cannot enumerate ACE mappings or HubSpot deal ids.
+  # protection record. Conditional put (attribute_not_exists) provides
+  # the dedup guarantee; read access intentionally denied so a
+  # compromised receiver cannot enumerate ACE mappings or HubSpot deal
+  # ids. LeadingKeys condition pins the PutItem to the WHK# pk prefix
+  # so the receiver cannot poison rows under ACE#, OPP#, DEAL#, or INV#.
   statement {
     actions   = ["dynamodb:PutItem"]
     resources = [var.entity_mappings_table_arn]
+    condition {
+      test     = "ForAllValues:StringLike"
+      variable = "dynamodb:LeadingKeys"
+      values   = ["WHK#*"]
+    }
   }
 
   # X-Ray. Cannot be resource-scoped (AWS-mandated wildcard).

@@ -495,13 +495,15 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     except Exception:  # noqa: BLE001 -- alert is best-effort
                         logger.exception("submit_to_ace: SNS publish for permanent error failed")
                     # HubSpot writeback so the deal record reflects the
-                    # rejection. Writes the AWS error blob (trimmed to
-                    # HubSpot single-line text-property max of 480 chars)
-                    # so BD sees the actual reason instead of a generic
-                    # "see email" message. Was previously a generic
-                    # message that overwrote a more detailed inner writeback.
+                    # rejection. AWS ValidationException strings often echo
+                    # customer-typed field values back; redact propertyValue
+                    # / localizedErrorMessage before persisting since the
+                    # HubSpot property is visible to anyone with deal-read.
                     if is_valid_hubspot_object_id(deal_id):
-                        reason_blob = f"AWS rejected {aws_step} ({exc.code}): {exc}"[:480]
+                        from src.hubspot.client import _redact_hubspot_error_body
+
+                        redacted = _redact_hubspot_error_body(str(exc))
+                        reason_blob = f"AWS rejected {aws_step} ({exc.code}): {redacted}"[:480]
                         try:
                             hubspot.update_deal(
                                 deal_id,

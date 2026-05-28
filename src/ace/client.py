@@ -156,9 +156,24 @@ class ACEClient:
 
     def get_opportunity(self, identifier: str) -> dict[str, Any]:
         try:
-            return self._call_read("get_opportunity", Catalog=self._catalog, Identifier=identifier)
+            response = self._call_read(
+                "get_opportunity", Catalog=self._catalog, Identifier=identifier
+            )
         except ClientError as exc:
             self._raise_api_error("GetOpportunity", exc)
+        # Echo-check the catalog. The IAM Catalog condition already blocks
+        # cross-catalog writes, but a regressed AWS response would otherwise
+        # flow through scrub-and-update silently. Mismatch is a hard error.
+        echoed = response.get("Catalog")
+        if echoed and echoed != self._catalog:
+            raise ACEAPIError(
+                (
+                    f"GetOpportunity({identifier}) returned Catalog={echoed!r} "
+                    f"but client is configured for {self._catalog!r}"
+                ),
+                code="CrossCatalogResponse",
+            )
+        return response
 
     def list_opportunities(self, **filters: Any) -> dict[str, Any]:
         try:

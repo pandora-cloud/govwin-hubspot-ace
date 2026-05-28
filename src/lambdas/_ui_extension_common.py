@@ -259,7 +259,7 @@ def serve_request(
     fingerprint = hashlib.sha256((sig_value + "|" + ts_value).encode("utf-8")).hexdigest()
     state = SyncStateManager(config)
     if not state.reserve_webhook_signature(
-        fingerprint, ttl_seconds=config.ace.webhook_max_age_seconds * 2
+        fingerprint, ttl_seconds=config.ace.webhook_max_age_seconds
     ):
         logger.warning(
             "ui-extension rejected: replay detected for fingerprint=%s...",
