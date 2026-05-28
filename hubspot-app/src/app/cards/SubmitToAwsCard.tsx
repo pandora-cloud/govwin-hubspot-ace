@@ -67,6 +67,17 @@ const READ_PROPERTIES: string[] = [
   "description",
 ];
 
+// HubSpot stores multi-select enum properties as semicolon-joined
+// strings ("Email;Live Event;Telemarketing"). The form needs arrays.
+// Trim and drop empties so a trailing semicolon doesn't produce a
+// phantom "" entry that fails the form's enum validation.
+const splitMulti = (raw: unknown): string[] => {
+  if (raw == null) return [];
+  const s = String(raw).trim();
+  if (!s) return [];
+  return s.split(";").map((v) => v.trim()).filter(Boolean);
+};
+
 interface DealSnapshot {
   dealId: string;
   dealName: string | null;
@@ -80,6 +91,40 @@ interface DealSnapshot {
   amount: number | null;
   closeDate: string | null;
   description: string | null;
+  // Extended snapshot used for update-mode pre-fill. The Submit form
+  // PATCHed these at create time, and update_in_ace keeps them in sync
+  // with subsequent webhook-driven updates, so the deal carries the
+  // last known state of the ACE classification BD selected for this
+  // opportunity. In update mode the form seeds itself from these so
+  // BD sees what AWS has rather than an empty form they'd have to
+  // re-enter (and risk wiping fields they don't intend to change).
+  acePartnerNeed: string[];
+  aceDeliveryModel: string[];
+  aceUseCase: string | null;
+  aceOpportunityType: string | null;
+  aceSalesActivities: string[];
+  aceCompetitorName: string | null;
+  aceOtherCompetitorNames: string | null;
+  aceAwsAccountId: string | null;
+  aceNationalSecurity: string | null;
+  aceSolutionId: string | null;
+  aceAwsProducts: string[];
+  aceAdditionalComments: string | null;
+  aceRelatedOpportunityId: string | null;
+  marketingSource: string | null;
+  marketingCampaign: string | null;
+  marketingChannels: string[];
+  marketingUseCases: string[];
+  marketingFundingUsed: string | null;
+  // AWS-side LifeCycle.Stage written by handle_ace_event on every
+  // inbound EventBridge event. Pre-fills the Update form's stage
+  // dropdown so an Approved or In-review opp doesn't open with a
+  // hard-coded "Qualified" default that would walk the stage backward.
+  aceLifecycleStage: string | null;
+  // AWS-side mirror of associated AWS Products; written by handle_ace_event
+  // on every inbound opportunity event. Different from aceAwsProducts
+  // (BD's edit on the deal) when an async product diff is in flight.
+  awsCosellProducts: string[];
 }
 
 interface CardProps {
@@ -154,6 +199,29 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
             }
           })(),
           description: props.description ?? null,
+          // Multi-value HubSpot enum properties come back as semicolon-
+          // joined strings. Split, trim, drop empties. The form expects
+          // arrays for MultiSelect-bound state slots.
+          acePartnerNeed: splitMulti(props.govwin_ace_partner_need),
+          aceDeliveryModel: splitMulti(props.govwin_ace_delivery_model),
+          aceUseCase: props.govwin_ace_use_case ?? null,
+          aceOpportunityType: props.govwin_ace_opportunity_type ?? null,
+          aceSalesActivities: splitMulti(props.govwin_ace_sales_activities),
+          aceCompetitorName: props.govwin_ace_competitor_name ?? null,
+          aceOtherCompetitorNames: props.govwin_ace_other_competitor_names ?? null,
+          aceAwsAccountId: props.govwin_ace_aws_account_id ?? null,
+          aceNationalSecurity: props.govwin_ace_national_security ?? null,
+          aceSolutionId: props.govwin_ace_solution_id ?? null,
+          aceAwsProducts: splitMulti(props.govwin_ace_aws_products),
+          aceAdditionalComments: props.govwin_ace_additional_comments ?? null,
+          aceRelatedOpportunityId: props.govwin_ace_related_opportunity_id ?? null,
+          marketingSource: props.govwin_ace_marketing_source ?? null,
+          marketingCampaign: props.govwin_ace_marketing_campaign_name ?? null,
+          marketingChannels: splitMulti(props.govwin_ace_marketing_channel),
+          marketingUseCases: splitMulti(props.govwin_ace_marketing_use_cases),
+          marketingFundingUsed: props.govwin_ace_marketing_dev_funded ?? null,
+          aceLifecycleStage: props.govwin_ace_lifecycle_stage ?? null,
+          awsCosellProducts: splitMulti(props.govwin_aws_cosell_products),
         };
         setSnapshot(snap);
         setStatus(
@@ -188,7 +256,19 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
     return () => clearInterval(tick);
   }, [status]);
 
-  const openSubmitForm = () => setFormOpen(true);
+  // Two entry points into the same form, distinguished by mode. Create
+  // mode runs the dealstage-flip -> webhook -> submit_to_ace pipeline.
+  // Update mode posts to /ui-extension/update which calls AWS
+  // UpdateOpportunity synchronously and returns the result inline.
+  const [formMode, setFormMode] = useState<"create" | "update">("create");
+  const openSubmitForm = () => {
+    setFormMode("create");
+    setFormOpen(true);
+  };
+  const openUpdateForm = () => {
+    setFormMode("update");
+    setFormOpen(true);
+  };
   const closeSubmitForm = () => setFormOpen(false);
   const onSubmissionQueued = () => {
     setFormOpen(false);
@@ -212,6 +292,7 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
         apiBaseUrl={API_BASE_URL}
         catalog={ACE_CATALOG}
         dealId={snapshot.dealId}
+        mode={formMode}
         defaultDealName={snapshot.dealName ?? ""}
         defaultCompanyName={snapshot.companyName ?? ""}
         defaultIndustry={snapshot.industry}
@@ -219,11 +300,63 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
         defaultCloseDate={snapshot.closeDate}
         defaultDescription={snapshot.description}
         existingGovwinOppId={snapshot.govwinOppId}
+        existingAceOpportunityId={snapshot.awsCosellId}
+        defaultPartnerNeed={snapshot.acePartnerNeed}
+        defaultDeliveryModel={snapshot.aceDeliveryModel}
+        defaultUseCase={snapshot.aceUseCase}
+        defaultOpportunityType={snapshot.aceOpportunityType}
+        defaultSalesActivities={snapshot.aceSalesActivities}
+        defaultCompetitor={snapshot.aceCompetitorName}
+        defaultOtherCompetitorNames={snapshot.aceOtherCompetitorNames}
+        defaultAwsAccountId={snapshot.aceAwsAccountId}
+        defaultNationalSecurity={snapshot.aceNationalSecurity}
+        defaultSolutionId={snapshot.aceSolutionId}
+        defaultAwsProducts={snapshot.aceAwsProducts}
+        defaultAdditionalComments={snapshot.aceAdditionalComments}
+        defaultMarketingSource={snapshot.marketingSource}
+        defaultMarketingCampaign={snapshot.marketingCampaign}
+        defaultMarketingChannels={snapshot.marketingChannels}
+        defaultMarketingUseCases={snapshot.marketingUseCases}
+        defaultMarketingFundingUsed={snapshot.marketingFundingUsed}
+        existingLifecycleStage={
+          // Prefer the explicit LifeCycle.Stage that handle_ace_event
+          // writes to the deal on every AWS event; fall back to mapping
+          // from cosell_status for opps that pre-date that property.
+          snapshot.aceLifecycleStage
+          || (snapshot.awsCosellStatus === "Launched"
+            ? "Launched"
+            : snapshot.awsCosellStatus === "Closed Lost"
+              ? "Closed Lost"
+              : null)
+        }
         onSubmissionQueued={onSubmissionQueued}
         onCancel={closeSubmitForm}
       />
     );
   }
+
+  // Card state machine. Three buckets:
+  //   not_submitted        -> Submit enabled, no Update button
+  //   in-flight or active  -> Submit greyed (with tooltip text), Update enabled
+  //   terminal (launched/  -> both greyed; the opportunity is done at AWS
+  //   closed_lost)
+  const hasCosellId = Boolean(snapshot?.awsCosellId);
+  const isTerminal = status === "launched" || status === "closed_lost";
+
+  // "Products syncing" detection. The /ui-extension/update path applies
+  // the LifeCycle/field UpdateOpportunity synchronously but pushes the
+  // per-product Associate/Disassociate diff through the webhook ->
+  // update_in_ace pipeline. During the window between save and the
+  // webhook draining, the deal's BD-edited govwin_ace_aws_products
+  // differs from the AWS-side govwin_aws_cosell_products. Show a small
+  // pill so BD knows the change hasn't fully landed yet rather than
+  // assuming the form lost their edit.
+  const productsSyncing = Boolean(
+    snapshot &&
+      hasCosellId &&
+      [...snapshot.aceAwsProducts].sort().join(";") !==
+        [...snapshot.awsCosellProducts].sort().join(";")
+  );
 
   return (
     <Flex direction="column" gap="md">
@@ -231,6 +364,13 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
         <Text format={{ fontWeight: "bold" }}>AWS Partner Central</Text>
         <StatusBadge status={status} awsCosellId={snapshot?.awsCosellId} />
       </Flex>
+
+      {productsSyncing ? (
+        <Text variant="microcopy">
+          {`Products syncing… the AWS-side associations are catching up to your latest product selection. ` +
+            `Refresh in a few seconds.`}
+        </Text>
+      ) : null}
 
       {status === "action_required" && snapshot?.aceNextSteps ? (
         <Flex direction="column" gap="xs">
@@ -243,18 +383,40 @@ const SubmitToAwsCard: React.FC<CardProps> = ({
 
       <Divider />
 
-      {status === "not_submitted" ? (
-        <Button variant="primary" onClick={openSubmitForm}>
+      <Flex direction="row" gap="sm">
+        <Button
+          variant="primary"
+          onClick={openSubmitForm}
+          disabled={hasCosellId || isTerminal}
+        >
           Submit to AWS
         </Button>
-      ) : (
-        <Text variant="microcopy">
-          {snapshot?.awsCosellId
-            ? `Opportunity ${snapshot.awsCosellId} created in AWS Partner Central.`
-            : "Submission in flight. The card will update when AWS responds."}
-        </Text>
-      )}
+        {hasCosellId ? (
+          <Button
+            variant="primary"
+            onClick={openUpdateForm}
+            disabled={isTerminal}
+          >
+            Update opportunity in AWS
+          </Button>
+        ) : null}
+      </Flex>
 
+      {hasCosellId && !isTerminal ? (
+        <Text variant="microcopy">
+          {`This deal is linked to AWS opportunity ${snapshot?.awsCosellId}. `}
+          {`To create a separate AWS opportunity, clone this deal in HubSpot `}
+          {`and submit the clone.`}
+        </Text>
+      ) : null}
+      {isTerminal ? (
+        <Text variant="microcopy">
+          {`AWS opportunity ${snapshot?.awsCosellId} is in a terminal state `}
+          {`(${status === "launched" ? "Launched" : "Closed Lost"}). `}
+          {`Updates are no longer accepted. Clone this deal in HubSpot to `}
+          {`start a new co-sell.`}
+        </Text>
+      ) : null}
     </Flex>
   );
 };

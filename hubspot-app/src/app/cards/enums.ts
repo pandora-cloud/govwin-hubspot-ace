@@ -124,6 +124,52 @@ export const USE_CASES: string[] = [
 export const MAX_AWS_PRODUCTS_PER_OPPORTUNITY = 20;
 export const MAX_SOLUTIONS_PER_OPPORTUNITY = 10;
 
+// LifeCycle.Stage enum (7 values). Drives the AWS-side opportunity
+// progression. Mirrors ALLOWED_LIFECYCLE_STAGES in src/ace/mapper.py.
+// "Launched" and "Closed Lost" are terminal: once set, AWS no longer
+// accepts further UpdateOpportunity calls for most fields.
+export const LIFECYCLE_STAGES: string[] = [
+  "Prospect",
+  "Qualified",
+  "Technical Validation",
+  "Business Validation",
+  "Committed",
+  "Launched",
+  "Closed Lost",
+];
+
+// LifeCycle.ClosedLostReason enum (19 values). Only required when
+// lifecycle_stage transitions to "Closed Lost". Mirrors
+// ALLOWED_CLOSED_LOST_REASONS in src/ace/mapper.py.
+export const CLOSED_LOST_REASONS: string[] = [
+  "Customer Deficiency",
+  "Delay / Cancellation of Project",
+  "Legal / Tax / Regulatory",
+  "Lost to Competitor - Google",
+  "Lost to Competitor - Microsoft",
+  "Lost to Competitor - SoftLayer",
+  "Lost to Competitor - VMWare",
+  "Lost to Competitor - Other",
+  "No Opportunity",
+  "On Premises Deployment",
+  "Partner Gap",
+  "Price",
+  "Security / Compliance",
+  "Technical Limitations",
+  "Customer Experience",
+  "Other",
+  "People/Relationship/Governance",
+  "Product/Technology",
+  "Financial/Commercial",
+];
+
+// Terminal lifecycle stages. Once an opp reaches one of these, the card
+// disables the Update button because AWS rejects further mutations.
+export const TERMINAL_LIFECYCLE_STAGES: ReadonlySet<string> = new Set([
+  "Launched",
+  "Closed Lost",
+]);
+
 // Source code prefixes for synthetic GovWin IDs (non-GovWin-sourced deals).
 export const SOURCE_PREFIXES: Array<{
   label: string;

@@ -23,20 +23,11 @@ import {
 
 import { SolutionPicker } from "./SolutionPicker";
 import { AwsProductsPicker } from "./AwsProductsPicker";
-import { SyntheticIdHelper, SyntheticIdValue } from "./SyntheticIdHelper";
 import {
+  CLOSED_LOST_REASONS,
   COMPETITORS,
   DELIVERY_MODELS,
-  MARKETING_CHANNELS,
-  MARKETING_SOURCES,
-  OPPORTUNITY_TYPES,
-  PARTNER_NEED_OPTIONS,
-  SALES_ACTIVITIES,
-  USE_CASES,
-} from "./enums";
-import {
-  COMPETITORS,
-  DELIVERY_MODELS,
+  LIFECYCLE_STAGES,
   MARKETING_CHANNELS,
   MARKETING_SOURCES,
   OPPORTUNITY_TYPES,
@@ -45,10 +36,28 @@ import {
   USE_CASES,
 } from "./enums";
 
+// Mode flag passed by SubmitToAwsCard. "create" is the initial-submission
+// path; "update" is the post-submission editor that drives the existing
+// AWS opportunity through LifeCycle transitions and field changes.
+//
+// In "update":
+//   - Synthetic GovWin ID builder is hidden; the existing govwin_opp_id is
+//     locked and shown read-only (AWS PartnerOpportunityIdentifier is
+//     immutable once a successful CreateOpportunity has been recorded).
+//   - A LifeCycle section appears with the Stage dropdown and a conditional
+//     ClosedLostReason picker.
+//   - The submit button posts to POST /ui-extension/update which calls
+//     AWS UpdateOpportunity synchronously rather than the dealstage-flip
+//     -> webhook -> submit_to_ace pipeline.
+//   - Field locks: PartnerOpportunityIdentifier (synthetic id), Origin,
+//     OpportunityTeam, and AWS reviewer-controlled LifeCycle.ReviewStatus.
+export type SubmitFormMode = "create" | "update";
+
 interface Props {
   apiBaseUrl: string;
   catalog: string;
   dealId: string;
+  mode: SubmitFormMode;
   defaultDealName: string;
   defaultCompanyName: string;
   defaultIndustry: string | null;
@@ -56,6 +65,37 @@ interface Props {
   defaultCloseDate: string | null;
   defaultDescription: string | null;
   existingGovwinOppId: string | null;
+  // Update-mode only: the AWS opp identifier the form is editing. Locked
+  // and displayed read-only at the top of the form so BD always sees which
+  // AWS-side opportunity their edits will modify.
+  existingAceOpportunityId?: string | null;
+  // Update-mode only: the current LifeCycle.Stage as last seen by the
+  // card. Used to pre-fill the stage dropdown so a no-op update doesn't
+  // accidentally walk the stage backward.
+  existingLifecycleStage?: string | null;
+  // Update-mode pre-fill: the last known state of the ACE classification
+  // fields, sourced from HubSpot deal properties the card already loaded.
+  // Without these the form opens with create-mode defaults and BD sees
+  // empty pickers for Delivery Model / Partner Need / etc. -- they'd
+  // either re-pick (risk of accidental change) or skip (and submit nulls,
+  // which the mapper treats as "no change" but is confusing UX).
+  defaultPartnerNeed?: string[];
+  defaultDeliveryModel?: string[];
+  defaultUseCase?: string | null;
+  defaultOpportunityType?: string | null;
+  defaultSalesActivities?: string[];
+  defaultCompetitor?: string | null;
+  defaultOtherCompetitorNames?: string | null;
+  defaultAwsAccountId?: string | null;
+  defaultNationalSecurity?: string | null;
+  defaultSolutionId?: string | null;
+  defaultAwsProducts?: string[];
+  defaultAdditionalComments?: string | null;
+  defaultMarketingSource?: string | null;
+  defaultMarketingCampaign?: string | null;
+  defaultMarketingChannels?: string[];
+  defaultMarketingUseCases?: string[];
+  defaultMarketingFundingUsed?: string | null;
   onSubmissionQueued: (response: { ace_opportunity_id?: string | null }) => void;
   onCancel: () => void;
 }
@@ -63,7 +103,6 @@ interface Props {
 interface FormState {
   fromGovWin: boolean;
   govwinOppId: string;
-  syntheticParts: SyntheticIdValue | null;
   // ACE classification
   partnerNeed: string[];
   deliveryModel: string[];
@@ -94,6 +133,9 @@ interface FormState {
   // Notes
   additionalComments: string;
   nextSteps: string;
+  // LifeCycle (update mode only)
+  lifecycleStage: string;
+  lifecycleClosedLostReason: string;
 }
 
 interface FieldError {
@@ -111,6 +153,7 @@ export const SubmitForm: React.FC<Props> = ({
   apiBaseUrl,
   catalog,
   dealId,
+  mode,
   defaultDealName,
   defaultCompanyName,
   defaultIndustry,
@@ -118,37 +161,76 @@ export const SubmitForm: React.FC<Props> = ({
   defaultCloseDate,
   defaultDescription,
   existingGovwinOppId,
+  existingAceOpportunityId,
+  existingLifecycleStage,
+  defaultPartnerNeed,
+  defaultDeliveryModel,
+  defaultUseCase,
+  defaultOpportunityType,
+  defaultSalesActivities,
+  defaultCompetitor,
+  defaultOtherCompetitorNames,
+  defaultAwsAccountId,
+  defaultNationalSecurity,
+  defaultSolutionId,
+  defaultAwsProducts,
+  defaultAdditionalComments,
+  defaultMarketingSource,
+  defaultMarketingCampaign,
+  defaultMarketingChannels,
+  defaultMarketingUseCases,
+  defaultMarketingFundingUsed,
   onSubmissionQueued,
   onCancel,
 }) => {
+  const isUpdate = mode === "update";
+  // In update mode the snapshot from the card carries the last-known ACE
+  // classification fields the BD selected when this opportunity was
+  // submitted. Seed the form state from those instead of the create-mode
+  // defaults so BD sees the current state and can edit incrementally.
+  // Falls back to create-mode defaults when the prop is missing (covers
+  // both create-mode and update-mode opps that pre-date when these
+  // properties were tracked on the deal).
   const [state, setState] = useState<FormState>({
     fromGovWin: Boolean(existingGovwinOppId),
     govwinOppId: existingGovwinOppId ?? "",
-    syntheticParts: null,
-    partnerNeed: ["Deal Support"],
-    deliveryModel: [],
-    useCase: "",
-    opportunityType: "Net New Business",
-    salesActivities: ["Initialized discussions with customer"],
-    competitor: "",
-    otherCompetitorNames: "",
+    partnerNeed: defaultPartnerNeed && defaultPartnerNeed.length > 0
+      ? defaultPartnerNeed
+      : ["Deal Support"],
+    deliveryModel: defaultDeliveryModel ?? [],
+    useCase: defaultUseCase ?? "",
+    opportunityType: defaultOpportunityType ?? "Net New Business",
+    salesActivities: defaultSalesActivities && defaultSalesActivities.length > 0
+      ? defaultSalesActivities
+      : ["Initialized discussions with customer"],
+    competitor: defaultCompetitor ?? "",
+    otherCompetitorNames: defaultOtherCompetitorNames ?? "",
     industry: defaultIndustry ?? "Government",
-    awsAccountId: "",
-    nationalSecurity: "",
-    awsAccountUnknown: false,
+    awsAccountId: defaultAwsAccountId ?? "",
+    nationalSecurity: defaultNationalSecurity ?? "",
+    // Infer "Not provided yet" in update mode when there's no account id
+    // on the deal. The original toggle state isn't persisted to HubSpot
+    // -- only the account id is -- so an empty id in update mode means
+    // BD either skipped via the toggle at create time OR the customer
+    // hasn't shared an account id yet. Either way the right default is
+    // checkbox ON so the form reflects "still don't have one" rather
+    // than implying BD just forgot to fill in a number they had.
+    awsAccountUnknown: isUpdate && !defaultAwsAccountId,
     dealName: defaultDealName ?? "",
     description: defaultDescription ?? "",
     amount: defaultAmount != null ? String(defaultAmount) : "",
     closeDate: defaultCloseDate ?? TODAY_PLUS_180(),
-    solutionId: "",
-    awsProducts: [],
-    marketingEnabled: false,
-    marketingSource: "None",
-    marketingChannels: [],
-    marketingCampaign: "",
-    marketingFundingUsed: "",
-    additionalComments: "",
+    solutionId: defaultSolutionId ?? "",
+    awsProducts: defaultAwsProducts ?? [],
+    marketingEnabled: Boolean(defaultMarketingSource && defaultMarketingSource !== "None"),
+    marketingSource: defaultMarketingSource ?? "None",
+    marketingChannels: defaultMarketingChannels ?? [],
+    marketingCampaign: defaultMarketingCampaign ?? "",
+    marketingFundingUsed: defaultMarketingFundingUsed ?? "",
+    additionalComments: defaultAdditionalComments ?? "",
     nextSteps: "",
+    lifecycleStage: existingLifecycleStage ?? "Qualified",
+    lifecycleClosedLostReason: "",
   });
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -160,28 +242,43 @@ export const SubmitForm: React.FC<Props> = ({
 
   const validate = (): FieldError[] => {
     const errs: FieldError[] = [];
-    if (state.fromGovWin && !state.govwinOppId.trim()) {
-      errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
+    // In update mode the synthetic-id builder is hidden -- the bound
+    // govwin_opp_id (PartnerOpportunityIdentifier) is immutable per AWS
+    // and we never need to revalidate it. Only check the id machinery
+    // when creating a new opportunity.
+    if (!isUpdate) {
+      if (state.fromGovWin && !state.govwinOppId.trim()) {
+        errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
+      }
+      // Non-GovWin deals get an auto-minted UUID at submit time -- no
+      // user input to validate. The dealname (validated below) is the
+      // human-readable label AWS reviewers see.
     }
-    if (!state.fromGovWin && (!state.syntheticParts || !state.syntheticParts.customer)) {
-      errs.push({
-        field: "govwin_opp_id",
-        message: "Pick a Source and fill in the Customer slug to build a synthetic ID.",
-      });
+    if (isUpdate) {
+      if (!state.lifecycleStage) {
+        errs.push({ field: "lifecycle_stage", message: "Pick a LifeCycle Stage." });
+      }
+      if (state.lifecycleStage === "Closed Lost" && !state.lifecycleClosedLostReason) {
+        errs.push({
+          field: "lifecycle_closed_lost_reason",
+          message: "Closed Lost requires a reason.",
+        });
+      }
     }
-    if (state.partnerNeed.length === 0) {
+    if (!isUpdate && state.partnerNeed.length === 0) {
       errs.push({ field: "partner_need", message: "Pick at least one Partner Need." });
     }
-    if (state.deliveryModel.length === 0) {
+    if (!isUpdate && state.deliveryModel.length === 0) {
       errs.push({ field: "delivery_model", message: "Pick at least one Delivery Model." });
     }
-    if (!state.useCase) {
+    if (!isUpdate && !state.useCase) {
       errs.push({ field: "use_case", message: "Pick a Customer Use Case." });
     }
+    // Format check applies in both modes; "required" gate only on create.
     if (!state.awsAccountUnknown && state.awsAccountId && !/^\d{12}$/.test(state.awsAccountId)) {
       errs.push({ field: "aws_account_id", message: "Must be exactly 12 digits." });
     }
-    if (!state.awsAccountUnknown && !state.awsAccountId) {
+    if (!isUpdate && !state.awsAccountUnknown && !state.awsAccountId) {
       errs.push({
         field: "aws_account_id",
         message: "Required for AWS launch attribution. Toggle 'Not provided yet' to skip.",
@@ -222,18 +319,19 @@ export const SubmitForm: React.FC<Props> = ({
     if (errs.length > 0) return;
 
     setSubmitting(true);
-    const govwin_opp_id = state.fromGovWin
-      ? state.govwinOppId.trim()
-      : state.syntheticParts
-        ? [
-            state.syntheticParts.source,
-            state.syntheticParts.customer,
-            state.syntheticParts.project,
-            state.syntheticParts.sequence,
-          ]
-            .filter(Boolean)
-            .join("-")
-        : "";
+    // In update mode the bound govwin_opp_id (PartnerOpportunityIdentifier)
+    // is immutable and the form locks it. In create mode: either BD's
+    // GovWin id (when fromGovWin=true) or an auto-minted UUID. The UUID
+    // replaces the older SOURCE-CUSTOMER-PROJECT-NNN scheme because AWS
+    // enforces uniqueness across the catalog FOREVER (see Option C E2E
+    // 2026-05-27): a human-readable synthetic id BD might want to
+    // recycle was never actually recyclable, and AWS reviewers see the
+    // deal name (Project.Title) for human context anyway.
+    const govwin_opp_id = isUpdate
+      ? (existingGovwinOppId ?? state.govwinOppId.trim())
+      : state.fromGovWin
+        ? state.govwinOppId.trim()
+        : `pc-${crypto.randomUUID()}`;
 
     const payload: Record<string, unknown> = {
       deal_id: dealId,
@@ -242,8 +340,11 @@ export const SubmitForm: React.FC<Props> = ({
       govwin_industry: state.industry,
       dealname: state.dealName,
       description: state.description,
-      amount: state.amount ? parseFloat(state.amount) : null,
-      closedate: state.closeDate,
+      // state.amount is the form-input string; treat any non-empty string
+      // as a value (including "0" which is falsy as a string but a valid
+      // user-entered amount they may want to clear with). parseFloat("")
+      // is NaN; we send null instead so Pydantic + AWS don't see NaN.
+      amount: state.amount !== "" && state.amount != null ? parseFloat(state.amount) : null,
       ace_partner_need: state.partnerNeed,
       ace_delivery_model: state.deliveryModel,
       ace_use_case: state.useCase,
@@ -256,8 +357,20 @@ export const SubmitForm: React.FC<Props> = ({
       ace_solution_id: state.solutionId || null,
       ace_aws_products: state.awsProducts,
       ace_additional_comments: state.additionalComments || null,
-      ace_next_steps: state.nextSteps || null,
     };
+    // Field name differs across endpoints: /submit takes closedate +
+    // ace_next_steps; /update takes lifecycle_target_close_date +
+    // lifecycle_next_steps and the LifeCycle stage payload.
+    if (isUpdate) {
+      payload.lifecycle_stage = state.lifecycleStage;
+      payload.lifecycle_closed_lost_reason =
+        state.lifecycleStage === "Closed Lost" ? state.lifecycleClosedLostReason : null;
+      payload.lifecycle_next_steps = state.nextSteps || null;
+      payload.lifecycle_target_close_date = state.closeDate || null;
+    } else {
+      payload.closedate = state.closeDate;
+      payload.ace_next_steps = state.nextSteps || null;
+    }
     if (state.marketingEnabled) {
       payload.marketing = {
         Source: state.marketingSource,
@@ -268,20 +381,52 @@ export const SubmitForm: React.FC<Props> = ({
     }
 
     try {
-      const response = await hubspot.fetch(`${apiBaseUrl}/ui-extension/submit`, {
+      // HubSpot's proxy rejects any request header other than Authorization
+      // (VALIDATION_ERROR: "Only 'Authorization' header is allowed from
+      // hubspot.fetch()"). The proxy sets Content-Type: application/json on
+      // POSTs with a string body automatically, so we just pass body.
+      const endpoint = isUpdate ? "/ui-extension/update" : "/ui-extension/submit";
+      const response = await hubspot.fetch(`${apiBaseUrl}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const body = await response.json();
-      if (response.status === 202) {
+      // hubspot.fetch sometimes returns a Response with an empty body on
+      // non-2xx (the upstream Lambda actually sent a JSON error body but
+      // the iframe bridge stripped it). Read as text first so an empty
+      // response surfaces as a real status-aware error instead of a
+      // generic JSON-parse "unexpected end of data".
+      const raw = await response.text();
+      const body = raw
+        ? JSON.parse(raw)
+        : { status: "unknown", message: `HTTP ${response.status} (empty body)` };
+      // Create returns 202 (queued); Update returns 200 (applied synchronously).
+      if (response.status === 202 || (isUpdate && response.status === 200)) {
         onSubmissionQueued({ ace_opportunity_id: body.ace_opportunity_id ?? null });
         return;
       }
       if (response.status === 409) {
-        setSubmitError(
-          `This deal already has an opportunity in AWS Partner Central (${body.ace_opportunity_id}). Refresh the card to see its current state.`
-        );
+        // Two distinct 409 cases the backend distinguishes via body.status:
+        //   "already_submitted": dedup -- this govwin id already has an ACE
+        //     opportunity. body.ace_opportunity_id is set.
+        //   "replay_detected": the request was retried inside the 10-min
+        //     signature window (transparent hubspot.fetch retry on a transient
+        //     failure). body.ace_opportunity_id is undefined; the original
+        //     request is or will be processed; user should reload the card.
+        if (body.status === "replay_detected") {
+          setSubmitError(
+            "Request was retried by HubSpot. The original submission is being processed. " +
+            "Reload the card to see the result."
+          );
+        } else if (body.status === "already_submitted" && body.ace_opportunity_id) {
+          setSubmitError(
+            `This deal already has an opportunity in AWS Partner Central ` +
+            `(${body.ace_opportunity_id}). Refresh the card to see its current state.`
+          );
+        } else {
+          setSubmitError(
+            body.message || "This deal already has an active AWS Partner Central submission."
+          );
+        }
         return;
       }
       if (response.status === 400) {
@@ -311,43 +456,124 @@ export const SubmitForm: React.FC<Props> = ({
   // stripped to narrow down the runtime crash.
   return (
     <Flex direction="column" gap="md">
-      <Heading>Submit deal to AWS Partner Central</Heading>
+      <Heading>
+        {isUpdate
+          ? "Update opportunity in AWS"
+          : "Submit deal to AWS Partner Central"}
+      </Heading>
 
       {submitError ? (
-        <Alert title="Submission error" variant="error">{submitError}</Alert>
+        <Alert title={isUpdate ? "Update error" : "Submission error"} variant="error">
+          {submitError}
+        </Alert>
+      ) : null}
+      {errors.length > 0 ? (
+        <Alert title={`Fix ${errors.length} field${errors.length === 1 ? "" : "s"} before ${isUpdate ? "updating" : "submitting"}`} variant="error">
+          <Flex direction="column" gap="xs">
+            {errors.map((e, i) => (
+              <Text key={`${e.field}-${i}`} variant="microcopy">
+                {`• ${e.field}: ${e.message}`}
+              </Text>
+            ))}
+          </Flex>
+        </Alert>
       ) : null}
 
       <Divider />
 
-      {/* Section 1: Source. Checkbox picks between real GovWin ID (checked)
-          and the synthetic builder (unchecked). Using Checkbox because it
-          uses the same `checked`/`onChange` pattern as the Marketing and
-          "Not provided yet" controls elsewhere in this form, which are
-          known to work. */}
-      <Checkbox
-        name="from_govwin"
-        checked={state.fromGovWin}
-        onChange={(checked) => update("fromGovWin", checked)}
-      >
-        This deal came from GovWin IQ
-      </Checkbox>
-      {state.fromGovWin ? (
-        <Input
-          name="govwin_opp_id"
-          label="GovWin Opportunity ID"
-          description="From GovWin IQ. Often looks like OPP123456 or BID987654."
-          value={state.govwinOppId}
-          onChange={(v) => update("govwinOppId", String(v ?? ""))}
-          error={Boolean(errorFor("govwin_opp_id"))}
-          validationMessage={errorFor("govwin_opp_id")}
-          readOnly={Boolean(existingGovwinOppId)}
-        />
+      {isUpdate ? (
+        // Update mode: the PartnerOpportunityIdentifier (synthetic GovWin
+        // id) is immutable once a successful CreateOpportunity has been
+        // recorded; AWS enforces uniqueness for the lifetime of the
+        // catalog. Display read-only so BD can see what they're editing.
+        <Flex direction="column" gap="xs">
+          <Text format={{ fontWeight: "bold" }}>Bound opportunity (locked)</Text>
+          <Text variant="microcopy">
+            {`GovWin ID: ${existingGovwinOppId ?? "(missing)"}`}
+          </Text>
+          <Text variant="microcopy">
+            {`AWS opportunity: ${existingAceOpportunityId ?? "(missing)"}`}
+          </Text>
+          <Text variant="microcopy">
+            Synthetic IDs cannot be changed after the first successful submission.
+            For a different opportunity, clone this deal in HubSpot and submit
+            the clone.
+          </Text>
+        </Flex>
       ) : (
-        <SyntheticIdHelper
-          defaultCompanyName={defaultCompanyName}
-          onChange={(_id, parts) => update("syntheticParts", parts)}
-        />
+        <>
+          {/* Section 1: Source (create mode only). Checkbox picks between
+              real GovWin ID (checked) and the synthetic builder (unchecked). */}
+          <Checkbox
+            name="from_govwin"
+            checked={state.fromGovWin}
+            onChange={(checked) => update("fromGovWin", checked)}
+          >
+            This deal came from GovWin IQ
+          </Checkbox>
+          {state.fromGovWin ? (
+            <Input
+              name="govwin_opp_id"
+              label="GovWin Opportunity ID"
+              description="From GovWin IQ. Often looks like OPP123456 or BID987654."
+              value={state.govwinOppId}
+              onChange={(v) => update("govwinOppId", String(v ?? ""))}
+              error={Boolean(errorFor("govwin_opp_id"))}
+              validationMessage={errorFor("govwin_opp_id")}
+              readOnly={Boolean(existingGovwinOppId)}
+            />
+          ) : (
+            // Non-GovWin deals get an auto-minted UUID for the AWS
+            // PartnerOpportunityIdentifier. We don't show it; the deal
+            // name (which BD already sets when creating the HubSpot
+            // deal) is the human-readable label that AWS reviewers see
+            // on the opportunity. Auto-minting avoids the irrevocable-
+            // synthetic-id trap (AWS uniqueness is enforced per catalog
+            // forever; the older SOURCE-CUSTOMER-NNN scheme made BD
+            // responsible for not colliding).
+            <Text variant="microcopy">
+              A unique identifier will be auto-generated for AWS Partner
+              Central tracking. The opportunity name AWS reviewers see is
+              the deal name (editable in the Project section below).
+            </Text>
+          )}
+        </>
       )}
+
+      {isUpdate ? (
+        <>
+          <Divider />
+          <Heading>LifeCycle</Heading>
+          <Text variant="microcopy">
+            Drives the AWS-side opportunity progression. Once Stage is set to
+            Launched or Closed Lost the opportunity is terminal and no further
+            updates can be applied.
+          </Text>
+          <Select
+            name="lifecycle_stage"
+            label="Stage"
+            value={state.lifecycleStage}
+            onChange={(v) => update("lifecycleStage", String(v ?? ""))}
+            options={LIFECYCLE_STAGES.map((s) => ({ label: s, value: s }))}
+            error={Boolean(errorFor("lifecycle_stage"))}
+            validationMessage={errorFor("lifecycle_stage")}
+          />
+          {state.lifecycleStage === "Closed Lost" ? (
+            <Select
+              name="lifecycle_closed_lost_reason"
+              label="Closed Lost reason"
+              description="Required by AWS when Stage is Closed Lost."
+              value={state.lifecycleClosedLostReason}
+              onChange={(v) =>
+                update("lifecycleClosedLostReason", String(v ?? ""))
+              }
+              options={CLOSED_LOST_REASONS.map((r) => ({ label: r, value: r }))}
+              error={Boolean(errorFor("lifecycle_closed_lost_reason"))}
+              validationMessage={errorFor("lifecycle_closed_lost_reason")}
+            />
+          ) : null}
+        </>
+      ) : null}
 
       <Divider />
 
@@ -571,10 +797,33 @@ export const SubmitForm: React.FC<Props> = ({
 
       <Divider />
 
+      {/* Mirror the top-of-form Alert immediately above the Submit button so
+          feedback lands in the user's line of sight after they click. HubSpot
+          UI Extensions run in a sandboxed iframe with no scrollIntoView, so
+          duplicating the status block at the action point is the cleanest
+          way to make 409/4xx/5xx responses visible without making the user
+          scroll back up. */}
+      {submitError ? (
+        <Alert title="Submission error" variant="error">{submitError}</Alert>
+      ) : null}
+      {errors.length > 0 ? (
+        <Alert title={`Fix ${errors.length} field${errors.length === 1 ? "" : "s"} before submitting`} variant="error">
+          <Flex direction="column" gap="xs">
+            {errors.map((e, i) => (
+              <Text key={`bot-${e.field}-${i}`} variant="microcopy">
+                {`• ${e.field}: ${e.message}`}
+              </Text>
+            ))}
+          </Flex>
+        </Alert>
+      ) : null}
+
       <Flex direction="row" gap="sm" justify="end">
         <Button onClick={onCancel} disabled={submitting}>Cancel</Button>
         <Button variant="primary" onClick={submit} disabled={submitting}>
-          {submitting ? "Submitting..." : "Submit to AWS"}
+          {submitting
+            ? isUpdate ? "Updating..." : "Submitting..."
+            : isUpdate ? "Update opportunity" : "Submit to AWS"}
         </Button>
       </Flex>
     </Flex>
