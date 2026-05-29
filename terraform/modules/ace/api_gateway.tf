@@ -11,7 +11,12 @@ resource "aws_apigatewayv2_integration" "webhook" {
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_function.hubspot_webhook_receiver.invoke_arn
   payload_format_version = "2.0"
-  timeout_milliseconds   = 5000 # within the HubSpot 5-second budget
+  # Must match or exceed the receiver Lambda timeout (10s). HubSpot
+  # tolerates occasional slow responses well past the documented 5s
+  # budget; the cold-start SNS-publish path on a CMK-encrypted topic
+  # can take a few seconds, and a 5s API Gateway cap was cutting the
+  # connection before the Lambda finished.
+  timeout_milliseconds = 10000
 }
 
 resource "aws_apigatewayv2_route" "webhook" {

@@ -162,6 +162,12 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     messages whose processing actually failed.
     """
     config = load_config()
+    # Pre-warm the SNS client used by the terminal-failure alert path so
+    # the first publish after a cold container does not pay boto3 + FIPS
+    # + KMS GenerateDataKey latency inline.
+    global _sns_client
+    if _sns_client is None:
+        _sns_client = make_client("sns", config.aws.region)
     state = SyncStateManager(config)
     auth = GovWinAuth(config)
     failures: list[dict[str, str]] = []
