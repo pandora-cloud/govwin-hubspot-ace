@@ -255,7 +255,9 @@ def test_update_event_from_our_integration_is_dropped(mock_secrets, mock_sqs, mo
     assert body_json["dropped"] == 1
 
 
-def test_update_event_from_foreign_integration_is_routed(mock_secrets, mock_sqs, monkeypatch) -> None:
+def test_update_event_from_foreign_integration_is_routed(
+    mock_secrets, mock_sqs, monkeypatch
+) -> None:
     """An INTEGRATION-source event from a DIFFERENT HubSpot app
     installed on the same portal still routes to update; it represents
     a real value change another integration made that we must reflect
@@ -336,9 +338,7 @@ def test_audit_property_from_crm_ui_alerts(mock_secrets, mock_sqs) -> None:
     assert "CRM_UI" in call_kwargs["message"]
 
 
-def test_audit_property_alert_failure_does_not_break_webhook(
-    mock_secrets, mock_sqs
-) -> None:
+def test_audit_property_alert_failure_does_not_break_webhook(mock_secrets, mock_sqs) -> None:
     """SNS publish errors during an audit event must NOT take down the
     webhook response; HubSpot would retry and we'd just alert twice on
     success (acceptable trade-off documented in receiver)."""

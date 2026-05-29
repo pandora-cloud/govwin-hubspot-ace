@@ -558,6 +558,12 @@ def _handle_invitation_event(
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     config = load_config()
+    # Pre-warm SNS for the orphan-alert + self-heal-mismatch alert
+    # paths so the first publish after a cold container does not pay
+    # boto3 + FIPS + KMS GenerateDataKey latency inline.
+    from src.alerts import ensure_sns_client
+
+    ensure_sns_client(config.aws.region)
     state = SyncStateManager(config)
     event_id = str(event.get("id") or "")
     detail_type = str(event.get("detail-type") or "")

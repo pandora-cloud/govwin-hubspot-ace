@@ -56,10 +56,25 @@ audit: ## Audit dependencies for known CVEs
 # DLQ operations
 # ---------------------------------------------------------------------------
 
-# Override via: make dlq-status PROFILE=myprof PREFIX=myproject-stg
+# Project-wide deployment identifiers. Overridable per target:
+#   make <target> PROFILE=ops PREFIX=acme-cosell-stg REGION=us-east-2
 PROFILE ?= pcmgmt
 PREFIX  ?= govwin-hubspot-prod
 REGION  ?= us-east-1
+
+# Env block threaded into every script target so load_config() resolves
+# to the deployed table / secret names instead of the LocalStack-era
+# defaults baked into src/config.py. Mirrors the env vars Terraform
+# sets on the Lambdas.
+SCRIPT_ENV := PYTHONPATH=. \
+  AWS_PROFILE=$(PROFILE) \
+  AWS_REGION=$(REGION) \
+  SYNC_STATE_TABLE=$(PREFIX)-sync-state \
+  ENTITY_MAPPINGS_TABLE=$(PREFIX)-entity-mappings \
+  GOVWIN_SECRET_NAME=$(PREFIX)/govwin \
+  GOVWIN_TOKENS_SECRET_NAME=$(PREFIX)/govwin-tokens \
+  HUBSPOT_SECRET_NAME=$(PREFIX)/hubspot \
+  HUBSPOT_WEBHOOK_SECRET_NAME=$(PREFIX)/hubspot-webhook
 
 dlq-status: ## Print depth for every project DLQ (PROFILE, PREFIX, REGION overridable)
 	@for q in $(PREFIX)-dlq $(PREFIX)-ace-submit-dlq $(PREFIX)-ace-update-dlq $(PREFIX)-govwin-sync-dlq; do \
@@ -79,12 +94,7 @@ dlq-redrive: ## Start an SQS redrive task for one DLQ (QUEUE=<dlq-name> required
 
 reconcile: ## Walk DDB + HubSpot + AWS for one govwin id (GOVWIN_ID=... required)
 	@if [ -z "$(GOVWIN_ID)" ]; then echo "usage: make reconcile GOVWIN_ID=OPP12345 [CATALOG=Sandbox|AWS] [PREFIX=...]"; exit 1; fi
-	@PYTHONPATH=. \
-		SYNC_STATE_TABLE=$(PREFIX)-sync-state \
-		ENTITY_MAPPINGS_TABLE=$(PREFIX)-entity-mappings \
-		HUBSPOT_SECRET_NAME=$(PREFIX)/hubspot \
-		HUBSPOT_WEBHOOK_SECRET_NAME=$(PREFIX)/hubspot-webhook \
-		.venv/bin/python scripts/reconcile.py $(if $(CATALOG),--catalog $(CATALOG),) $(GOVWIN_ID)
+	@$(SCRIPT_ENV) .venv/bin/python scripts/reconcile.py $(if $(CATALOG),--catalog $(CATALOG),) $(GOVWIN_ID)
 
 clean: ## Remove build artifacts
 	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache
@@ -113,7 +123,9 @@ local-down: ## Stop LocalStack and clean up
 # ---------------------------------------------------------------------------
 
 validate: ## Validate credentials and connectivity (GovWin, HubSpot, AWS)
-	@if [ -f .env ]; then export $$(grep -v '^\#' .env | grep -v '^$$' | xargs) && python scripts/validate.py; else echo "No .env file found. Copy .env.example to .env and fill in credentials."; exit 1; fi
+	@if [ ! -f .env ]; then echo "No .env file found. Copy .env.example to .env and fill in credentials."; exit 1; fi
+	@set -a; . ./.env; set +a; $(SCRIPT_ENV) .venv/bin/python scripts/validate.py
 
 dry-run: ## Dry-run sync: discover and map opps without writing to HubSpot
-	@if [ -f .env ]; then export $$(grep -v '^\#' .env | grep -v '^$$' | xargs) && python scripts/dry_run.py --limit 5; else echo "No .env file found. Copy .env.example to .env and fill in credentials."; exit 1; fi
+	@if [ ! -f .env ]; then echo "No .env file found. Copy .env.example to .env and fill in credentials."; exit 1; fi
+	@set -a; . ./.env; set +a; $(SCRIPT_ENV) .venv/bin/python scripts/dry_run.py --limit 5

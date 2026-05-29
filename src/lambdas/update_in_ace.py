@@ -890,6 +890,12 @@ def _process_event(
 
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     config = load_config()
+    # Pre-warm SNS for the permanent-error + self-heal-mismatch alert
+    # paths; first publish after cold start would otherwise add ~5s to
+    # the error feedback to BD.
+    from src.alerts import ensure_sns_client
+
+    ensure_sns_client(config.aws.region)
     state = SyncStateManager(config)
     ace = ACEClient(config)
     results: list[dict[str, Any]] = []

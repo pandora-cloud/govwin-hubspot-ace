@@ -430,6 +430,13 @@ def _process_event(
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """SQS event source mapping entry point."""
     config = load_config()
+    # Pre-warm the SNS client used by the permanent-error alert path so
+    # the first error after a cold start does not pay boto3 + FIPS +
+    # KMS GenerateDataKey latency inline with the deal-property
+    # writeback BD is waiting on.
+    from src.alerts import ensure_sns_client
+
+    ensure_sns_client(config.aws.region)
     state = SyncStateManager(config)
     ace = ACEClient(config)
     results: list[dict[str, Any]] = []
