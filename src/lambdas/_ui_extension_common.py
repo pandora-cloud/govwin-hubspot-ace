@@ -150,8 +150,13 @@ def _validate_request_signature(
     if not signature or not timestamp:
         return False, "missing signature"
     config = load_config()
+    # ``ensure_clients`` is called at handler entry, but a code path that
+    # reaches here without calling it would silently AttributeError on
+    # ``None.get_secret_value``. The prior ``assert`` was stripped under
+    # ``python -O``; this guard is explicit.
+    if _secrets_client is None:
+        ensure_clients(config.aws.region)
     try:
-        assert _secrets_client is not None
         secret = get_signing_secret(_secrets_client, config.aws.hubspot_webhook_secret_name)
     except SignatureConfigError as exc:
         logger.error("ui-extension signing secret unavailable: %s", exc)
@@ -189,9 +194,7 @@ def _validate_request_signature(
 def _preflight_response(headers: dict[str, str]) -> dict[str, Any]:
     request_origin = headers.get("origin", "")
     allowed_origin = (
-        request_origin
-        if request_origin in _ALLOWED_HUBSPOT_ORIGINS
-        else "https://app.hubspot.com"
+        request_origin if request_origin in _ALLOWED_HUBSPOT_ORIGINS else "https://app.hubspot.com"
     )
     return {
         "statusCode": 204,

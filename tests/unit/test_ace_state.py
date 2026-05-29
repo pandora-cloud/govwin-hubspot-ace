@@ -114,3 +114,40 @@ class TestInvitationLookup:
             hubspot_deal_id="deal-42",
         )
         assert state.find_govwin_by_hubspot_deal_id("deal-42") == "OPP1"
+
+    def test_subsequent_update_refreshes_existing_reverse_index_ttl(
+        self, state: SyncStateManager
+    ) -> None:
+        """Updates that omit invitation/deal args must still refresh both reverse rows.
+
+        Otherwise the reverse-lookup rows decay on a separate TTL clock from the
+        forward ACE# mapping and the 365-day window resets only when the caller
+        happens to pass the same id again.
+        """
+        state.update_ace_mapping(
+            govwin_id="OPP1",
+            ace_opportunity_id="O1",
+            ace_engagement_invitation_id="engi-abc",
+            hubspot_deal_id="deal-42",
+        )
+        before_inv = state._mappings_table.get_item(Key={"pk": "INV#engi-abc", "sk": "REVERSE"})[
+            "Item"
+        ]
+        before_deal = state._mappings_table.get_item(Key={"pk": "DEAL#deal-42", "sk": "REVERSE"})[
+            "Item"
+        ]
+
+        # Subsequent update touches an unrelated field. Reverse rows must
+        # still refresh from the values already persisted on the forward row.
+        state.update_ace_mapping(govwin_id="OPP1", last_modified_date="2026-05-01T00:00:00Z")
+
+        after_inv = state._mappings_table.get_item(Key={"pk": "INV#engi-abc", "sk": "REVERSE"})[
+            "Item"
+        ]
+        after_deal = state._mappings_table.get_item(Key={"pk": "DEAL#deal-42", "sk": "REVERSE"})[
+            "Item"
+        ]
+        assert after_inv["updated_at"] >= before_inv["updated_at"]
+        assert after_deal["updated_at"] >= before_deal["updated_at"]
+        assert state.find_govwin_by_invitation_id("engi-abc") == "OPP1"
+        assert state.find_govwin_by_hubspot_deal_id("deal-42") == "OPP1"

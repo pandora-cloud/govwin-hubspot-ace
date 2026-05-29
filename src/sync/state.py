@@ -206,7 +206,12 @@ class SyncStateManager:
     # -----------------------------------------------------------------------
 
     def get_ace_mapping(self, govwin_id: str) -> dict[str, Any] | None:
-        """Return the ACE record for a GovWin opportunity, or None if not submitted."""
+        """Return the ACE record for a GovWin opportunity, or None if not submitted.
+
+        :param govwin_id: GovWin global opportunity id.
+        :returns: A dict copy of the DynamoDB item, or None if the row
+            does not exist or DynamoDB returned an error (logged).
+        """
         try:
             response = self._mappings_table.get_item(
                 Key={"pk": f"ACE#{govwin_id}", "sk": "MAPPING"}
@@ -231,10 +236,24 @@ class SyncStateManager:
     ) -> None:
         """Merge the supplied ACE fields into the mapping for ``govwin_id``.
 
-        Uses ``UpdateItem`` with SET expressions so that fields written by an
-        earlier step (CreateOpportunity, AssociateOpportunity) are preserved
-        when a later step (StartEngagement) writes its result. Pass only the
-        fields you intend to change; ``None`` values are skipped.
+        Uses ``UpdateItem`` with SET expressions so that fields written
+        by an earlier step (CreateOpportunity, AssociateOpportunity) are
+        preserved when a later step (StartEngagement) writes its result.
+
+        :param govwin_id: GovWin global opportunity id.
+        :param ace_opportunity_id: AWS opportunity id from
+            CreateOpportunity.
+        :param last_modified_date: ``LastModifiedDate`` echo for
+            optimistic locking on the next UpdateOpportunity.
+        :param ace_engagement_invitation_id: Invitation id from the
+            StartEngagement response.
+        :param ace_task_id: Task arn from the StartEngagement response.
+        :param ace_task_client_token: Idempotency token persisted for
+            StartEngagement retries.
+        :param client_token: CreateOpportunity idempotency token.
+        :param hubspot_deal_id: Originating HubSpot deal id; used for
+            reverse-lookup from inbound HubSpot webhook events.
+        :returns: None. ``None``-valued args are skipped.
         """
         updates: dict[str, Any] = {
             "updated_at": datetime.now(UTC).isoformat(),
@@ -267,19 +286,36 @@ class SyncStateManager:
 
         # Maintain reverse-lookup records so find_govwin_by_invitation_id
         # and find_govwin_by_hubspot_deal_id can use O(1) GetItem instead
-        # of an expensive table Scan.
-        if ace_engagement_invitation_id:
-            self._put_reverse_index(f"INV#{ace_engagement_invitation_id}", govwin_id)
-        if hubspot_deal_id:
-            self._put_reverse_index(f"DEAL#{hubspot_deal_id}", govwin_id)
+        # of an expensive table Scan. Refresh BOTH reverse-index rows on
+        # every update regardless of which fields the caller passed --
+        # otherwise the reverse rows decay on a separate TTL clock from
+        # the forward row and can expire while the mapping is still live.
+        existing = self.get_ace_mapping(govwin_id) or {}
+        inv_id = ace_engagement_invitation_id or str(
+            existing.get("ace_engagement_invitation_id") or ""
+        )
+        deal_id = hubspot_deal_id or str(existing.get("hubspot_deal_id") or "")
+        if inv_id:
+            self._put_reverse_index(f"INV#{inv_id}", govwin_id)
+        if deal_id:
+            self._put_reverse_index(f"DEAL#{deal_id}", govwin_id)
 
     def reserve_client_token(self, govwin_id: str, client_token: str) -> str:
         """Atomically reserve a ClientToken for a pending CreateOpportunity.
 
-        Uses a conditional ``put_item`` so two concurrent SQS deliveries for
-        the same deal cannot both reserve different tokens (which would
-        otherwise mint two ACE opportunities for one GovWin opp). On
-        contention, falls back to reading the winning token.
+        Uses a conditional ``put_item`` so two concurrent SQS deliveries
+        for the same deal cannot both reserve different tokens (which
+        would otherwise mint two ACE opportunities for one GovWin opp).
+        On contention, falls back to reading the winning token.
+
+        :param govwin_id: GovWin global opportunity id.
+        :param client_token: Caller-generated UUID-style idempotency
+            token; only persisted when no token has been reserved yet.
+        :returns: The token now persisted for ``govwin_id``: either the
+            supplied ``client_token`` (first-write wins) or the token an
+            earlier concurrent caller already reserved.
+        :raises botocore.exceptions.ClientError: For any DynamoDB
+            failure other than ``ConditionalCheckFailedException``.
         """
         try:
             self._mappings_table.put_item(
@@ -306,8 +342,16 @@ class SyncStateManager:
     def reserve_task_client_token(self, govwin_id: str, client_token: str) -> str:
         """Reserve a ClientToken for the StartEngagementFromOpportunityTask call.
 
-        Same idempotency guarantee as ``reserve_client_token`` but scoped to
-        the engagement-task token so retries reuse it instead of regenerating.
+        Same idempotency guarantee as :meth:`reserve_client_token` but
+        scoped to the engagement-task token so retries reuse it instead
+        of regenerating.
+
+        :param govwin_id: GovWin global opportunity id.
+        :param client_token: Caller-generated idempotency token.
+        :returns: The persisted task ClientToken (existing value wins
+            on contention).
+        :raises botocore.exceptions.ClientError: For any DynamoDB
+            failure other than ``ConditionalCheckFailedException``.
         """
         existing = self.get_ace_mapping(govwin_id) or {}
         token = existing.get("ace_task_client_token")
@@ -332,9 +376,14 @@ class SyncStateManager:
         """Locate the GovWin id whose ACE mapping holds this engagement invitation.
 
         Uses an O(1) GetItem against a reverse-index record written by
-        ``update_ace_mapping`` whenever ``ace_engagement_invitation_id`` is
-        set. The reverse record's pk is ``INV#<invitation_id>`` and its
-        body carries ``govwin_id``.
+        :meth:`update_ace_mapping` whenever
+        ``ace_engagement_invitation_id`` is set. The reverse record's
+        pk is ``INV#<invitation_id>`` and its body carries
+        ``govwin_id``.
+
+        :param invitation_id: AWS Engagement Invitation id.
+        :returns: The mapped GovWin id, or None when no reverse-index
+            row exists or the DynamoDB read fails (logged).
         """
         try:
             response = self._mappings_table.get_item(
@@ -350,7 +399,12 @@ class SyncStateManager:
         """Locate the GovWin id whose ACE mapping points at this HubSpot deal.
 
         O(1) GetItem against a reverse-index record (pk
-        ``DEAL#<hubspot_deal_id>``) written by ``update_ace_mapping``.
+        ``DEAL#<hubspot_deal_id>``) written by
+        :meth:`update_ace_mapping`.
+
+        :param hubspot_deal_id: HubSpot deal object id.
+        :returns: The mapped GovWin id, or None when no reverse-index
+            row exists or the DynamoDB read fails (logged).
         """
         try:
             response = self._mappings_table.get_item(
@@ -363,7 +417,15 @@ class SyncStateManager:
         return _as_str(item.get("govwin_id")) if item else None
 
     def _put_reverse_index(self, pk: str, govwin_id: str) -> None:
-        """Write a reverse-lookup record. Uses the same TTL as the forward record."""
+        """Write a reverse-lookup record. Uses the same TTL as the forward record.
+
+        Unconditional ``put_item`` is correct here: ``INV#<id>`` ->
+        ``govwin_id`` and ``DEAL#<id>`` -> ``govwin_id`` are 1:1 by
+        contract (AWS Engagement Invitation ids and HubSpot deal ids
+        never re-bind to a different opportunity). Two concurrent writes
+        for the same key carry the same govwin_id, so the put is
+        idempotent and a ``ConditionExpression`` would add no safety.
+        """
         self._mappings_table.put_item(
             Item={
                 "pk": pk,
@@ -385,10 +447,18 @@ class SyncStateManager:
     def mark_event_seen_atomic(self, event_id: str, ttl_seconds: int = 86400) -> bool:
         """Atomically mark an EventBridge event id as seen.
 
-        Returns True on first sighting (caller should process the event) and
-        False if the event was already marked (caller should skip). Combines
-        the prior is_event_seen + mark_event_seen pair into a single
-        conditional write to eliminate the TOCTOU window.
+        Combines the prior is_event_seen + mark_event_seen pair into a
+        single conditional write to eliminate the TOCTOU window.
+
+        :param event_id: EventBridge event id (must be globally unique
+            for the dedup window).
+        :param ttl_seconds: Row TTL; defaults to 24 hours, which matches
+            AWS' redelivery guarantee.
+        :returns: True on first sighting (caller should process the
+            event); False if the event was already marked (caller
+            should skip).
+        :raises botocore.exceptions.ClientError: For any DynamoDB
+            failure other than ``ConditionalCheckFailedException``.
         """
         try:
             self._mappings_table.put_item(
@@ -410,18 +480,20 @@ class SyncStateManager:
     def reserve_webhook_signature(self, signature_fingerprint: str, ttl_seconds: int = 600) -> bool:
         """Atomically reserve a webhook signature to defeat replay attacks.
 
-        Returns True on first sighting (caller should accept the delivery)
-        and False if the same signature has been seen within the TTL window
-        (caller should reject the request as a replay).
-
-        ``signature_fingerprint`` is expected to be a hash of the X-HubSpot-
-        Signature-v3 header (do NOT pass the raw signature, since it has
-        the same length and entropy as the secret-derived MAC and might leak
-        through logs). 32-byte SHA-256 hex is appropriate.
-
-        The TTL must be >= the receiver's accepted signature age window so
-        that replays inside the window are caught even if the original
-        delivery has already been processed.
+        :param signature_fingerprint: Hash of the
+            ``X-HubSpot-Signature-v3`` header. Do NOT pass the raw
+            signature: it has the same length and entropy as the
+            secret-derived MAC and might leak through logs. 32-byte
+            SHA-256 hex is appropriate.
+        :param ttl_seconds: Row TTL. Must be at least the receiver's
+            accepted signature age window so replays inside the window
+            are caught even if the original delivery has already been
+            processed.
+        :returns: True on first sighting (caller should accept the
+            delivery); False if the same signature has been seen within
+            the TTL window (caller should reject as a replay).
+        :raises botocore.exceptions.ClientError: For any DynamoDB
+            failure other than ``ConditionalCheckFailedException``.
         """
         try:
             self._mappings_table.put_item(
@@ -439,4 +511,3 @@ class SyncStateManager:
             if code == "ConditionalCheckFailedException":
                 return False
             raise
-
