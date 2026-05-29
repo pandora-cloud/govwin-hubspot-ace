@@ -52,8 +52,12 @@ def _publish_orphan_alert(
 ) -> None:
     """Thin wrapper that builds the message + delegates to src.alerts.
 
-    See src.alerts.publish_alert for the actual SNS publish path and
-    error-detail redaction.
+    Wrapper exists because the subject ("ACE orphan opportunity") and
+    the body framing (remediation instructions for an inbound AWS
+    EventBridge event with no matching HubSpot deal) are specific to
+    the event-handling path. The submit / update Lambdas have their
+    own wrappers for the same reason. Do not consolidate to a shared
+    helper.
     """
     from src.alerts import publish_alert
 

@@ -57,9 +57,13 @@ def _publish_permanent_error_alert(
     """Thin wrapper that builds the message + delegates to src.alerts.
 
     The actual SNS publish + error-detail redaction lives in
-    ``src.alerts.publish_alert``. This Lambda's wrapper exists to keep
-    the call sites readable and pin the per-step intro copy that's
-    specific to the submit pipeline.
+    ``src.alerts.publish_alert``. This wrapper exists because the
+    subject + per-step ``intro`` copy below is unique to the submit
+    pipeline (CreateOpportunity / AssociateOpportunity /
+    StartEngagementFromOpportunityTask); inlining the f-string
+    template at every call site would duplicate the four-step intro
+    dictionary at each raise. Each Lambda owns its own wrapper for the
+    same reason. Do not consolidate to a shared helper.
     """
     from src.alerts import publish_alert
 

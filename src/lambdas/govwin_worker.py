@@ -45,7 +45,15 @@ _sns_client: Any | None = None
 
 
 def _publish_failure_alert(*, config: Any, message_id: str, summary: str, detail: str) -> None:
-    """Best-effort SNS alert for terminal sync failures. Never raises."""
+    """Best-effort SNS alert for terminal sync failures. Never raises.
+
+    Per-Lambda wrapper rather than a call to ``src.alerts.publish_alert``
+    because the GovWin sync path predates the shared alerts module and
+    its JSON body shape (``{message_id, summary, detail}``) is consumed
+    by a different downstream than the ACE alerts. The submit / update
+    / handle-event Lambdas each own a similar framing wrapper. Do not
+    consolidate.
+    """
     topic_arn = config.aws.sns_topic_arn
     if not topic_arn:
         return

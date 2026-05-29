@@ -1,5 +1,14 @@
 """Token bucket rate limiter for GovWin API (4,000 calls/hour rolling window).
 
+Per-API rate limiter. The three rate limiters in this codebase (GovWin,
+HubSpot, ACE) deliberately implement different algorithms (rolling 60-
+minute window / sliding 10-second window / dual token buckets for
+reads + writes) because each upstream publishes a different quota with
+different reset semantics. A shared base class would have to pretend
+those semantics are the same and would be a leaky abstraction. Do not
+consolidate.
+
+
 The limiter is **process-local**. State is held in instance memory and is
 NOT shared across Lambda invocations or across concurrent workers. This
 holds today because the GovWin sync runs with maxConcurrency=2 and the

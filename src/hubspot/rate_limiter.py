@@ -1,4 +1,13 @@
-"""Sliding window rate limiter for HubSpot API (100 requests/10 seconds)."""
+"""Sliding window rate limiter for HubSpot API (100 requests/10 seconds).
+
+Per-API rate limiter. The three rate limiters in this codebase (GovWin,
+HubSpot, ACE) deliberately implement different algorithms (rolling 60-
+minute window / sliding 10-second window / dual token buckets for
+reads + writes) because each upstream publishes a different quota with
+different reset semantics. A shared base class would have to pretend
+those semantics are the same and would be a leaky abstraction. Do not
+consolidate.
+"""
 
 from __future__ import annotations
 

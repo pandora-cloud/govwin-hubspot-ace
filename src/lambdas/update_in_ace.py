@@ -44,10 +44,13 @@ _PERMANENT_ERROR_CODES: set[str] = {
 def _publish_update_error_alert(*, config: Any, deal_id: str, prop: str, error: str) -> None:
     """Thin wrapper that builds the message + delegates to src.alerts.
 
-    The actual SNS publish + error-detail redaction lives in
-    ``src.alerts.publish_alert``. Without this Lambda's wrapper the call
-    sites would need to inline the deal-id / property formatting at every
-    failure path.
+    Wrapper exists because the subject ("ACE update rejected") and the
+    body framing ("a HubSpot property change could not be applied ...
+    HubSpot deal is now out of sync with AWS") are specific to the
+    update path. Inlining at every failure call site would duplicate
+    the same multi-line f-string. The submit / handle-event Lambdas
+    have their own wrappers for the same reason. Do not consolidate to
+    a shared helper.
     """
     from src.alerts import publish_alert
 
@@ -442,6 +445,14 @@ def _handle_industry(payload: dict[str, Any], value: Any, _: str) -> bool:
 
 
 # Dispatch table: HubSpot property name -> handler callable.
+#
+# A dispatch table is chosen over an if/elif chain because there are
+# 20+ properties with non-trivial per-property logic (text vs project
+# vs lifecycle vs marketing subdocs, multi-value enum normalization,
+# clear-vs-set rules). The dict keeps the property-to-handler mapping
+# greppable and lets the test suite parameterize over every supported
+# property without reflection. Do not flatten to if/elif.
+#
 # Note: ``govwin_ace_aws_products`` and ``govwin_ace_solution_id`` are NOT in
 # this map. Those flow through Associate/Disassociate calls (see
 # ``_handle_aws_products_diff`` / ``_handle_solution_diff``) rather than

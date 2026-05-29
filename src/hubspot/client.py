@@ -452,7 +452,16 @@ class HubSpotClient:
         return results
 
     def get_deal(self, deal_id: str, properties: list[str] | None = None) -> dict[str, Any]:
-        """Fetch a single deal by HubSpot object id with the requested properties."""
+        """Fetch a single deal by HubSpot object id.
+
+        :param deal_id: HubSpot deal object id (numeric string).
+        :param properties: Optional list of property names to include in
+            the response. HubSpot returns only system properties when
+            this is None / empty.
+        :returns: The CRM v3 deal payload.
+        :raises HubSpotAPIError: On any non-2xx response, including
+            404 for unknown / archived ids.
+        """
         params: dict[str, Any] = {}
         if properties:
             params["properties"] = ",".join(properties)
@@ -487,7 +496,15 @@ class HubSpotClient:
             raise
 
     def update_deal(self, deal_id: str, properties: dict[str, Any]) -> dict[str, Any]:
-        """Patch a single deal's properties."""
+        """Patch a single deal's properties.
+
+        :param deal_id: HubSpot deal object id.
+        :param properties: Mapping of property name to new value.
+            HubSpot treats omitted properties as unchanged (PATCH
+            semantics).
+        :returns: The CRM v3 patch response.
+        :raises HubSpotAPIError: On any non-2xx response.
+        """
         return self._patch(
             f"crm/v3/objects/deals/{deal_id}",
             {"properties": properties},
@@ -840,7 +857,16 @@ class HubSpotClient:
         target_url: str,
         max_concurrent_requests: int = 10,
     ) -> dict[str, Any]:
-        """Set the webhook delivery URL and throttling for a private app."""
+        """Set the webhook delivery URL and throttling for a private app.
+
+        :param app_id: HubSpot application id (e.g. ``"38079082"``).
+        :param target_url: HTTPS endpoint HubSpot delivers events to.
+        :param max_concurrent_requests: HubSpot throttling cap; the
+            event source is paused when this many requests are in
+            flight to ``target_url``.
+        :returns: The webhook settings response.
+        :raises HubSpotAPIError: On any non-2xx response.
+        """
         return self._post(
             f"webhooks/v3/{app_id}/settings",
             {
@@ -858,7 +884,17 @@ class HubSpotClient:
         subscription_details: dict[str, Any],
         active: bool = True,
     ) -> dict[str, Any]:
-        """Register a webhook subscription on a private app."""
+        """Register a webhook subscription on a private app.
+
+        :param app_id: HubSpot application id.
+        :param subscription_details: HubSpot
+            ``SubscriptionDetailsRequest`` payload (``subscriptionType``,
+            ``propertyName`` for property-change subscriptions, etc.).
+        :param active: When False, registers the subscription paused so
+            it can be flipped on later without re-registering.
+        :returns: The created subscription record.
+        :raises HubSpotAPIError: On any non-2xx response.
+        """
         return self._post(
             f"webhooks/v3/{app_id}/subscriptions",
             {"subscriptionDetails": subscription_details, "active": active},

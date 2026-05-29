@@ -8,6 +8,14 @@ AWS publishes two per-account buckets:
 Throttled calls return ``ThrottlingException``. The standard recovery is
 exponential backoff (handled in the client via tenacity); this limiter is a
 proactive guard so we do not burn the per-second bucket on bursts.
+
+Per-API rate limiter. The three rate limiters in this codebase (GovWin,
+HubSpot, ACE) deliberately implement different algorithms (rolling 60-
+minute window / sliding 10-second window / dual token buckets for
+reads + writes) because each upstream publishes a different quota with
+different reset semantics. A shared base class would have to pretend
+those semantics are the same and would be a leaky abstraction. Do not
+consolidate.
 """
 
 from __future__ import annotations

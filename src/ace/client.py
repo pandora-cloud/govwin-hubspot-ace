@@ -242,10 +242,18 @@ class ACEClient:
     ) -> dict[str, Any]:
         """Update an opportunity, refreshing LastModifiedDate on ConflictException.
 
-        :param known_last_modified_date: caller-provided LastModifiedDate (e.g.
-            persisted in DynamoDB after the last successful write). When
-            supplied the first attempt skips the GetOpportunity round-trip;
-            subsequent attempts always refetch.
+        :param identifier: The AWS opportunity id.
+        :param updates: Top-level body fields to write. See
+            :meth:`update_opportunity` for the PUT-semantics caveat.
+        :param max_attempts: Maximum total attempts (initial + retries).
+        :param known_last_modified_date: Caller-provided
+            ``LastModifiedDate`` (e.g. persisted in DynamoDB after the
+            last successful write). When supplied the first attempt
+            skips the GetOpportunity round-trip; subsequent attempts
+            always refetch the current value.
+        :returns: The successful UpdateOpportunity response.
+        :raises ACEAPIError: On non-retryable errors, or on
+            ``ConflictException`` after exhausting ``max_attempts``.
         """
         last_error: Exception | None = None
         last_modified = known_last_modified_date
@@ -283,6 +291,16 @@ class ACEClient:
     # ------------------------------------------------------------------
 
     def list_solutions(self, **filters: Any) -> dict[str, Any]:
+        """Raw paginated ``ListSolutions`` call.
+
+        :param filters: Forwarded to boto3 ``list_solutions``. Common
+            keys are ``Status`` (list of ``Active`` / ``Inactive`` /
+            ``Draft``), ``MaxResults``, and ``NextToken``.
+        :returns: The raw boto3 response with ``SolutionSummaries`` and
+            ``NextToken`` keys. Use :meth:`list_active_solutions` for the
+            paginated, projected view that the UI Extension consumes.
+        :raises ACEAPIError: On any non-retryable AWS error.
+        """
         try:
             return self._call_read("list_solutions", Catalog=self._catalog, **filters)
         except ClientError as exc:
@@ -335,6 +353,16 @@ class ACEClient:
         related_entity_identifier: str,
         related_entity_type: str = "Solutions",
     ) -> dict[str, Any]:
+        """Associate a related entity (typically a Solution) with an opportunity.
+
+        :param opportunity_identifier: The AWS opportunity id.
+        :param related_entity_identifier: The related entity id, e.g.
+            ``S-0051246`` for a Solution.
+        :param related_entity_type: Boto3 enum value; defaults to
+            ``"Solutions"``.
+        :returns: The raw boto3 response (usually empty on success).
+        :raises ACEAPIError: On any non-retryable AWS error.
+        """
         try:
             return self._call_write(
                 "associate_opportunity",
@@ -352,6 +380,15 @@ class ACEClient:
         related_entity_identifier: str,
         related_entity_type: str = "Solutions",
     ) -> dict[str, Any]:
+        """Remove an association previously added by :meth:`associate_opportunity`.
+
+        :param opportunity_identifier: The AWS opportunity id.
+        :param related_entity_identifier: The related entity id to detach.
+        :param related_entity_type: Boto3 enum value; defaults to
+            ``"Solutions"``.
+        :returns: The raw boto3 response.
+        :raises ACEAPIError: On any non-retryable AWS error.
+        """
         try:
             return self._call_write(
                 "disassociate_opportunity",
@@ -375,8 +412,16 @@ class ACEClient:
     ) -> dict[str, Any]:
         """Submit an opportunity to AWS for review.
 
-        ``aws_submission`` shape: ``{"InvolvementType": "Co-Sell", "Visibility": "Full"}``.
-        Defaults pulled from config when not provided.
+        :param opportunity_identifier: The AWS opportunity id returned by
+            :meth:`create_opportunity`.
+        :param client_token: Idempotency token; persist via
+            :meth:`src.sync.state.SyncStateManager.reserve_task_client_token`
+            so SQS retries reuse the same value.
+        :param aws_submission: ``{"InvolvementType": ..., "Visibility": ...}``.
+            Defaults to the configured ACE submission defaults when None.
+        :returns: The boto3 response including the engagement
+            ``TaskArn`` and ``OpportunityIdentifier``.
+        :raises ACEAPIError: On any non-retryable AWS error.
         """
         if aws_submission is None:
             aws_submission = {
@@ -422,11 +467,22 @@ class ACEClient:
     def scrub_for_update(current: dict[str, Any]) -> dict[str, Any]:
         """Reduce a GetOpportunity response to fields UpdateOpportunity accepts.
 
-        UpdateOpportunity has PUT semantics: omitted fields are treated as
-        being cleared. The valid Update params per the boto3 service model
-        are narrower than what GetOpportunity returns, so we whitelist.
-        Catalog, Identifier, and LastModifiedDate are passed by the caller
-        and are not part of the body fields we scrub.
+        UpdateOpportunity has PUT semantics: omitted fields are treated
+        as cleared. The valid Update params per the boto3 service model
+        are narrower than what GetOpportunity returns, so this helper
+        whitelists. ``Catalog``, ``Identifier``, and ``LastModifiedDate``
+        are passed by the caller and are not part of the body fields the
+        scrub touches.
+
+        :param current: The response dict from
+            :meth:`get_opportunity`.
+        :returns: A new dict containing only fields the boto3
+            ``UpdateOpportunity`` shape accepts, with sub-fields cleaned
+            so AWS' client-side validator does not reject stub entries
+            (empty ``ExpectedCustomerSpend`` rows, contact entries
+            missing ``FirstName`` / ``LastName`` / ``Email``, empty
+            ``SalesActivities`` lists, and Marketing companions that
+            require ``Source == "Marketing Activity"``).
         """
         # AWS UpdateOpportunity has PUT semantics: any field omitted from
         # the request is treated as null. We must echo every field that
