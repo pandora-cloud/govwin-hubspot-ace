@@ -131,7 +131,14 @@ def load_config() -> AppConfig:
             govwin_secret_name=os.environ["GOVWIN_SECRET_NAME"],
             hubspot_secret_name=os.environ["HUBSPOT_SECRET_NAME"],
             govwin_tokens_secret_name=os.environ["GOVWIN_TOKENS_SECRET_NAME"],
-            hubspot_webhook_secret_name=os.environ["HUBSPOT_WEBHOOK_SECRET_NAME"],
+            # Only the webhook receiver + UI extension Lambdas use this for
+            # signature validation. setup_hubspot / govwin_orchestrator /
+            # govwin_worker / submit_to_ace / update_in_ace /
+            # handle_ace_event never read it. Keep optional so a Lambda
+            # that doesn't need the secret can run without inheriting it.
+            # Lambdas that DO need it fail loud at use time via
+            # ``get_signing_secret`` when the name is empty.
+            hubspot_webhook_secret_name=os.environ.get("HUBSPOT_WEBHOOK_SECRET_NAME", ""),
             sns_topic_arn=os.environ.get("SNS_TOPIC_ARN", ""),
             dlq_url=os.environ.get("DLQ_URL", ""),
             ace_submission_queue_url=os.environ.get("ACE_SUBMISSION_QUEUE_URL", ""),

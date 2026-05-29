@@ -20,8 +20,14 @@ REQUIRED_ENV: tuple[str, ...] = (
     "GOVWIN_SECRET_NAME",
     "HUBSPOT_SECRET_NAME",
     "GOVWIN_TOKENS_SECRET_NAME",
-    "HUBSPOT_WEBHOOK_SECRET_NAME",
 )
+
+# ``HUBSPOT_WEBHOOK_SECRET_NAME`` is intentionally not in REQUIRED_ENV.
+# Only the webhook-receiver + UI-extension Lambdas need it; the other
+# Lambdas (setup_hubspot, govwin_orchestrator, govwin_worker,
+# submit_to_ace, update_in_ace, handle_ace_event) do not, and failing
+# their config-load over a value they never read would block deploy
+# without buying any safety.
 
 
 @pytest.fixture
