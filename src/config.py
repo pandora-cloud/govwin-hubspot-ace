@@ -119,16 +119,19 @@ def load_config() -> AppConfig:
         ),
         aws=AWSConfig(
             region=os.environ.get("AWS_REGION", "us-east-1"),
-            sync_state_table=os.environ.get("SYNC_STATE_TABLE", "govwin_sync_state"),
-            entity_mappings_table=os.environ.get("ENTITY_MAPPINGS_TABLE", "govwin_entity_mappings"),
-            govwin_secret_name=os.environ.get("GOVWIN_SECRET_NAME", "govwin-hubspot/govwin"),
-            hubspot_secret_name=os.environ.get("HUBSPOT_SECRET_NAME", "govwin-hubspot/hubspot"),
-            govwin_tokens_secret_name=os.environ.get(
-                "GOVWIN_TOKENS_SECRET_NAME", "govwin-hubspot/govwin-tokens"
-            ),
-            hubspot_webhook_secret_name=os.environ.get(
-                "HUBSPOT_WEBHOOK_SECRET_NAME", "govwin-hubspot/hubspot-webhook"
-            ),
+            # Table names + secret ARNs / names are required: Terraform
+            # injects them into the Lambda env, and the Makefile
+            # SCRIPT_ENV macro injects them for local scripts. Defaulting
+            # them to LocalStack-era literals silently masked production
+            # misconfiguration (the script would point at nonexistent
+            # tables instead of failing loud). Use ``KeyError`` to make
+            # the missing var obvious at load time.
+            sync_state_table=os.environ["SYNC_STATE_TABLE"],
+            entity_mappings_table=os.environ["ENTITY_MAPPINGS_TABLE"],
+            govwin_secret_name=os.environ["GOVWIN_SECRET_NAME"],
+            hubspot_secret_name=os.environ["HUBSPOT_SECRET_NAME"],
+            govwin_tokens_secret_name=os.environ["GOVWIN_TOKENS_SECRET_NAME"],
+            hubspot_webhook_secret_name=os.environ["HUBSPOT_WEBHOOK_SECRET_NAME"],
             sns_topic_arn=os.environ.get("SNS_TOPIC_ARN", ""),
             dlq_url=os.environ.get("DLQ_URL", ""),
             ace_submission_queue_url=os.environ.get("ACE_SUBMISSION_QUEUE_URL", ""),

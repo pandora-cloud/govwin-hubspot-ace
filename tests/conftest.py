@@ -15,6 +15,17 @@ from moto import mock_aws
 # uses, so requests would 404. Production Lambdas keep FIPS on (default).
 os.environ.setdefault("AWS_USE_FIPS_ENDPOINT", "false")
 
+# ``src.config.load_config`` requires these env vars at import time;
+# production sets them via Terraform Lambda env vars or the Makefile's
+# SCRIPT_ENV macro for scripts. Tests run them through ``moto`` so the
+# table / secret names just need to be valid strings.
+os.environ.setdefault("SYNC_STATE_TABLE", "test-sync-state")
+os.environ.setdefault("ENTITY_MAPPINGS_TABLE", "test-entity-mappings")
+os.environ.setdefault("GOVWIN_SECRET_NAME", "test/govwin")
+os.environ.setdefault("HUBSPOT_SECRET_NAME", "test/hubspot")
+os.environ.setdefault("GOVWIN_TOKENS_SECRET_NAME", "test/govwin-tokens")
+os.environ.setdefault("HUBSPOT_WEBHOOK_SECRET_NAME", "test/hubspot-webhook")
+
 from src.config import (
     ACEConfig,
     AppConfig,
