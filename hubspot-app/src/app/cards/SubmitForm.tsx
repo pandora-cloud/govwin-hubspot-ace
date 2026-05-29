@@ -23,6 +23,7 @@ import {
 
 import { SolutionPicker } from "./SolutionPicker";
 import { AwsProductsPicker } from "./AwsProductsPicker";
+import { SyntheticIdHelper, SyntheticIdValue, composeId } from "./SyntheticIdHelper";
 import {
   CLOSED_LOST_REASONS,
   COMPETITORS,
@@ -103,6 +104,10 @@ interface Props {
 interface FormState {
   fromGovWin: boolean;
   govwinOppId: string;
+  // Non-GovWin path: BD assembles the synthetic id via SyntheticIdHelper.
+  // ``null`` until the helper emits its first change. ``validate()``
+  // requires a non-empty ``customer`` before submit is allowed.
+  syntheticParts: SyntheticIdValue | null;
   // ACE classification
   partnerNeed: string[];
   deliveryModel: string[];
@@ -194,6 +199,7 @@ export const SubmitForm: React.FC<Props> = ({
   const [state, setState] = useState<FormState>({
     fromGovWin: Boolean(existingGovwinOppId),
     govwinOppId: existingGovwinOppId ?? "",
+    syntheticParts: null,
     partnerNeed: defaultPartnerNeed && defaultPartnerNeed.length > 0
       ? defaultPartnerNeed
       : ["Deal Support"],
@@ -250,9 +256,12 @@ export const SubmitForm: React.FC<Props> = ({
       if (state.fromGovWin && !state.govwinOppId.trim()) {
         errs.push({ field: "govwin_opp_id", message: "GovWin Opportunity ID is required." });
       }
-      // Non-GovWin deals get an auto-minted UUID at submit time; no
-      // user input to validate. The dealname (validated below) is the
-      // human-readable label AWS reviewers see.
+      if (!state.fromGovWin && (!state.syntheticParts || !state.syntheticParts.customer.trim())) {
+        errs.push({
+          field: "govwin_opp_id",
+          message: "Build a synthetic GovWin ID; the Customer slug is required.",
+        });
+      }
     }
     if (isUpdate) {
       if (!state.lifecycleStage) {
@@ -321,17 +330,17 @@ export const SubmitForm: React.FC<Props> = ({
     setSubmitting(true);
     // In update mode the bound govwin_opp_id (PartnerOpportunityIdentifier)
     // is immutable and the form locks it. In create mode: either BD's
-    // GovWin id (when fromGovWin=true) or an auto-minted UUID. The UUID
-    // replaces the older SOURCE-CUSTOMER-PROJECT-NNN scheme because AWS
-    // enforces uniqueness across the catalog FOREVER (see Option C E2E
-    // 2026-05-27): a human-readable synthetic id BD might want to
-    // recycle was never actually recyclable, and AWS reviewers see the
-    // deal name (Project.Title) for human context anyway.
+    // real GovWin id (when fromGovWin=true) or a synthetic id composed
+    // by the SyntheticIdHelper. AWS enforces PartnerOpportunityIdentifier
+    // uniqueness per catalog forever, so BD must pick a sequence value
+    // they have not used on this prefix before; the helper's microcopy
+    // calls this out. validate() guarantees ``syntheticParts.customer``
+    // is non-empty on this branch.
     const govwin_opp_id = isUpdate
       ? (existingGovwinOppId ?? state.govwinOppId.trim())
       : state.fromGovWin
         ? state.govwinOppId.trim()
-        : `pc-${crypto.randomUUID()}`;
+        : composeId(state.syntheticParts!);
 
     const payload: Record<string, unknown> = {
       deal_id: dealId,
@@ -451,9 +460,6 @@ export const SubmitForm: React.FC<Props> = ({
     return e?.message;
   };
 
-  // Bisection v1: Sections 1-4 active. SyntheticIdHelper / SolutionPicker /
-  // AwsProductsPicker child components + Marketing/Notes sections still
-  // stripped to narrow down the runtime crash.
   return (
     <Flex direction="column" gap="md">
       <Heading>
@@ -523,19 +529,15 @@ export const SubmitForm: React.FC<Props> = ({
               readOnly={Boolean(existingGovwinOppId)}
             />
           ) : (
-            // Non-GovWin deals get an auto-minted UUID for the AWS
-            // PartnerOpportunityIdentifier. We don't show it; the deal
-            // name (which BD already sets when creating the HubSpot
-            // deal) is the human-readable label that AWS reviewers see
-            // on the opportunity. Auto-minting avoids the irrevocable-
-            // synthetic-id trap (AWS uniqueness is enforced per catalog
-            // forever; the older SOURCE-CUSTOMER-NNN scheme made BD
-            // responsible for not colliding).
-            <Text variant="microcopy">
-              A unique identifier will be auto-generated for AWS Partner
-              Central tracking. The opportunity name AWS reviewers see is
-              the deal name (editable in the Project section below).
-            </Text>
+            // Non-GovWin deals build a synthetic id via the helper.
+            // AWS enforces PartnerOpportunityIdentifier uniqueness per
+            // catalog for the lifetime of the catalog, so BD must
+            // override the suggested sequence if they have used this
+            // prefix before. The helper's microcopy calls this out.
+            <SyntheticIdHelper
+              defaultCompanyName={defaultCompanyName}
+              onChange={(_id, parts) => update("syntheticParts", parts)}
+            />
           )}
         </>
       )}
