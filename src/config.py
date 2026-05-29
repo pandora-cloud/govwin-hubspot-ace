@@ -126,18 +126,20 @@ def load_config() -> AppConfig:
             # misconfiguration (the script would point at nonexistent
             # tables instead of failing loud). Use ``KeyError`` to make
             # the missing var obvious at load time.
+            # Table names are required: a typo or LocalStack-era default
+            # would otherwise silently target a nonexistent table and the
+            # ClientError-swallowing read paths in src/sync/state.py would
+            # return None as if the row didn't exist. Secret names are
+            # NOT required: a wrong secret name fails loud at the next
+            # boto3 ``get_secret_value`` call (ResourceNotFoundException
+            # is not swallowed), and the ACE Lambdas legitimately do not
+            # have GOVWIN_SECRET_NAME / GOVWIN_TOKENS_SECRET_NAME in
+            # their Terraform env block (they never read GovWin secrets).
             sync_state_table=os.environ["SYNC_STATE_TABLE"],
             entity_mappings_table=os.environ["ENTITY_MAPPINGS_TABLE"],
-            govwin_secret_name=os.environ["GOVWIN_SECRET_NAME"],
-            hubspot_secret_name=os.environ["HUBSPOT_SECRET_NAME"],
-            govwin_tokens_secret_name=os.environ["GOVWIN_TOKENS_SECRET_NAME"],
-            # Only the webhook receiver + UI extension Lambdas use this for
-            # signature validation. setup_hubspot / govwin_orchestrator /
-            # govwin_worker / submit_to_ace / update_in_ace /
-            # handle_ace_event never read it. Keep optional so a Lambda
-            # that doesn't need the secret can run without inheriting it.
-            # Lambdas that DO need it fail loud at use time via
-            # ``get_signing_secret`` when the name is empty.
+            govwin_secret_name=os.environ.get("GOVWIN_SECRET_NAME", ""),
+            hubspot_secret_name=os.environ.get("HUBSPOT_SECRET_NAME", ""),
+            govwin_tokens_secret_name=os.environ.get("GOVWIN_TOKENS_SECRET_NAME", ""),
             hubspot_webhook_secret_name=os.environ.get("HUBSPOT_WEBHOOK_SECRET_NAME", ""),
             sns_topic_arn=os.environ.get("SNS_TOPIC_ARN", ""),
             dlq_url=os.environ.get("DLQ_URL", ""),

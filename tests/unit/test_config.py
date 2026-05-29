@@ -17,17 +17,17 @@ from src.config import load_config
 REQUIRED_ENV: tuple[str, ...] = (
     "SYNC_STATE_TABLE",
     "ENTITY_MAPPINGS_TABLE",
-    "GOVWIN_SECRET_NAME",
-    "HUBSPOT_SECRET_NAME",
-    "GOVWIN_TOKENS_SECRET_NAME",
 )
 
-# ``HUBSPOT_WEBHOOK_SECRET_NAME`` is intentionally not in REQUIRED_ENV.
-# Only the webhook-receiver + UI-extension Lambdas need it; the other
-# Lambdas (setup_hubspot, govwin_orchestrator, govwin_worker,
-# submit_to_ace, update_in_ace, handle_ace_event) do not, and failing
-# their config-load over a value they never read would block deploy
-# without buying any safety.
+# Only the two DynamoDB table-name vars are required. A typo would
+# otherwise silently target a nonexistent table and the
+# ClientError-swallowing read paths in src/sync/state.py would return
+# None as if the row didn't exist. Secret-name vars are NOT required:
+# a wrong value fails loud at the next ``get_secret_value`` call
+# (ResourceNotFoundException), and several Lambdas legitimately don't
+# have all four secret names in their Terraform env block (the ACE
+# Lambdas never read GovWin secrets; setup_hubspot / orchestrator /
+# worker don't read the webhook secret).
 
 
 @pytest.fixture
