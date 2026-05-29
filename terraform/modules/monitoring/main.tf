@@ -8,6 +8,16 @@ variable "enable_notifications" {
 variable "notification_email" {
   type    = string
   default = ""
+  validation {
+    # When alarms are enabled (the default), the SNS topic MUST have a
+    # subscriber or every alarm publishes into the void: Lambda errors,
+    # DLQ depth, scheduler failures, the update_in_ace fan-out alarm,
+    # the audit-event hand-edit alerts, the orphan-opportunity alerts;
+    # all silently dropped. Force the operator to make an explicit
+    # choice: provide an inbox or disable notifications.
+    condition     = !var.enable_notifications || length(var.notification_email) > 0
+    error_message = "notification_email is required when enable_notifications=true. Set it in terraform.tfvars or set enable_notifications=false explicitly."
+  }
 }
 variable "kms_key_arn" {
   description = "Pipeline CMK ARN from the kms module. Encrypts the SNS notifications topic and the catch-all DLQ messages."
