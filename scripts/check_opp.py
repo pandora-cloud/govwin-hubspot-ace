@@ -53,22 +53,24 @@ def main() -> int:
             continue
 
         opp = opps[0]
-        print(json.dumps(
-            {
-                "id": opp.get("id"),
-                "iqOppId": opp.get("iqOppId"),
-                "title": opp.get("title"),
-                "status": opp.get("status"),
-                "type": opp.get("type"),
-                "updateDate": opp.get("updateDate"),
-                "createdDate": opp.get("createdDate"),
-                "govEntity": opp.get("govEntity"),
-                "solicitationNumber": opp.get("solicitationNumber"),
-                "marked": opp.get("marked"),
-            },
-            indent=2,
-            default=str,
-        ))
+        print(
+            json.dumps(
+                {
+                    "id": opp.get("id"),
+                    "iqOppId": opp.get("iqOppId"),
+                    "title": opp.get("title"),
+                    "status": opp.get("status"),
+                    "type": opp.get("type"),
+                    "updateDate": opp.get("updateDate"),
+                    "createdDate": opp.get("createdDate"),
+                    "govEntity": opp.get("govEntity"),
+                    "solicitationNumber": opp.get("solicitationNumber"),
+                    "marked": opp.get("marked"),
+                },
+                indent=2,
+                default=str,
+            )
+        )
 
     return 0
 

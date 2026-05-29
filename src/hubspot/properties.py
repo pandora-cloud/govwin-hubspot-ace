@@ -482,27 +482,30 @@ DEAL_PROPERTIES: list[HubSpotProperty] = [
             "self-heal (reads this property when only the Stage webhook fires)."
         ),
         options=[
-            {"label": v, "value": v} for v in sorted([
-                "Customer Deficiency",
-                "Delay / Cancellation of Project",
-                "Legal / Tax / Regulatory",
-                "Lost to Competitor - Google",
-                "Lost to Competitor - Microsoft",
-                "Lost to Competitor - SoftLayer",
-                "Lost to Competitor - VMWare",
-                "Lost to Competitor - Other",
-                "No Opportunity",
-                "On Premises Deployment",
-                "Partner Gap",
-                "Price",
-                "Security / Compliance",
-                "Technical Limitations",
-                "Customer Experience",
-                "Other",
-                "People/Relationship/Governance",
-                "Product/Technology",
-                "Financial/Commercial",
-            ])
+            {"label": v, "value": v}
+            for v in sorted(
+                [
+                    "Customer Deficiency",
+                    "Delay / Cancellation of Project",
+                    "Legal / Tax / Regulatory",
+                    "Lost to Competitor - Google",
+                    "Lost to Competitor - Microsoft",
+                    "Lost to Competitor - SoftLayer",
+                    "Lost to Competitor - VMWare",
+                    "Lost to Competitor - Other",
+                    "No Opportunity",
+                    "On Premises Deployment",
+                    "Partner Gap",
+                    "Price",
+                    "Security / Compliance",
+                    "Technical Limitations",
+                    "Customer Experience",
+                    "Other",
+                    "People/Relationship/Governance",
+                    "Product/Technology",
+                    "Financial/Commercial",
+                ]
+            )
         ],
     ),
     HubSpotProperty(

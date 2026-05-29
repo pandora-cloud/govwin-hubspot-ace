@@ -138,9 +138,7 @@ def main() -> int:
             next_token = page.get("NextToken")
             if not next_token or len(all_opps) >= 1000:
                 break
-        candidates = [
-            o for o in all_opps if o.get("PartnerOpportunityIdentifier") == govwin_id
-        ]
+        candidates = [o for o in all_opps if o.get("PartnerOpportunityIdentifier") == govwin_id]
         _dump(
             f"4. AWS PC ListOpportunities (PartnerOpportunityIdentifier == {govwin_id})",
             candidates or "(none; expected unless prior submissions collided)",

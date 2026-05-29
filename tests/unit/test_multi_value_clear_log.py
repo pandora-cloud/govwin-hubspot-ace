@@ -73,9 +73,7 @@ def test_partner_need_filled_returns_true_no_warn(caplog: pytest.LogCaptureFixtu
 def test_delivery_model_filled_returns_true_no_warn(caplog: pytest.LogCaptureFixture) -> None:
     payload: dict = {}
     with caplog.at_level(logging.WARNING, logger="src.lambdas.update_in_ace"):
-        result = update_mod._handle_delivery_model(
-            payload, "Professional Services", "Partner Co"
-        )
+        result = update_mod._handle_delivery_model(payload, "Professional Services", "Partner Co")
     assert result is True
     assert payload["Project"]["DeliveryModels"] == ["Professional Services"]
     assert not any("no-op" in rec.message for rec in caplog.records)

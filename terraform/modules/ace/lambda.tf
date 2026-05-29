@@ -36,11 +36,11 @@ locals {
 }
 
 resource "aws_lambda_function" "hubspot_webhook_receiver" {
-  function_name                  = "${var.name_prefix}-hubspot-webhook-receiver"
-  role                           = aws_iam_role.webhook_receiver.arn
-  handler                        = "src.lambdas.hubspot_webhook_receiver.handler"
-  runtime                        = "python3.12"
-  architectures                  = ["arm64"]
+  function_name = "${var.name_prefix}-hubspot-webhook-receiver"
+  role          = aws_iam_role.webhook_receiver.arn
+  handler       = "src.lambdas.hubspot_webhook_receiver.handler"
+  runtime       = "python3.12"
+  architectures = ["arm64"]
   # 10s, not 5s: HubSpot's documented 5s budget assumes the receiver does
   # only signature validation + SQS enqueue. The audit-event path also
   # publishes to SNS inline, and the first publish from a fresh Lambda

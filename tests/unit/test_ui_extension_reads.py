@@ -94,11 +94,15 @@ def test_aws_products_cache_reused_on_second_call(monkeypatch) -> None:
     cache is the cheap way to simulate the warm state."""
     from src.models import AwsProductSummary
 
-    sample = [AwsProductSummary.model_validate({
-        "Identifier": "AmazonEC2Linux",
-        "Name": "Amazon EC2",
-        "Family": "Compute",
-    })]
+    sample = [
+        AwsProductSummary.model_validate(
+            {
+                "Identifier": "AmazonEC2Linux",
+                "Name": "Amazon EC2",
+                "Family": "Compute",
+            }
+        )
+    ]
     monkeypatch.setattr(reads_mod, "_aws_products_cache", sample)
     # Point the path at /nonexistent to prove the file is NOT opened.
     monkeypatch.setattr(reads_mod, "AWS_PRODUCTS_PATH", "/nonexistent/no.json")

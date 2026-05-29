@@ -94,10 +94,16 @@ def main() -> int:
             if not deal:
                 print("(no deal found with this govwin_id)")
                 continue
-            print(json.dumps({
-                "hubspot_deal_id": deal.get("id"),
-                "properties": deal.get("properties"),
-            }, indent=2, default=str))
+            print(
+                json.dumps(
+                    {
+                        "hubspot_deal_id": deal.get("id"),
+                        "properties": deal.get("properties"),
+                    },
+                    indent=2,
+                    default=str,
+                )
+            )
 
     return 0
 

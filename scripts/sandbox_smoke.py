@@ -142,9 +142,7 @@ def _build_create_payload(client_token: str) -> dict[str, Any]:
                     "Amount": "100000.00",
                     "CurrencyCode": "USD",
                     "Frequency": "Monthly",
-                    "TargetCompany": os.environ.get(
-                        "ACE_PARTNER_COMPANY_NAME", "Partner Company"
-                    ),
+                    "TargetCompany": os.environ.get("ACE_PARTNER_COMPANY_NAME", "Partner Company"),
                 }
             ],
         },
@@ -201,9 +199,7 @@ def scenario_1_create(client: Any) -> dict[str, Any]:
     return response
 
 
-def scenario_2_associate(
-    client: Any, opp_id: str, target: tuple[str, str]
-) -> None:
+def scenario_2_associate(client: Any, opp_id: str, target: tuple[str, str]) -> None:
     related_type, related_id = target
     print(f"Scenario 2: AssociateOpportunity ({related_type})")
     client.associate_opportunity(
@@ -251,7 +247,9 @@ def _get_with_retry(client: Any, opp_id: str, attempts: int = 6) -> dict[str, An
                 raise
             last_error = exc
             wait = 5 * (i + 1)  # 5, 10, 15, 20, 25, 30 seconds
-            print(f"  [WAIT] {opp_id} not yet visible (attempt {i+1}/{attempts}); sleeping {wait}s")
+            print(
+                f"  [WAIT] {opp_id} not yet visible (attempt {i + 1}/{attempts}); sleeping {wait}s"
+            )
             time.sleep(wait)
     assert last_error is not None
     raise last_error
@@ -343,9 +341,7 @@ def _synth_event(detail_type: str, detail: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _invoke_handler(
-    function_name: str, payload: dict[str, Any]
-) -> dict[str, Any]:
+def _invoke_handler(function_name: str, payload: dict[str, Any]) -> dict[str, Any]:
     lam = boto3.client("lambda", region_name=REGION)
     response = lam.invoke(
         FunctionName=function_name,
@@ -483,8 +479,7 @@ def scenario_9_webhook_positive(api_url: str, secret_name: str) -> None:
     response = httpx.post(api_url, content=body, headers=headers, timeout=10.0)
     if response.status_code != 200:
         raise RuntimeError(
-            f"expected 200 for valid signature, got {response.status_code}: "
-            f"{response.text[:200]}"
+            f"expected 200 for valid signature, got {response.status_code}: {response.text[:200]}"
         )
     payload = response.json()
     # Unknown property name -> classify_property_change returns 'drop'.

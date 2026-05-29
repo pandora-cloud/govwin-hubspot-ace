@@ -84,7 +84,9 @@ def main() -> int:
         description="Dry-run: discover and map GovWin opportunities without syncing"
     )
     parser.add_argument(
-        "--limit", type=int, default=5,
+        "--limit",
+        type=int,
+        default=5,
         help="Max opportunities to fetch details for (default: 5)",
     )
     parser.add_argument("--verbose", action="store_true", help="Show all mapped field values")
@@ -135,8 +137,10 @@ def main() -> int:
 
         # Step 2: Fetch details (limited)
         to_fetch = opportunities[: args.limit]
-        print(f"\nStep 2: Fetching details for {len(to_fetch)}"
-              f" of {len(opportunities)} opportunities...")
+        print(
+            f"\nStep 2: Fetching details for {len(to_fetch)}"
+            f" of {len(opportunities)} opportunities..."
+        )
         bundles = []
         for opp in to_fetch:
             if not opp.id:
@@ -174,12 +178,14 @@ def main() -> int:
                     contacts_seen.add(key)
                     mapped_contacts.append(map_contact_to_hubspot(contact))
 
-            results.append({
-                "deal": props,
-                "company": company["properties"] if company else None,
-                "contacts": [c["properties"] for c in mapped_contacts],
-                "contact_count": len(bundle.contacts),
-            })
+            results.append(
+                {
+                    "deal": props,
+                    "company": company["properties"] if company else None,
+                    "contacts": [c["properties"] for c in mapped_contacts],
+                    "contact_count": len(bundle.contacts),
+                }
+            )
 
     # Step 4: Report
     if args.json:
@@ -224,8 +230,10 @@ def main() -> int:
 
     # Summary
     print(f"{'=' * 55}")
-    print(f"Summary: {len(results)} deals, {len(companies_seen)} companies, "
-          f"{len(contacts_seen)} contacts")
+    print(
+        f"Summary: {len(results)} deals, {len(companies_seen)} companies, "
+        f"{len(contacts_seen)} contacts"
+    )
     remaining = len(opportunities) - len(to_fetch)
     print(f"Remaining opportunities not fetched: {remaining}")
     calls = client.rate_limiter.calls_in_window

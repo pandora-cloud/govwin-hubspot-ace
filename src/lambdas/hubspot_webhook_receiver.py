@@ -353,7 +353,5 @@ def _process_audit_events(events: list[Any], *, config: Any) -> int:
             )
             sent += 1
         except Exception:  # noqa: BLE001 -- alert is advisory
-            logger.exception(
-                "audit alert publish failed for deal=%s prop=%s", deal_id, prop
-            )
+            logger.exception("audit alert publish failed for deal=%s prop=%s", deal_id, prop)
     return sent
