@@ -41,6 +41,22 @@ _PERMANENT_ERROR_CODES: set[str] = {
 }
 
 
+def _is_review_locked_error(exc: ACEAPIError) -> bool:
+    """True when AWS rejected the update only because review is in progress.
+
+    AWS Partner Central rejects ``UpdateOpportunity`` (and any modify,
+    including a Closed-Lost transition) while the opportunity's review
+    status is Submitted/In review/Rejected, with
+    ``ValidationException: ACTION_NOT_PERMITTED: ... cannot be modified in
+    Submitted, Rejected or In review status``. Unlike a merit-based
+    ValidationException (bad field value), this one is *transient until
+    review exits*: the same payload succeeds once AWS finishes its review.
+    So it must NOT take the permanent-drop path; the edit is deferred and
+    replayed on review exit (see :mod:`src.ace.reconcile`).
+    """
+    return exc.code == "ValidationException" and "ACTION_NOT_PERMITTED" in str(exc)
+
+
 def _publish_update_error_alert(*, config: Any, deal_id: str, prop: str, error: str) -> None:
     """Thin wrapper that builds the message + delegates to src.alerts.
 
@@ -139,7 +155,7 @@ def _ensure_closed_lost_pair_consistency(
 # actually mutated, False otherwise. Dispatch via ``_DELTA_HANDLERS``.
 
 
-def _handle_amount(payload: dict[str, Any], value: Any, partner_company_name: str) -> bool:
+def _handle_amount(payload: dict[str, Any], value: Any) -> bool:
     try:
         total = float(value)
     except (TypeError, ValueError):
@@ -155,19 +171,21 @@ def _handle_amount(payload: dict[str, Any], value: Any, partner_company_name: st
     # update via webhook would write a value 12x the create-path
     # baseline; a real divergence between the two paths.
     monthly = total / MRR_MONTHS_PER_YEAR
+    # TargetCompany is the AWS "AWS" | "Self" enum, not a company name;
+    # "AWS" tags this as the AWS MRR estimate. See src/ace/mapper.py.
     project["ExpectedCustomerSpend"] = [
         {
             "Amount": f"{monthly:.2f}",
             "CurrencyCode": "USD",
             "Frequency": "Monthly",
-            "TargetCompany": partner_company_name,
+            "TargetCompany": "AWS",
         }
     ]
     payload["Project"] = project
     return True
 
 
-def _handle_closedate(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_closedate(payload: dict[str, Any], value: Any) -> bool:
     # HubSpot delivers closedate as either a YYYY-MM-DD string or a
     # millisecond epoch depending on which API set it (the UI sets epoch
     # ms; the form's PATCH sets epoch ms; legacy paths may set ISO). AWS
@@ -198,7 +216,7 @@ def _handle_closedate(payload: dict[str, Any], value: Any, _: str) -> bool:
     return True
 
 
-def _handle_dealname(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_dealname(payload: dict[str, Any], value: Any) -> bool:
     # CustomerBusinessProblem is intentionally NOT derived from dealname
     # here. The create path sets a valid >= 20 char CustomerBusinessProblem
     # from the deal description; that's the authoritative source.
@@ -208,7 +226,7 @@ def _handle_dealname(payload: dict[str, Any], value: Any, _: str) -> bool:
     return True
 
 
-def _handle_description(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_description(payload: dict[str, Any], value: Any) -> bool:
     # CustomerBusinessProblem has a server-side regex (?s).{20,2000}.
     # If the new description is below the minimum, pad with the existing
     # project title (mirrors the create-path behavior). If neither is long
@@ -225,7 +243,7 @@ def _handle_description(payload: dict[str, Any], value: Any, _: str) -> bool:
     return True
 
 
-def _handle_use_case(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_use_case(payload: dict[str, Any], value: Any) -> bool:
     project = dict(payload.get("Project") or {})
     project["CustomerUseCase"] = str(value)
     payload["Project"] = project
@@ -241,7 +259,7 @@ def _project_text_setter(aws_field: str, *, max_length: int | None = None):
     under PUT.
     """
 
-    def _handler(payload: dict[str, Any], value: Any, _: str) -> bool:
+    def _handler(payload: dict[str, Any], value: Any) -> bool:
         text = str(value).strip() if value is not None else ""
         project = dict(payload.get("Project") or {})
         if text:
@@ -257,7 +275,7 @@ def _project_text_setter(aws_field: str, *, max_length: int | None = None):
 def _life_cycle_text_setter(aws_field: str, *, max_length: int | None = None):
     """Build a handler that sets/clears a free-text LifeCycle.<aws_field>."""
 
-    def _handler(payload: dict[str, Any], value: Any, _: str) -> bool:
+    def _handler(payload: dict[str, Any], value: Any) -> bool:
         text = str(value).strip() if value is not None else ""
         life_cycle = dict(payload.get("LifeCycle") or {})
         if text:
@@ -270,7 +288,7 @@ def _life_cycle_text_setter(aws_field: str, *, max_length: int | None = None):
     return _handler
 
 
-def _handle_aws_account_id(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_aws_account_id(payload: dict[str, Any], value: Any) -> bool:
     # AWS account id must be 12 digits if present; otherwise we clear.
     text = str(value).strip() if value is not None else ""
     project = dict(payload.get("Project") or {})
@@ -302,7 +320,7 @@ def _make_marketing_handler(aws_field: str):
       (2) Companion fields are rejected when Source is not "Marketing Activity".
     """
 
-    def _handler(payload: dict[str, Any], value: Any, _: str) -> bool:
+    def _handler(payload: dict[str, Any], value: Any) -> bool:
         text = str(value).strip() if value is not None else ""
         marketing = dict(payload.get("Marketing") or {})
         if aws_field in ("UseCases", "Channels"):
@@ -332,7 +350,7 @@ def _make_marketing_handler(aws_field: str):
     return _handler
 
 
-def _handle_lifecycle_stage(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_lifecycle_stage(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     life_cycle = dict(payload.get("LifeCycle") or {})
     if text:
@@ -347,7 +365,7 @@ def _handle_lifecycle_stage(payload: dict[str, Any], value: Any, _: str) -> bool
     return True
 
 
-def _handle_closed_lost_reason(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_closed_lost_reason(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     life_cycle = dict(payload.get("LifeCycle") or {})
     if text:
@@ -358,7 +376,7 @@ def _handle_closed_lost_reason(payload: dict[str, Any], value: Any, _: str) -> b
     return True
 
 
-def _handle_partner_need(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_partner_need(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
         # Multi-value clears are not currently sent to AWS: list-valued
@@ -374,7 +392,7 @@ def _handle_partner_need(payload: dict[str, Any], value: Any, _: str) -> bool:
     return True
 
 
-def _handle_delivery_model(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_delivery_model(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
         logger.warning(
@@ -388,7 +406,7 @@ def _handle_delivery_model(payload: dict[str, Any], value: Any, _: str) -> bool:
     return True
 
 
-def _handle_sales_activities(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_sales_activities(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
         logger.warning(
@@ -402,7 +420,7 @@ def _handle_sales_activities(payload: dict[str, Any], value: Any, _: str) -> boo
     return True
 
 
-def _handle_national_security(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_national_security(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if text not in ("Yes", "No"):
         return False
@@ -410,7 +428,7 @@ def _handle_national_security(payload: dict[str, Any], value: Any, _: str) -> bo
     return True
 
 
-def _handle_opportunity_type(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_opportunity_type(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
         return False
@@ -422,7 +440,7 @@ def _handle_opportunity_type(payload: dict[str, Any], value: Any, _: str) -> boo
     return True
 
 
-def _handle_industry(payload: dict[str, Any], value: Any, _: str) -> bool:
+def _handle_industry(payload: dict[str, Any], value: Any) -> bool:
     text = str(value).strip() if value is not None else ""
     if not text:
         return False
@@ -486,7 +504,6 @@ def _apply_delta(
     payload: dict[str, Any],
     prop: str,
     value: Any,
-    partner_company_name: str = "Partner Company",
 ) -> bool:
     """Mutate ``payload`` (an UpdateOpportunity body) for one property change.
 
@@ -503,7 +520,7 @@ def _apply_delta(
     handler = _DELTA_HANDLERS.get(prop)
     if handler is None:
         return False
-    return bool(handler(payload, value, partner_company_name))
+    return bool(handler(payload, value))
 
 
 def _resolve_govwin_id(state: SyncStateManager, hubspot: HubSpotClient, deal_id: str) -> str | None:
@@ -862,7 +879,7 @@ def _process_event(
     current = ace.get_opportunity(str(ace_id))
     payload = ACEClient.scrub_for_update(current)
     value = _resolve_property_value(hs_event, hubspot, deal_id, str(prop))
-    if not _apply_delta(payload, str(prop), value, config.ace.partner_company_name):
+    if not _apply_delta(payload, str(prop), value):
         return {"status": "skipped", "reason": f"no relevant field for {prop}"}
 
     # Closed-Lost stage/reason companion read.
@@ -926,9 +943,52 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                     _process_event(hs_event, config=config, state=state, ace=ace, hubspot=hubspot)
                 )
             except ACEAPIError as exc:
+                deal_id = str((hs_event or {}).get("objectId") or "?")
+                prop = str((hs_event or {}).get("propertyName") or "?")
+                # Review-locked rejection: AWS is mid-review, so the edit
+                # can't land yet but is NOT invalid. Defer the property
+                # (park it on the mapping) and let the review-exit reconcile
+                # replay it. No SNS: deferral is an expected, auto-recovered
+                # condition, not an operator-actionable failure.
+                if (
+                    _is_review_locked_error(exc)
+                    and is_valid_hubspot_object_id(deal_id)
+                    and prop != "?"
+                ):
+                    govwin_id = _resolve_govwin_id(state, hubspot, deal_id)
+                    if govwin_id:
+                        logger.info(
+                            "update_in_ace: review-locked for message %s prop=%s; "
+                            "deferring until AWS review exits",
+                            message_id,
+                            prop,
+                        )
+                        try:
+                            state.add_pending_reconcile_props(govwin_id, {prop})
+                        except Exception:  # noqa: BLE001 -- best-effort
+                            logger.exception(
+                                "update_in_ace: failed to park pending prop for govwin=%s",
+                                govwin_id,
+                            )
+                        try:
+                            hubspot.update_deal(
+                                deal_id,
+                                {
+                                    "govwin_ace_next_steps": (
+                                        f"Edit to '{prop}' queued; will apply "
+                                        "automatically after AWS completes its review."
+                                    )
+                                },
+                            )
+                        except Exception:  # noqa: BLE001 -- writeback is best-effort
+                            logger.exception(
+                                "update_in_ace: deferral writeback failed for deal %s",
+                                deal_id,
+                            )
+                        continue
+                    # No govwin mapping to park against: fall through to the
+                    # permanent path so the rejection is still surfaced.
                 if exc.code in _PERMANENT_ERROR_CODES:
-                    deal_id = str((hs_event or {}).get("objectId") or "?")
-                    prop = str((hs_event or {}).get("propertyName") or "?")
                     logger.warning(
                         "update_in_ace: permanent error %s for message %s prop=%s; dropping",
                         exc.code,

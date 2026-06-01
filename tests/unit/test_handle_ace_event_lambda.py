@@ -480,3 +480,82 @@ def test_hyperscaler_contact_email_masked_in_logs(
     # Raw email never appears in logs; masked form does.
     assert "evil@evil.example" not in log_text
     assert "e***@evil.example" in log_text
+
+
+# ---------------------------------------------------------------------------
+# Reconcile-on-review-exit trigger
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_invoked_when_editable_and_props_pending(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """Opportunity Updated -> Approved with parked props replays them, reusing
+    the already-fetched GetOpportunity response (no second AWS read)."""
+    state_mock.get_ace_mapping.return_value = {
+        "hubspot_deal_id": "deal-1",
+        "ace_opportunity_id": "O1",
+        "pending_reconcile_props": {"amount"},
+    }
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+        patch.object(handle_ace_event, "reconcile_pending_props") as recon,
+    ):
+        handle_ace_event.handler(_opportunity_event(), context=None)
+    recon.assert_called_once()
+    kwargs = recon.call_args.kwargs
+    assert kwargs["govwin_id"] == "OPP1"
+    assert kwargs["ace_id"] == "O1"
+    assert kwargs["props"] == {"amount"}
+    # Reused the already-fetched full opp; only one GetOpportunity total.
+    assert kwargs["current_full"] is ace_mock.get_opportunity.return_value
+    ace_mock.get_opportunity.assert_called_once_with("O1")
+
+
+def test_reconcile_not_invoked_while_review_locked(state_mock, ace_mock, hubspot_mock) -> None:
+    """A Submitted (blocked) status must not trigger a replay."""
+    ace_mock.get_opportunity.return_value = {
+        "Id": "O1",
+        "PartnerOpportunityIdentifier": "OPP1",
+        "LifeCycle": {"ReviewStatus": "Submitted"},
+        "LastModifiedDate": "2026-04-29T00:00:00Z",
+    }
+    state_mock.get_ace_mapping.return_value = {
+        "hubspot_deal_id": "deal-1",
+        "ace_opportunity_id": "O1",
+        "pending_reconcile_props": {"amount"},
+    }
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+        patch.object(handle_ace_event, "reconcile_pending_props") as recon,
+    ):
+        handle_ace_event.handler(_opportunity_event(), context=None)
+    recon.assert_not_called()
+
+
+def test_reconcile_failure_does_not_block_stage_writeback(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """A reconcile exception is swallowed; the stage write-back still runs."""
+    state_mock.get_ace_mapping.return_value = {
+        "hubspot_deal_id": "deal-1",
+        "ace_opportunity_id": "O1",
+        "pending_reconcile_props": {"amount"},
+    }
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+        patch.object(
+            handle_ace_event,
+            "reconcile_pending_props",
+            side_effect=RuntimeError("boom"),
+        ),
+    ):
+        result = handle_ace_event.handler(_opportunity_event(), context=None)
+    assert result["status"] == "updated"
+    hubspot_mock.update_deal.assert_called_once()

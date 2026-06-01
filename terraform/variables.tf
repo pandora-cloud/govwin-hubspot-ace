@@ -231,17 +231,6 @@ variable "ace_default_visibility" {
   default     = "Full"
 }
 
-variable "ace_partner_company_name" {
-  description = <<-EOT
-    Partner company legal name surfaced as ExpectedCustomerSpend.TargetCompany in
-    AWS Partner Central. Must be set per deployment to the deploying partner's
-    legal name (e.g. "Acme Cloud LLC"). Defaults to a placeholder so unconfigured
-    deploys do not write someone else's company name to AWS.
-  EOT
-  type        = string
-  default     = "Partner Company"
-}
-
 variable "ace_trigger_stages" {
   description = <<-EOT
     Comma-separated HubSpot deal stage internal IDs (numeric, HubSpot-assigned)

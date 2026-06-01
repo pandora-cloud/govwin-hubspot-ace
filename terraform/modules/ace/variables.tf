@@ -94,17 +94,6 @@ variable "ace_default_visibility" {
   default = "Full"
 }
 
-variable "ace_partner_company_name" {
-  type        = string
-  description = <<-EOT
-    Partner company legal name surfaced as ExpectedCustomerSpend.TargetCompany in
-    AWS Partner Central. Set per deployment to the deploying partner's legal name
-    (e.g. "Acme Cloud LLC"). Defaults to a placeholder so unconfigured deploys
-    do not write someone else's company name to AWS.
-  EOT
-  default     = "Partner Company"
-}
-
 variable "ace_trigger_stages" {
   type        = string
   description = <<-EOT
@@ -137,4 +126,10 @@ variable "sns_topic_arn" {
 variable "kms_key_arn" {
   description = "Pipeline CMK ARN from the kms module. Encrypts ACE SQS queues and any future at-rest CMK targets."
   type        = string
+}
+
+variable "reconcile_sweep_schedule" {
+  description = "EventBridge Scheduler expression for the reconcile-pending sweep (backstop for best-effort ACE EventBridge delivery)."
+  type        = string
+  default     = "rate(6 hours)"
 }

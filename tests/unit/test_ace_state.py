@@ -151,3 +151,63 @@ class TestInvitationLookup:
         assert after_deal["updated_at"] >= before_deal["updated_at"]
         assert state.find_govwin_by_invitation_id("engi-abc") == "OPP1"
         assert state.find_govwin_by_hubspot_deal_id("deal-42") == "OPP1"
+
+
+class TestPendingReconcileProps:
+    def test_add_creates_string_set(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        state.add_pending_reconcile_props("OPP1", {"amount"})
+        record = state.get_ace_mapping("OPP1")
+        assert record is not None
+        assert record["pending_reconcile_props"] == {"amount"}
+
+    def test_add_unions_atomically(self, state: SyncStateManager) -> None:
+        """Concurrent webhook fan-out must union, not clobber, parked props."""
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        state.add_pending_reconcile_props("OPP1", {"amount"})
+        state.add_pending_reconcile_props("OPP1", {"closedate"})
+        record = state.get_ace_mapping("OPP1")
+        assert record is not None
+        assert record["pending_reconcile_props"] == {"amount", "closedate"}
+
+    def test_add_empty_set_is_noop(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        state.add_pending_reconcile_props("OPP1", set())
+        record = state.get_ace_mapping("OPP1")
+        assert record is not None
+        assert "pending_reconcile_props" not in record
+
+    def test_add_refreshes_ttl(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        state.add_pending_reconcile_props("OPP1", {"amount"})
+        record = state.get_ace_mapping("OPP1")
+        assert record is not None
+        assert int(record["ttl"]) > 0
+
+    def test_clear_removes_attribute(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        state.add_pending_reconcile_props("OPP1", {"amount", "closedate"})
+        state.clear_pending_reconcile_props("OPP1")
+        record = state.get_ace_mapping("OPP1")
+        assert record is not None
+        assert "pending_reconcile_props" not in record
+
+    def test_scan_returns_only_rows_with_pending(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1", hubspot_deal_id="d1")
+        state.update_ace_mapping(govwin_id="OPP2", ace_opportunity_id="O2", hubspot_deal_id="d2")
+        state.add_pending_reconcile_props("OPP1", {"amount"})
+        rows = state.scan_pending_reconcile()
+        pks = {r["pk"] for r in rows}
+        assert pks == {"ACE#OPP1"}
+        assert rows[0]["pending_reconcile_props"] == {"amount"}
+
+    def test_scan_excludes_reverse_index_rows(self, state: SyncStateManager) -> None:
+        """The sk == MAPPING filter must exclude REVERSE / SEEN rows."""
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1", hubspot_deal_id="d1")
+        state.add_pending_reconcile_props("OPP1", {"amount"})
+        rows = state.scan_pending_reconcile()
+        assert all(r["sk"] == "MAPPING" for r in rows)
+
+    def test_scan_empty_when_none_pending(self, state: SyncStateManager) -> None:
+        state.update_ace_mapping(govwin_id="OPP1", ace_opportunity_id="O1")
+        assert state.scan_pending_reconcile() == []

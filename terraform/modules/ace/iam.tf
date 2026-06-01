@@ -113,8 +113,17 @@ data "aws_iam_policy_document" "ace_permissions" {
 
   # Reverse-index records (pk INV#... and DEAL#...) require GetItem and
   # PutItem on the entity-mappings table; the base v1 policy on the
-  # Lambda role already grants those, so no additional ACE-specific
-  # DynamoDB statement is needed here.
+  # Lambda role already grants those.
+  #
+  # The reconcile-pending sweep additionally needs Scan to find rows that
+  # still carry pending_reconcile_props (the table has no GSI today, so a
+  # filtered Scan is the lookup). Scan is NOT in the base policy, so grant
+  # it here scoped to the entity-mappings table.
+  statement {
+    sid       = "ReconcileSweepScan"
+    actions   = ["dynamodb:Scan"]
+    resources = [var.entity_mappings_table_arn]
+  }
 }
 
 resource "aws_iam_role_policy" "ace" {

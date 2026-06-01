@@ -51,6 +51,7 @@ locals {
     "${var.name_prefix}-submit-to-ace",
     "${var.name_prefix}-update-in-ace",
     "${var.name_prefix}-handle-ace-event",
+    "${var.name_prefix}-reconcile-pending",
     "${var.name_prefix}-ui-ext-reads",
     "${var.name_prefix}-ui-ext-writes",
   ]
@@ -59,9 +60,18 @@ locals {
     "${var.name_prefix}-govwin-sync-dlq",
     "${var.name_prefix}-ace-submit-dlq",
     "${var.name_prefix}-ace-update-dlq",
+    "${var.name_prefix}-ace-reconcile-sweep-dlq",
   ]
 
-  scheduler_name = "${var.name_prefix}-govwin-sync"
+  # Both EventBridge Scheduler schedules in the project. A TargetErrorCount
+  # on either means a tick was silently dropped: the hourly govwin-sync
+  # orchestrator, or the reconcile-pending sweep that backstops deferred
+  # ACE edits. Names are string-literal-derived from name_prefix for the
+  # same module-decoupling reason as the lambda/DLQ lists above.
+  monitored_scheduler_names = [
+    "${var.name_prefix}-govwin-sync",
+    "${var.name_prefix}-ace-reconcile-pending",
+  ]
 }
 
 # Notifications topic. Subscribers should be terminal sinks only (email,
@@ -161,14 +171,15 @@ resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
   ok_actions          = [aws_sns_topic.sync_notifications.arn]
 }
 
-# EventBridge Scheduler dropped invocations. The Scheduler fires the
-# orchestrator hourly; if it fails to invoke (concurrency throttle, IAM
-# revocation, target gone), the invocation lands in the configured DLQ.
-# This alarm covers the case where the scheduler-side failure is itself
-# silent (e.g. role policy misconfiguration prevents the DLQ write).
+# EventBridge Scheduler dropped invocations. A Scheduler that fails to
+# invoke (concurrency throttle, IAM revocation, target gone) lands the
+# invocation in its configured DLQ. This alarm covers the case where the
+# scheduler-side failure is itself silent (e.g. role policy misconfiguration
+# prevents the DLQ write). One alarm per schedule in the project.
 resource "aws_cloudwatch_metric_alarm" "scheduler_failures" {
-  alarm_name          = "${var.name_prefix}-scheduler-target-errors"
-  alarm_description   = "EventBridge Scheduler ${local.scheduler_name} failed to invoke its target. The hourly orchestrator tick was missed."
+  for_each            = toset(local.monitored_scheduler_names)
+  alarm_name          = "${each.value}-target-errors"
+  alarm_description   = "EventBridge Scheduler ${each.value} failed to invoke its target; a scheduled tick was missed."
   namespace           = "AWS/Scheduler"
   metric_name         = "TargetErrorCount"
   statistic           = "Sum"
@@ -179,7 +190,7 @@ resource "aws_cloudwatch_metric_alarm" "scheduler_failures" {
   treat_missing_data  = "notBreaching"
   dimensions = {
     ScheduleGroup = "default"
-    ScheduleName  = local.scheduler_name
+    ScheduleName  = each.value
   }
   alarm_actions = [aws_sns_topic.sync_notifications.arn]
 }

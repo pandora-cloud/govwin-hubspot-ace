@@ -29,7 +29,7 @@ def test_empty_value_returns_false_and_warns(
 ) -> None:
     payload: dict = {}
     with caplog.at_level(logging.WARNING, logger="src.lambdas.update_in_ace"):
-        result = handler(payload, "", "Partner Co")
+        result = handler(payload, "")
     assert result is False
     # Payload was not mutated.
     assert payload == {}
@@ -51,7 +51,7 @@ def test_none_returns_false_and_warns(
 ) -> None:
     payload: dict = {}
     with caplog.at_level(logging.WARNING, logger="src.lambdas.update_in_ace"):
-        result = handler(payload, None, "Partner Co")
+        result = handler(payload, None)
     assert result is False
     assert any(prop_name in rec.message for rec in caplog.records)
 
@@ -60,7 +60,7 @@ def test_partner_need_filled_returns_true_no_warn(caplog: pytest.LogCaptureFixtu
     payload: dict = {}
     with caplog.at_level(logging.WARNING, logger="src.lambdas.update_in_ace"):
         result = update_mod._handle_partner_need(
-            payload, "Co-Sell - Deal Support;Co-Sell - Pricing Assistance", "Partner Co"
+            payload, "Co-Sell - Deal Support;Co-Sell - Pricing Assistance"
         )
     assert result is True
     assert payload["PrimaryNeedsFromAws"] == [
@@ -73,7 +73,7 @@ def test_partner_need_filled_returns_true_no_warn(caplog: pytest.LogCaptureFixtu
 def test_delivery_model_filled_returns_true_no_warn(caplog: pytest.LogCaptureFixture) -> None:
     payload: dict = {}
     with caplog.at_level(logging.WARNING, logger="src.lambdas.update_in_ace"):
-        result = update_mod._handle_delivery_model(payload, "Professional Services", "Partner Co")
+        result = update_mod._handle_delivery_model(payload, "Professional Services")
     assert result is True
     assert payload["Project"]["DeliveryModels"] == ["Professional Services"]
     assert not any("no-op" in rec.message for rec in caplog.records)

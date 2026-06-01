@@ -139,6 +139,9 @@ class TestApplyDelta:
         assert spend[0]["Amount"] == "20833.33"
         assert spend[0]["CurrencyCode"] == "USD"
         assert spend[0]["Frequency"] == "Monthly"
+        # TargetCompany is the AWS enum, not free text. With no
+        # ExpectedContractDuration on the spend, AWS only accepts "AWS".
+        assert spend[0]["TargetCompany"] == "AWS"
 
     def test_amount_invalid_string_skips(self):
         ace, state, hubspot = _patches()
@@ -375,6 +378,68 @@ class TestErrors:
             in (c.args[1] if len(c.args) > 1 else c.kwargs.get("properties", {}))
         ]
         assert writeback_calls, "Expected a HubSpot writeback with govwin_ace_next_steps"
+
+    def test_review_locked_defers_instead_of_dropping(self, monkeypatch):
+        """A status-lock ValidationException must NOT take the permanent path.
+
+        AWS rejects UpdateOpportunity while the opp is Submitted/In review/
+        Rejected with ACTION_NOT_PERMITTED. That edit is transient-until-
+        review-exit: park the prop, write a 'queued' note, fire NO SNS, and
+        do not re-queue the SQS message.
+        """
+        from src.lambdas import update_in_ace
+
+        ace, state, hubspot = _patches()
+        ace.update_with_retry.side_effect = ACEAPIError(
+            "UpdateOpportunity failed [ValidationException]: ACTION_NOT_PERMITTED:"
+            "You cannot perform Update action. The opportunity cannot be modified "
+            "in Submitted, Rejected or In review status.",
+            code="ValidationException",
+        )
+        sns_calls: list[dict] = []
+        monkeypatch.setattr(
+            update_in_ace,
+            "_publish_update_error_alert",
+            lambda **kw: sns_calls.append(kw),
+        )
+
+        result = _run(_event(_record("amount", "1000")), ace, state, hubspot)
+
+        # Not retried via SQS (review takes hours/days; retry is useless).
+        assert result["batchItemFailures"] == []
+        # Prop parked for replay on review exit.
+        state.add_pending_reconcile_props.assert_called_once_with("OPP1234", {"amount"})
+        # No SNS: deferral is expected and auto-recovered.
+        assert sns_calls == []
+        # A 'queued' note went to the deal.
+        writeback_calls = [
+            c
+            for c in hubspot.update_deal.call_args_list
+            if "queued" in str(c.args[1] if len(c.args) > 1 else c.kwargs.get("properties", {}))
+        ]
+        assert writeback_calls, "Expected a 'queued' writeback to govwin_ace_next_steps"
+
+    def test_merit_validation_still_takes_permanent_path(self, monkeypatch):
+        """Regression: a non-status-lock ValidationException must still drop +
+        SNS-alert (permanent path), NOT defer."""
+        from src.lambdas import update_in_ace
+
+        ace, state, hubspot = _patches()
+        ace.update_with_retry.side_effect = ACEAPIError(
+            "field CustomerBusinessProblem is invalid", code="ValidationException"
+        )
+        sns_calls: list[dict] = []
+        monkeypatch.setattr(
+            update_in_ace,
+            "_publish_update_error_alert",
+            lambda **kw: sns_calls.append(kw),
+        )
+
+        result = _run(_event(_record("amount", "1000")), ace, state, hubspot)
+
+        assert result["batchItemFailures"] == []
+        state.add_pending_reconcile_props.assert_not_called()
+        assert len(sns_calls) == 1
 
     def test_redelivered_sqs_message_is_idempotent(self):
         """SQS at-least-once: the same property change can arrive twice.

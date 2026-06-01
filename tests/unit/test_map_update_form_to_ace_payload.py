@@ -10,7 +10,7 @@ specific regression guard.
 The function takes:
 * ``form``: an UpdateFormRequest
 * ``current``: GetOpportunity output (the scrub_for_update echo base)
-* ``config``: AppConfig (catalog + partner_company_name)
+* ``config``: AppConfig (catalog)
 """
 
 from __future__ import annotations
@@ -89,7 +89,6 @@ def _current() -> dict:
 def _config() -> MagicMock:
     config = MagicMock()
     config.ace.catalog = "Sandbox"
-    config.ace.partner_company_name = "Pandora Cloud LLC"
     return config
 
 

@@ -18,6 +18,7 @@ import re
 from typing import Any
 
 from src.ace.client import ACEAPIError, ACEClient
+from src.ace.reconcile import RECONCILABLE_REVIEW_STATUSES, reconcile_pending_props
 from src.config import load_config
 from src.hubspot.client import HubSpotClient
 from src.sync.state import SyncStateManager
@@ -239,6 +240,35 @@ def _handle_opportunity_event(
         return {"status": "skipped", "reason": "archive check failed"}
     if deal_archived:
         return {"status": "skipped", "reason": "deal archived in HubSpot"}
+
+    # Reconcile deferred edits. If this event is the opportunity leaving
+    # AWS review (Approved / Action Required), replay any HubSpot edits
+    # that update_in_ace parked while the opportunity was review-locked.
+    # Reuse the already-fetched ``full`` (no extra GetOpportunity). Wrapped
+    # so a reconcile failure never blocks the stage write-back below; the
+    # scheduled sweep is the backstop. Idempotent: clear_pending_reconcile_props
+    # after success makes a redelivered event a no-op.
+    if review_status in RECONCILABLE_REVIEW_STATUSES:
+        mapping = state.get_ace_mapping(partner_id_str) or {}
+        pending = mapping.get("pending_reconcile_props")
+        if pending:
+            try:
+                reconcile_pending_props(
+                    ace=ace,
+                    hubspot=hubspot,
+                    state=state,
+                    govwin_id=partner_id_str,
+                    ace_id=str(full.get("Id") or aws_id),
+                    deal_id=str(deal_id),
+                    props=set(pending),
+                    current_full=full,
+                )
+            except Exception:  # noqa: BLE001 -- never block the stage write-back
+                logger.exception(
+                    "handle_ace_event: reconcile of parked props failed for govwin=%s "
+                    "(left parked for the scheduled sweep)",
+                    partner_id_str,
+                )
 
     # Build the unified write-back: cosell id / status / score (always)
     # plus dealstage (when the ReviewStatus maps to a known stage label).

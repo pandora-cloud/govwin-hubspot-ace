@@ -300,6 +300,82 @@ class SyncStateManager:
         if deal_id:
             self._put_reverse_index(f"DEAL#{deal_id}", govwin_id)
 
+    def add_pending_reconcile_props(self, govwin_id: str, props: set[str]) -> None:
+        """Record HubSpot properties whose ACE update was deferred during AWS review.
+
+        AWS rejects ``UpdateOpportunity`` while the opportunity's review
+        status is Submitted/In review/Rejected. Rather than drop the edit,
+        ``update_in_ace`` parks the changed property names here; they are
+        replayed once the opportunity becomes editable (see
+        :mod:`src.ace.reconcile`).
+
+        Uses ``ADD`` on a DynamoDB String Set so concurrent webhook
+        fan-out writes union atomically instead of clobbering one another.
+        The mapping ``ttl`` is refreshed in the same call to keep the row
+        alive through the (hours-to-days) review window.
+
+        :param govwin_id: GovWin global opportunity id.
+        :param props: HubSpot property names to defer; empty sets are
+            ignored (a String Set cannot be empty).
+        :returns: None.
+        """
+        if not props:
+            return
+        self._mappings_table.update_item(
+            Key={"pk": f"ACE#{govwin_id}", "sk": "MAPPING"},
+            UpdateExpression="ADD pending_reconcile_props :p SET #ttl = :ttl",
+            ExpressionAttributeNames={"#ttl": "ttl"},
+            ExpressionAttributeValues={
+                ":p": set(props),
+                ":ttl": int(time.time()) + 365 * 86400,
+            },
+        )
+
+    def clear_pending_reconcile_props(self, govwin_id: str) -> None:
+        """Remove the deferred-property set after a successful reconcile.
+
+        Removes the attribute entirely (a DynamoDB String Set cannot be
+        stored empty), making a redelivered reconcile event a no-op.
+
+        :param govwin_id: GovWin global opportunity id.
+        :returns: None.
+        """
+        self._mappings_table.update_item(
+            Key={"pk": f"ACE#{govwin_id}", "sk": "MAPPING"},
+            UpdateExpression="REMOVE pending_reconcile_props",
+        )
+
+    def scan_pending_reconcile(self) -> list[dict[str, Any]]:
+        """Return every ACE mapping row that still has deferred properties.
+
+        Backstop for the best-effort EventBridge trigger: the scheduled
+        sweep uses this to find opportunities whose deferred edits were
+        never replayed because the ``Opportunity Updated`` event was not
+        delivered. A ``Scan`` is adequate at current table scale; a sparse
+        GSI on ``pending_reconcile_props`` is the documented scale-up path.
+
+        :returns: A list of mapping items (sk == ``MAPPING``) that carry a
+            non-empty ``pending_reconcile_props`` set. Empty on error
+            (logged).
+        """
+        items: list[dict[str, Any]] = []
+        try:
+            kwargs: dict[str, Any] = {
+                "FilterExpression": ("sk = :mapping AND attribute_exists(pending_reconcile_props)"),
+                "ExpressionAttributeValues": {":mapping": "MAPPING"},
+            }
+            while True:
+                response = self._mappings_table.scan(**kwargs)
+                items.extend(dict(i) for i in response.get("Items", []))
+                last_key = response.get("LastEvaluatedKey")
+                if not last_key:
+                    break
+                kwargs["ExclusiveStartKey"] = last_key
+        except ClientError:
+            logger.exception("scan_pending_reconcile failed")
+            return []
+        return items
+
     def reserve_client_token(self, govwin_id: str, client_token: str) -> str:
         """Atomically reserve a ClientToken for a pending CreateOpportunity.
 

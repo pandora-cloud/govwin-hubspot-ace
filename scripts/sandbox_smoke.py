@@ -142,7 +142,7 @@ def _build_create_payload(client_token: str) -> dict[str, Any]:
                     "Amount": "100000.00",
                     "CurrencyCode": "USD",
                     "Frequency": "Monthly",
-                    "TargetCompany": os.environ.get("ACE_PARTNER_COMPANY_NAME", "Partner Company"),
+                    "TargetCompany": "AWS",
                 }
             ],
         },

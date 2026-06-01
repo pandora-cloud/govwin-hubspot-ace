@@ -919,7 +919,6 @@ def _marketing_block(deal: dict[str, Any]) -> dict[str, Any] | None:
 
 def _project_block(
     deal: dict[str, Any],
-    partner_company_name: str = "Partner Company",
 ) -> dict[str, Any]:
     title = _get(deal, "dealname") or "GovWin Opportunity"
     description = _get(deal, "description") or _get(deal, "govwin_primary_requirement") or ""
@@ -1009,12 +1008,18 @@ def _project_block(
             # entirely rather than emit a value AWS will reject.
             if total > 0:
                 monthly = total / MRR_MONTHS_PER_YEAR
+                # TargetCompany is an AWS enum, not a free-text company
+                # name: "AWS" tags the spend as the AWS MRR estimate,
+                # "Self" is for partner TCV with ExpectedContractDuration.
+                # With no ExpectedContractDuration on the project, AWS
+                # accepts only "AWS" and silently coerces anything else,
+                # so emit the literal to avoid relying on that coercion.
                 project["ExpectedCustomerSpend"] = [
                     {
                         "Amount": f"{monthly:.2f}",
                         "CurrencyCode": "USD",
                         "Frequency": "Monthly",
-                        "TargetCompany": partner_company_name,
+                        "TargetCompany": "AWS",
                     }
                 ]
         except (TypeError, ValueError):
@@ -1159,7 +1164,7 @@ def map_hubspot_deal_to_ace_create_payload(
         "Origin": config.ace.default_origin,
         "OpportunityType": "Net New Business",
         "PrimaryNeedsFromAws": primary_needs,
-        "Project": _project_block(deal, config.ace.partner_company_name),
+        "Project": _project_block(deal),
         "Customer": customer,
         "LifeCycle": _life_cycle_block(deal),
     }
@@ -1259,12 +1264,14 @@ def map_update_form_to_ace_payload(
     if form.amount is not None and form.amount > 0:
         # Same MRR convention as create-path: HubSpot annual / 12 = monthly.
         monthly = float(form.amount) / MRR_MONTHS_PER_YEAR
+        # See _project_block: TargetCompany is the "AWS" | "Self" enum,
+        # not a company name. Emit "AWS" (the AWS MRR estimate tag).
         project["ExpectedCustomerSpend"] = [
             {
                 "Amount": f"{monthly:.2f}",
                 "CurrencyCode": "USD",
                 "Frequency": "Monthly",
-                "TargetCompany": config.ace.partner_company_name,
+                "TargetCompany": "AWS",
             }
         ]
     if form.ace_sales_activities:

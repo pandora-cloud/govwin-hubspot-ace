@@ -14,7 +14,6 @@ locals {
     ACE_DEFAULT_SOLUTION_ID      = var.ace_default_solution_id
     ACE_DEFAULT_INVOLVEMENT_TYPE = var.ace_default_involvement_type
     ACE_DEFAULT_VISIBILITY       = var.ace_default_visibility
-    ACE_PARTNER_COMPANY_NAME     = var.ace_partner_company_name
     ACE_TRIGGER_STAGES           = var.ace_trigger_stages
     # HubSpot integration app id. The audit-event handler in the webhook
     # receiver compares ev.sourceId against this value: an INTEGRATION-
@@ -129,6 +128,33 @@ resource "aws_lambda_function" "handle_ace_event" {
   }
 }
 
+# Scheduled backstop that replays HubSpot edits deferred while an opportunity
+# was review-locked. The event-driven reconcile in handle_ace_event is the
+# primary path; this sweep covers EventBridge's best-effort delivery. It only
+# reads (Scan + GetOpportunity) and conditionally writes (UpdateOpportunity),
+# so it reuses the shared Lambda role like update_in_ace / handle_ace_event.
+resource "aws_lambda_function" "reconcile_pending" {
+  function_name                  = "${var.name_prefix}-reconcile-pending"
+  role                           = var.lambda_role_arn
+  handler                        = "src.lambdas.reconcile_pending.handler"
+  runtime                        = "python3.12"
+  architectures                  = ["arm64"]
+  timeout                        = 300
+  memory_size                    = 256
+  reserved_concurrent_executions = 1
+  filename                       = var.lambda_source_zip
+  source_code_hash               = var.lambda_source_hash
+  layers                         = [var.lambda_layer_arn]
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  environment {
+    variables = local.ace_env
+  }
+}
+
 # CloudWatch log groups with explicit retention.
 resource "aws_cloudwatch_log_group" "ace_logs" {
   for_each = toset([
@@ -136,6 +162,7 @@ resource "aws_cloudwatch_log_group" "ace_logs" {
     aws_lambda_function.submit_to_ace.function_name,
     aws_lambda_function.update_in_ace.function_name,
     aws_lambda_function.handle_ace_event.function_name,
+    aws_lambda_function.reconcile_pending.function_name,
   ])
   name              = "/aws/lambda/${each.value}"
   retention_in_days = var.log_retention_days
