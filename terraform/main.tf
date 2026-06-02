@@ -63,6 +63,7 @@ module "lambda" {
   name_prefix                = local.name_prefix
   aws_profile                = var.aws_profile
   aws_region                 = var.aws_region
+  ace_catalog                = var.ace_catalog
   sync_state_table_name      = module.dynamodb.sync_state_table_name
   sync_state_table_arn       = module.dynamodb.sync_state_table_arn
   entity_mappings_table_name = module.dynamodb.entity_mappings_table_name

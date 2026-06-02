@@ -199,7 +199,12 @@ resource "aws_iam_role_policy" "deployer_lambda" {
           "logs:UntagResource",
           "logs:ListTagsForResource",
         ]
-        Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/lambda/${local.project_glob}*"
+        # Lambda execution logs plus the API Gateway access-log group for the
+        # HubSpot webhook stage; both stay inside the project's name prefix.
+        Resource = [
+          "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/lambda/${local.project_glob}*",
+          "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/apigateway/${local.project_glob}*",
+        ]
       },
       {
         # logs:DescribeLogGroups is a list-style API that does not support
@@ -210,6 +215,35 @@ resource "aws_iam_role_policy" "deployer_lambda" {
         Sid      = "LogsDescribeRegion"
         Effect   = "Allow"
         Action   = ["logs:DescribeLogGroups"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = local.region
+          }
+        }
+      },
+      {
+        # Enabling access logging on the HubSpot webhook HTTP API uses the
+        # CloudWatch vended-logs delivery path, not a direct CreateLogGroup
+        # write. Per AWS docs (AWS-logs-infrastructure-CWL), the principal
+        # setting it up needs CreateLogDelivery plus PutResourcePolicy /
+        # DescribeResourcePolicies so AWS can auto-attach the
+        # delivery.logs.amazonaws.com write policy to the log group. The
+        # Get/Update/Delete/List delivery actions let terraform plan, update,
+        # and destroy the stage's logging config. These actions do not
+        # support resource-level scoping, so Resource must be "*"; we bound
+        # them to the project region like LogsDescribeRegion above.
+        Sid    = "LogsDeliveryForAccessLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:DescribeResourcePolicies",
+        ]
         Resource = "*"
         Condition = {
           StringEquals = {

@@ -10,6 +10,16 @@ variable "aws_region" {
   type = string
 }
 
+variable "ace_catalog" {
+  type        = string
+  description = "AWS Partner Central catalog: Sandbox (testing) or AWS (production). setup_hubspot seeds the govwin_ace_solution_id dropdown from ListSolutions against this catalog, so it must match the ACE submission Lambdas."
+  default     = "Sandbox"
+  validation {
+    condition     = contains(["Sandbox", "AWS"], var.ace_catalog)
+    error_message = "ace_catalog must be Sandbox or AWS."
+  }
+}
+
 variable "sync_state_table_name" {
   type = string
 }
@@ -183,6 +193,22 @@ data "aws_iam_policy_document" "lambda_permissions" {
     ]
     resources = ["*"]
   }
+
+  # Partner Central ListSolutions: setup_hubspot seeds the
+  # govwin_ace_solution_id dropdown from the live Active-solution set.
+  # ListSolutions does not support resource-level scoping, so the
+  # catalog condition is the least-privilege control: a Sandbox
+  # deployment cannot enumerate production-catalog solutions. Mirrors the
+  # ui_extension_reads role grant in modules/ace.
+  statement {
+    actions   = ["partnercentral:ListSolutions"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "partnercentral:Catalog"
+      values   = [var.ace_catalog]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "lambda" {
@@ -246,6 +272,11 @@ locals {
     GOVWIN_MARKED_VERSION     = var.govwin_marked_version
     INITIAL_LOOKBACK_DAYS     = tostring(var.initial_lookback_days)
     BATCH_SIZE                = tostring(var.batch_size)
+    # setup_hubspot calls ListSolutions against this catalog to seed the
+    # govwin_ace_solution_id dropdown. Must match the ACE submission
+    # Lambdas, else the card offers production solution IDs the HubSpot
+    # property has no options for and every submit PATCH 400s.
+    ACE_CATALOG = var.ace_catalog
     # Federal compliance: force FIPS 140-validated TLS endpoints on every
     # AWS API call. NIST 800-53 SC-13, CMMC L2 SC.L2-3.13.11.
     AWS_USE_FIPS_ENDPOINT = "true"
@@ -289,6 +320,7 @@ resource "aws_cloudwatch_log_group" "setup_hubspot_logs" {
 resource "terraform_data" "setup_hubspot" {
   triggers_replace = [
     aws_lambda_function.setup_hubspot.source_code_hash,
+    var.ace_catalog,
   ]
 
   provisioner "local-exec" {

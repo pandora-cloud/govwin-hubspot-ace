@@ -71,14 +71,22 @@ def _solution_options(config: Any) -> list[dict[str, str]]:
     The Sandbox catalog typically has zero Solutions. When that happens
     we return an empty option list and the form's SolutionPicker hides
     itself; the mapper falls back to Project.OtherSolutionDescription.
+
+    In the ``AWS`` (production) catalog the dropdown MUST be seeded from
+    the live solution set; a swallowed ``ListSolutions`` failure here
+    silently seeds an empty picker and every card submit then 400s with
+    ``INVALID_OPTION``. So the error is only swallowed for ``Sandbox``;
+    in production it propagates and fails the setup Lambda loud.
     """
     try:
         ace = ACEClient(config)
         solutions = ace.list_active_solutions()
     except ACEAPIError as exc:
+        if config.ace.catalog == "AWS":
+            raise
         logger.warning(
             "ListSolutions failed during setup; leaving govwin_ace_solution_id "
-            "options empty. error=%s",
+            "options empty (Sandbox catalog). error=%s",
             exc,
         )
         return []
@@ -136,24 +144,36 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     except (KeyError, json.JSONDecodeError) as exc:
         logger.warning("failed to seed AWS Products options: %s", exc)
 
+    # In production an empty/errored solution set is a misconfiguration, not
+    # a normal state: refuse to seed the placeholder so the Lambda returns
+    # FunctionError and the terraform_data.setup_hubspot provisioner aborts
+    # the apply. (_solution_options already re-raises a ListSolutions failure
+    # in the AWS catalog, so that propagates out of the handler too.)
+    solution_options = _solution_options(config)
+    if not solution_options:
+        if config.ace.catalog == "AWS":
+            raise RuntimeError(
+                "ListSolutions returned no Active solutions for the AWS "
+                "production catalog; refusing to seed govwin_ace_solution_id "
+                "with a placeholder. Register at least one Active solution in "
+                "Partner Central or check the setup Lambda's "
+                "partnercentral:ListSolutions permission."
+            )
+        # Sandbox: HubSpot rejects enumeration properties with zero options on
+        # create, and the Sandbox catalog usually has no registered solutions;
+        # add a single placeholder so the property creates. The form's
+        # SolutionPicker hides itself when this is the only option, and the
+        # backend mapper translates the placeholder to OtherSolutionDescription.
+        solution_options = [
+            {
+                "label": "(no AWS solutions registered in this catalog)",
+                "value": "_NONE_REGISTERED_",
+            }
+        ]
     try:
-        solution_options = _solution_options(config)
-        if not solution_options:
-            # HubSpot rejects enumeration properties with zero options on
-            # create. The Sandbox catalog usually has no registered
-            # solutions; add a single placeholder so the property creates.
-            # The form's SolutionPicker hides itself when this is the only
-            # option, and the backend mapper translates the placeholder to
-            # OtherSolutionDescription.
-            solution_options = [
-                {
-                    "label": "(no AWS solutions registered in this catalog)",
-                    "value": "_NONE_REGISTERED_",
-                }
-            ]
         _patch_property_options(DEAL_PROPERTIES, "govwin_ace_solution_id", solution_options)
         logger.info("seeded %d Solution options", len(solution_options))
-    except (KeyError, HubSpotAPIError, ACEAPIError) as exc:
+    except (KeyError, HubSpotAPIError) as exc:
         logger.warning("failed to seed Solution options: %s", exc)
 
     with HubSpotClient(config) as client:
