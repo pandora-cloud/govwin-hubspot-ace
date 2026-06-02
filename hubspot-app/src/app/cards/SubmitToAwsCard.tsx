@@ -33,7 +33,7 @@ const API_BASE_URL = "https://np1hq84j21.execute-api.us-east-1.amazonaws.com";
 // When in Sandbox, the SolutionPicker hides itself and the mapper falls
 // back to OtherSolutionDescription. Hardcoded here because the UI
 // Extension can't read Lambda env vars.
-const ACE_CATALOG = "Sandbox";
+const ACE_CATALOG = "AWS";
 
 // Wire the card up as a HubSpot CRM extension. Per HubSpot's UI Extensions
 // docs, the file must call hubspot.extend(...) instead of exporting a

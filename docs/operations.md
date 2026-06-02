@@ -170,6 +170,71 @@ aws dynamodb get-item \
 
 If you need to force re-processing, delete the entry. The TTL is 24h so this is rarely needed in steady state.
 
+## Deferred edits and review-status reconciliation
+
+AWS Partner Central rejects `UpdateOpportunity` while an opportunity's review status is `Submitted`, `In review`, or `Rejected`. Rather than dropping a HubSpot edit that lands during that window, `update_in_ace` parks it and replays it automatically once AWS lets the opportunity be edited again (`Approved` or `Action Required`). For BD, this is invisible: the edit applies on its own after review completes. This section is for the operator who needs to confirm a parked edit is progressing.
+
+### What "queued" means
+
+When BD edits a deal (amount, close date, name, AWS products, stage, and so on) while its AWS opportunity is still under review, the deal's **Next steps** field (`govwin_ace_next_steps`) shows a note like:
+
+> Edit to 'amount' queued; will apply automatically after AWS completes its review.
+
+That is the expected, healthy state. No alert fires, because deferral is a normal outcome, not a failure. The changed property name is recorded on the DynamoDB `ACE#{govwin_id}` mapping in a String Set attribute named `pending_reconcile_props`. Multiple edits during the same review window accumulate into that set and are coalesced into a single `UpdateOpportunity` when the opportunity becomes editable.
+
+### How the replay is triggered
+
+Two independent triggers, so a single dropped event never strands an edit:
+
+1. **Event-driven (primary):** AWS emits an `Opportunity Updated` EventBridge event on approve or reject. `handle_ace_event` reads the review status from that event and, if the opportunity is now editable and has parked props, replays them immediately.
+2. **Scheduled sweep (backstop):** `govwin-hubspot-prod-reconcile-pending` runs on the `rate(6 hours)` EventBridge Scheduler (`govwin-hubspot-prod-ace-reconcile-pending`). It scans the mapping table for rows with `pending_reconcile_props`, calls `GetOpportunity` on each, and replays the parked edits for any row whose review status has become editable. Rows still in a blocked status are skipped and stay queued. The sweep exists because AWS EventBridge delivery is best-effort: if the approve event is dropped, the sweep still catches the edit within one cadence.
+
+On a successful replay, the parked set is cleared, the AWS opportunity's `LastModifiedDate` is refreshed in DynamoDB, and the deal's **Next steps** note is replaced with:
+
+> Deferred edit(s) applied to AWS after review completed: amount, closedate.
+
+### Inspecting a parked deal
+
+The 4-way diagnostic (`make reconcile GOVWIN_ID=<opp>`, described above) prints the full DynamoDB mapping, so `pending_reconcile_props` and its members show up directly in section 1 of its output. It is read-only and does not conflict with the sweep; run it any time, including while the sweep is active. To check the parked set without the full diagnostic:
+
+```bash
+aws dynamodb get-item \
+  --table-name govwin-hubspot-prod-entity-mappings \
+  --key '{"pk":{"S":"ACE#OPP12345"},"sk":{"S":"MAPPING"}}' \
+  --query 'Item.pending_reconcile_props'
+```
+
+A non-empty `SS` (string set) means edits are still parked. Cross-check the review status with `GetOpportunity`:
+
+```bash
+PYTHONPATH=. .venv/bin/python -c \
+  "from src.config import load_config; from src.ace.client import ACEClient; \
+   print(ACEClient(load_config()).get_opportunity('O-XXXXXXXX')['LifeCycle']['ReviewStatus'])"
+```
+
+- Status is `Submitted`, `In review`, or `Rejected`: parked is correct; wait for AWS. Nothing to do.
+- Status is `Approved` or `Action Required` but the set is still non-empty after the next sweep cadence (6 hours): the replay is failing. Check the next subsection.
+
+### Forcing a sweep and handling sweep failures
+
+To replay immediately instead of waiting for the cadence (for example, after you have confirmed a deal left review):
+
+```bash
+aws lambda invoke \
+  --function-name govwin-hubspot-prod-reconcile-pending \
+  --payload '{}' /dev/stdout
+```
+
+The sweep is idempotent: clearing the parked set after a successful replay makes a second run a no-op, and the EventBridge-driven path dedups on event id, so a manual invoke racing the scheduler is safe.
+
+If a replayed edit is permanently rejected by AWS on merit (a genuinely invalid field value, not a status lock), the sweep clears the parked set so it does not loop forever and writes the reason onto the deal's **Next steps** field (`AWS rejected the deferred edit after review (<code>): ...`). Treat that like any other `ValidationException`: fix the field in HubSpot and re-save to re-trigger the update path.
+
+Sweep-level failures surface through standard monitoring:
+
+- `govwin-hubspot-prod-reconcile-pending-errors`: the sweep Lambda threw. Tail `/aws/lambda/govwin-hubspot-prod-reconcile-pending`.
+- `govwin-hubspot-prod-ace-reconcile-pending-target-errors`: EventBridge Scheduler could not invoke the sweep. After the scheduler exhausts its 2 retries, the failed invocation lands in `govwin-hubspot-prod-ace-reconcile-sweep-dlq`.
+- `govwin-hubspot-prod-ace-reconcile-sweep-dlq-depth`: a sweep invocation exhausted retries. Inspect the DLQ as with any other (see [DLQs and queues](#dlqs-and-queues)).
+
 ## DynamoDB backup and restore
 
 Both DynamoDB tables use on-demand billing and PITR (point-in-time recovery) is enabled by default in the production module.

@@ -89,9 +89,3 @@ def publish_alert(
         )
     except ClientError as exc:
         logger.exception("alerts: SNS publish failed (subject=%r): %s", subject, exc)
-
-
-def clear_client_cache() -> None:
-    """Drop the lazy SNS client. Intended for test teardown."""
-    global _sns_client
-    _sns_client = None

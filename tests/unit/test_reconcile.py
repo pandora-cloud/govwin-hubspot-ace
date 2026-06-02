@@ -72,6 +72,22 @@ def test_happy_replay_coalesces_into_one_update():
     state.clear_pending_reconcile_props.assert_called_once_with("OPP1234")
 
 
+def test_success_writeback_replaces_queued_note():
+    ace, hubspot, state = _mocks({"amount": "120000"})
+    _call(ace, hubspot, state, {"amount"})
+    hubspot.update_deal.assert_called_once()
+    note = hubspot.update_deal.call_args.args[1]["govwin_ace_next_steps"]
+    assert "applied to AWS after review" in note
+    assert "amount" in note
+    assert len(note) <= 255
+
+
+def test_noop_does_not_write_success_note():
+    ace, hubspot, state = _mocks({"amount": ""})
+    _call(ace, hubspot, state, {"amount"})
+    hubspot.update_deal.assert_not_called()
+
+
 def test_known_last_modified_date_passed_through():
     ace, hubspot, state = _mocks({"amount": "120000"})
     _call(ace, hubspot, state, {"amount"})

@@ -217,9 +217,6 @@ class HubSpotClient:
     def _put(self, path: str, data: Any = None) -> dict[str, Any]:
         return self._request("PUT", path, json_data=data)
 
-    def _delete(self, path: str) -> dict[str, Any]:
-        return self._request("DELETE", path)
-
     # -----------------------------------------------------------------------
     # Property Group Setup
     # -----------------------------------------------------------------------
@@ -846,56 +843,3 @@ class HubSpotClient:
             "company_properties": len(COMPANY_PROPERTIES),
             "contact_properties": len(CONTACT_PROPERTIES),
         }
-
-    # -----------------------------------------------------------------------
-    # Webhook subscription management (developer-platform 2025.2+)
-    # -----------------------------------------------------------------------
-
-    def configure_webhook_settings(
-        self,
-        app_id: str,
-        target_url: str,
-        max_concurrent_requests: int = 10,
-    ) -> dict[str, Any]:
-        """Set the webhook delivery URL and throttling for a private app.
-
-        :param app_id: HubSpot application id (e.g. ``"38079082"``).
-        :param target_url: HTTPS endpoint HubSpot delivers events to.
-        :param max_concurrent_requests: HubSpot throttling cap; the
-            event source is paused when this many requests are in
-            flight to ``target_url``.
-        :returns: The webhook settings response.
-        :raises HubSpotAPIError: On any non-2xx response.
-        """
-        return self._post(
-            f"webhooks/v3/{app_id}/settings",
-            {
-                "targetUrl": target_url,
-                "throttling": {
-                    "period": "SECONDLY",
-                    "maxConcurrentRequests": max_concurrent_requests,
-                },
-            },
-        )
-
-    def create_webhook_subscription(
-        self,
-        app_id: str,
-        subscription_details: dict[str, Any],
-        active: bool = True,
-    ) -> dict[str, Any]:
-        """Register a webhook subscription on a private app.
-
-        :param app_id: HubSpot application id.
-        :param subscription_details: HubSpot
-            ``SubscriptionDetailsRequest`` payload (``subscriptionType``,
-            ``propertyName`` for property-change subscriptions, etc.).
-        :param active: When False, registers the subscription paused so
-            it can be flipped on later without re-registering.
-        :returns: The created subscription record.
-        :raises HubSpotAPIError: On any non-2xx response.
-        """
-        return self._post(
-            f"webhooks/v3/{app_id}/subscriptions",
-            {"subscriptionDetails": subscription_details, "active": active},
-        )

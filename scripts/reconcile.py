@@ -99,9 +99,11 @@ def main() -> int:
         _dump("2. HubSpot deal", "(no hubspot_deal_id in DDB mapping; skipped)")
 
     # 3. AWS GetOpportunity
+    review_status: str | None = None
     if ace_id:
         try:
             opp = ace.get_opportunity(ace_id)
+            review_status = (opp.get("LifeCycle") or {}).get("ReviewStatus")
             slim = {
                 "Id": opp.get("Id"),
                 "PartnerOpportunityIdentifier": opp.get("PartnerOpportunityIdentifier"),
@@ -155,6 +157,28 @@ def main() -> int:
         flags.append("DDB.hubspot_deal_id does not match itself (data corruption)")
     if ace_id and not mapping.get("ace_opportunity_id"):
         flags.append("ace_id resolved but DDB row is partial")
+
+    # Parked deferred edits vs. current review status. A parked set while the
+    # opp is still in review is expected; a parked set while the opp is
+    # already editable means the sweep should have replayed it (investigate).
+    pending = mapping.get("pending_reconcile_props")
+    if pending:
+        from src.ace.reconcile import BLOCKED_REVIEW_STATUSES, RECONCILABLE_REVIEW_STATUSES
+
+        parked = sorted(pending)
+        if review_status in RECONCILABLE_REVIEW_STATUSES:
+            flags.append(
+                f"{len(parked)} edit(s) parked {parked} but opp is editable "
+                f"(ReviewStatus={review_status}); sweep should have replayed these"
+            )
+        elif review_status in BLOCKED_REVIEW_STATUSES:
+            flags.append(
+                f"{len(parked)} edit(s) parked {parked} awaiting AWS review "
+                f"(ReviewStatus={review_status}); expected, will auto-apply"
+            )
+        else:
+            flags.append(f"{len(parked)} edit(s) parked {parked} (ReviewStatus={review_status})")
+
     if not flags:
         flags.append("No obvious 4-way drift detected.")
     for flag in flags:

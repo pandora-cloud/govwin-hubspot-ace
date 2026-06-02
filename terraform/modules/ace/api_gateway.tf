@@ -25,10 +25,33 @@ resource "aws_apigatewayv2_route" "webhook" {
   target    = "integrations/${aws_apigatewayv2_integration.webhook.id}"
 }
 
+# Access log group for the webhook stage. CUI/compliance evaluators expect
+# the inbound request log to exist as audit evidence, not just Lambda logs.
+resource "aws_cloudwatch_log_group" "webhook_access" {
+  name              = "/aws/apigateway/${var.name_prefix}-hubspot-webhook"
+  retention_in_days = var.log_retention_days
+}
+
 resource "aws_apigatewayv2_stage" "webhook" {
   api_id      = aws_apigatewayv2_api.webhook.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.webhook_access.arn
+    # No request/response bodies: the body carries the HubSpot signature and
+    # deal payload. Log only routing/outcome metadata for the audit trail.
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      integrationErr = "$context.integrationErrorMessage"
+      responseLength = "$context.responseLength"
+    })
+  }
 
   default_route_settings {
     throttling_burst_limit = 100

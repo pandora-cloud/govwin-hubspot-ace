@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -165,77 +164,6 @@ class HubSpotProperty(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class HubSpotDealProperties(BaseModel):
-    """Properties for a HubSpot deal upsert."""
-
-    dealname: str
-    amount: str | None = None
-    dealstage: str | None = None
-    pipeline: str | None = None
-    description: str | None = None
-    closedate: str | None = None
-    govwin_opp_id: str | None = None
-    govwin_iq_opp_id: str | None = None
-    govwin_opp_type: str | None = None
-    govwin_status: str | None = None
-    govwin_solicitation_date: str | None = None
-    govwin_solicitation_number: str | None = None
-    govwin_source_url: str | None = None
-    govwin_iq_url: str | None = None
-    govwin_duration: str | None = None
-    govwin_primary_naics: str | None = None
-    govwin_naics_code: str | None = None
-    govwin_primary_requirement: str | None = None
-    govwin_analyst_notes: str | None = None
-    govwin_competition_type: str | None = None
-    govwin_contract_type: str | None = None
-    govwin_type_of_award: str | None = None
-    govwin_country: str | None = None
-    govwin_created_date: str | None = None
-    govwin_update_date: str | None = None
-    govwin_cmmc_requirements: str | None = None
-    govwin_smart_tags: str | None = None
-    govwin_agency: str | None = None
-    govwin_priority: str | None = None
-    govwin_market: str | None = None
-    govwin_industry: str | None = None
-    govwin_ace_opportunity_type: str | None = None
-
-    model_config = {"extra": "ignore"}
-
-
-class HubSpotCompanyProperties(BaseModel):
-    """Properties for a HubSpot company upsert."""
-
-    name: str
-    industry: str | None = None
-    govwin_gov_entity_id: str | None = None
-    govwin_parent_agency: str | None = None
-    govwin_entity_url: str | None = None
-    govwin_entity_type: str | None = None
-
-    model_config = {"extra": "ignore"}
-
-
-class HubSpotContactProperties(BaseModel):
-    """Properties for a HubSpot contact upsert."""
-
-    email: str | None = None
-    firstname: str | None = None
-    lastname: str | None = None
-    phone: str | None = None
-    jobtitle: str | None = None
-    address: str | None = None
-    city: str | None = None
-    state: str | None = None
-    zip: str | None = None
-    govwin_contact_id: str | None = None
-    govwin_entity_level1: str | None = None
-    govwin_entity_level2: str | None = None
-
-    model_config = {"extra": "ignore"}
-
-
 # ---------------------------------------------------------------------------
 # AWS Partner Central (ACE) Models
 # ---------------------------------------------------------------------------
@@ -280,114 +208,6 @@ class ACELifeCycle(BaseModel):
     review_status: str | None = Field(None, alias="ReviewStatus")
 
     model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-class ACEOpportunityCreatePayload(BaseModel):
-    """Payload sent to ``CreateOpportunity``.
-
-    Field names match the API exactly so the model can serialize directly
-    via ``model_dump(by_alias=True, exclude_none=True)``.
-    """
-
-    catalog: str = Field(..., alias="Catalog")
-    client_token: str = Field(..., alias="ClientToken")
-    origin: str = Field("Partner Referral", alias="Origin")
-    opportunity_type: str = Field("Net New Business", alias="OpportunityType")
-    primary_needs_from_aws: list[str] = Field(default_factory=list, alias="PrimaryNeedsFromAws")
-    project: ACEProject = Field(..., alias="Project")
-    customer: ACECustomer = Field(..., alias="Customer")
-    life_cycle: ACELifeCycle | None = Field(None, alias="LifeCycle")
-    partner_opportunity_identifier: str | None = Field(None, alias="PartnerOpportunityIdentifier")
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-class ACEOpportunityResponse(BaseModel):
-    """Response returned by Create/Update/GetOpportunity."""
-
-    id: str | None = Field(None, alias="Id")
-    arn: str | None = Field(None, alias="Arn")
-    partner_opportunity_identifier: str | None = Field(None, alias="PartnerOpportunityIdentifier")
-    last_modified_date: datetime | None = Field(None, alias="LastModifiedDate")
-    created_date: datetime | None = Field(None, alias="CreatedDate")
-    catalog: str | None = Field(None, alias="Catalog")
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-class ACEEngagementInvitation(BaseModel):
-    """Engagement invitation as returned by ListEngagementInvitations."""
-
-    id: str | None = Field(None, alias="Id")
-    arn: str | None = Field(None, alias="Arn")
-    catalog: str | None = Field(None, alias="Catalog")
-    payload_type: str | None = Field(None, alias="PayloadType")
-    status: str | None = Field(None, alias="Status")
-    expiration_date: datetime | None = Field(None, alias="ExpirationDate")
-    invitation_date: datetime | None = Field(None, alias="InvitationDate")
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-class ACEEngagementTaskResult(BaseModel):
-    """Result of StartEngagementFromOpportunityTask (async task)."""
-
-    task_id: str | None = Field(None, alias="TaskId")
-    task_arn: str | None = Field(None, alias="TaskArn")
-    task_status: str | None = Field(None, alias="TaskStatus")
-    opportunity_id: str | None = Field(None, alias="OpportunityId")
-    engagement_invitation_id: str | None = Field(None, alias="EngagementInvitationId")
-    message: str | None = Field(None, alias="Message")
-    reason_code: str | None = Field(None, alias="ReasonCode")
-    start_time: datetime | None = Field(None, alias="StartTime")
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-class ACESolution(BaseModel):
-    """A registered Partner Central solution as returned by ListSolutions."""
-
-    id: str = Field(..., alias="Id")
-    arn: str | None = Field(None, alias="Arn")
-    name: str | None = Field(None, alias="Name")
-    status: str | None = Field(None, alias="Status")
-    category: str | None = Field(None, alias="Category")
-    catalog: str | None = Field(None, alias="Catalog")
-    created_date: datetime | None = Field(None, alias="CreatedDate")
-
-    model_config = {"populate_by_name": True, "extra": "ignore"}
-
-
-# ---------------------------------------------------------------------------
-# Sync State Models
-# ---------------------------------------------------------------------------
-
-
-class SyncState(BaseModel):
-    """Global sync state."""
-
-    last_sync_timestamp: datetime | None = None
-    total_synced: int = 0
-    last_run_status: str = "never_run"
-
-
-class ACEOpportunityMapping(BaseModel):
-    """Tracks the linkage between a HubSpot deal and an ACE opportunity.
-
-    Persisted in DynamoDB under pk=``ACE#<govwin_id>``. The ``last_modified_date``
-    is required for optimistic locking on every UpdateOpportunity call.
-    """
-
-    govwin_id: str
-    hubspot_deal_id: str | None = None
-    ace_opportunity_id: str
-    ace_engagement_invitation_id: str | None = None
-    ace_task_id: str | None = None
-    last_modified_date: datetime | None = None
-    client_token: str | None = None
-    submitted_at: datetime | None = None
-
-    model_config = {"extra": "ignore"}
 
 
 # ---------------------------------------------------------------------------

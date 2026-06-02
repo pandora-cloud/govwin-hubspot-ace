@@ -152,6 +152,7 @@ def reconcile_pending_props(
         hubspot_deal_id=deal_id,
     )
     state.clear_pending_reconcile_props(govwin_id)
+    _writeback_success(hubspot, deal_id, sorted(props))
     logger.info(
         "reconcile: govwin=%s opp=%s replayed %d parked prop(s)",
         govwin_id,
@@ -159,6 +160,19 @@ def reconcile_pending_props(
         len(props),
     )
     return {"status": "reconciled", "ace_opportunity_id": ace_id, "props": sorted(props)}
+
+
+def _writeback_success(hubspot: HubSpotClient, deal_id: str, props: list[str]) -> None:
+    """Replace the deferral "queued" note once the parked edits actually land on AWS."""
+    from src.ace.validators import is_valid_hubspot_object_id
+
+    if not is_valid_hubspot_object_id(deal_id):
+        return
+    note = f"Deferred edit(s) applied to AWS after review completed: {', '.join(props)}."
+    try:
+        hubspot.update_deal(deal_id, {"govwin_ace_next_steps": note[:255]})
+    except Exception:  # noqa: BLE001 -- writeback is best-effort
+        logger.exception("reconcile: success writeback failed for deal %s", deal_id)
 
 
 def _writeback_rejection(hubspot: HubSpotClient, deal_id: str, exc: ACEAPIError) -> None:
