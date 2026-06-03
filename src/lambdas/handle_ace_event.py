@@ -47,6 +47,18 @@ _DEALSTAGE_BY_AWS_REVIEW: dict[str, str] = {
     "Expired": "Closed Lost",
 }
 
+# Terminal LifeCycle.Stage values take precedence over ReviewStatus. A
+# Closed Lost / Launched opportunity keeps ReviewStatus=Approved, so
+# mapping by ReviewStatus alone reverts a just-closed deal back to
+# "Approved by AWS" on the inbound echo of our own UpdateOpportunity
+# (the card's outbound close emits an "Opportunity Updated" event).
+# Maps Stage -> (govwin_aws_cosell_status mirror, deal pipeline stage
+# label); mirrors the outbound mapping in ui_extension_writes.
+_TERMINAL_STAGE_TO_HUBSPOT: dict[str, tuple[str, str]] = {
+    "Closed Lost": ("Closed Lost", "Closed Lost"),
+    "Launched": ("Launched", "Closed Won"),
+}
+
 
 def _publish_orphan_alert(
     *, config: Any, aws_opp_id: str, partner_opp_id: str | None, reason: str
@@ -285,11 +297,27 @@ def _handle_opportunity_event(
         )
         aws_id_value = ""
 
+    # Terminal LifeCycle.Stage (Closed Lost / Launched) takes precedence
+    # over ReviewStatus: a closed opp keeps ReviewStatus=Approved, so
+    # mapping by ReviewStatus alone would revert a just-closed deal back to
+    # "Approved by AWS" on the inbound echo of our own close
+    # UpdateOpportunity. See _TERMINAL_STAGE_TO_HUBSPOT.
+    lifecycle_stage = str((full.get("LifeCycle") or {}).get("Stage") or "")[:80]
+    closed_lost_reason = str((full.get("LifeCycle") or {}).get("ClosedLostReason") or "")[:255]
+    terminal = _TERMINAL_STAGE_TO_HUBSPOT.get(lifecycle_stage)
+    cosell_status_value: str
+    target_stage: str | None
+    if terminal:
+        cosell_status_value, target_stage = terminal
+    else:
+        cosell_status_value = review_status
+        target_stage = _DEALSTAGE_BY_AWS_REVIEW.get(review_status)
+
     writeback: dict[str, Any] = {}
     if aws_id_value:
         writeback["govwin_aws_cosell_id"] = aws_id_value
-    if review_status:
-        writeback["govwin_aws_cosell_status"] = review_status[:80]
+    if cosell_status_value:
+        writeback["govwin_aws_cosell_status"] = cosell_status_value[:80]
     # Mirror the AWS-side LifeCycle.Stage onto the deal so the Update
     # form can pre-fill the stage dropdown to the current value. Without
     # this, the form falls back to a hard-coded "Qualified" default for
@@ -301,21 +329,33 @@ def _handle_opportunity_event(
     # property. Earlier we wrote unconditionally, which fired a property-
     # change webhook -> update_in_ace -> GetOpportunity + UpdateOpportunity
     # (no-op against AWS state) on every inbound event. That burned write
-    # quota and could trigger another inbound event loop.
-    lifecycle_stage = str((full.get("LifeCycle") or {}).get("Stage") or "")[:80]
+    # quota and could trigger another inbound event loop. The same diff
+    # guard covers the ClosedLostReason mirror below.
     if lifecycle_stage:
         try:
-            current_deal = hubspot.get_deal(str(deal_id), properties=["govwin_ace_lifecycle_stage"])
-            current_stage = (current_deal.get("properties") or {}).get("govwin_ace_lifecycle_stage")
+            current_deal = hubspot.get_deal(
+                str(deal_id),
+                properties=["govwin_ace_lifecycle_stage", "govwin_ace_closed_lost_reason"],
+            )
+            current_props = current_deal.get("properties") or {}
         except Exception:  # noqa: BLE001 -- best-effort
             logger.exception(
                 "handle_ace_event: get_deal for lifecycle_stage compare failed for %s; "
                 "writing anyway",
                 deal_id,
             )
-            current_stage = None
-        if current_stage != lifecycle_stage:
+            current_props = {}
+        if current_props.get("govwin_ace_lifecycle_stage") != lifecycle_stage:
             writeback["govwin_ace_lifecycle_stage"] = lifecycle_stage
+        # Mirror ClosedLostReason too: the Update card sends the reason to
+        # AWS but does not persist it to the deal property, so without this
+        # the deal shows a blank reason on a Closed Lost opp.
+        if (
+            lifecycle_stage == "Closed Lost"
+            and closed_lost_reason
+            and current_props.get("govwin_ace_closed_lost_reason") != closed_lost_reason
+        ):
+            writeback["govwin_ace_closed_lost_reason"] = closed_lost_reason
 
     # AWS-side product associations, mirrored to the deal so the card can
     # render a "syncing" pill whenever the BD-edited govwin_ace_aws_products
@@ -329,7 +369,6 @@ def _handle_opportunity_event(
     if engagement_score is not None:
         writeback["govwin_aws_marketplace_engagement_score"] = str(engagement_score)[:50]
 
-    target_stage = _DEALSTAGE_BY_AWS_REVIEW.get(review_status)
     stage_label_id: str | None = None
     if target_stage:
         stage_label_id = hubspot.get_stage_id_by_label(target_stage)

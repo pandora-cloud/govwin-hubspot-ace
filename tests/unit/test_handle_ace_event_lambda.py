@@ -101,6 +101,89 @@ def test_opportunity_updated_with_approved_status(state_mock, ace_mock, hubspot_
     assert body["dealstage"] == "stage-id-123"
 
 
+def test_closed_lost_terminal_stage_takes_precedence_over_review_status(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """A Closed Lost opp keeps ReviewStatus=Approved. The inbound echo of our
+    own close UpdateOpportunity must mirror the terminal Stage, not revert the
+    deal back to "Approved by AWS"."""
+    ace_mock.get_opportunity.return_value = {
+        "Id": "O1",
+        "PartnerOpportunityIdentifier": "OPP1",
+        "LifeCycle": {
+            "ReviewStatus": "Approved",
+            "Stage": "Closed Lost",
+            "ClosedLostReason": "No Opportunity",
+        },
+        "LastModifiedDate": "2026-06-03T00:00:00Z",
+    }
+    hubspot_mock.get_deal.return_value = {"properties": {}}
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(_opportunity_event(), context=None)
+    assert result["status"] == "updated"
+    assert result["stage"] == "Closed Lost"
+    body = hubspot_mock.update_deal.call_args.args[1]
+    assert body["govwin_aws_cosell_status"] == "Closed Lost"
+    assert body["dealstage"] == "stage-id-123"
+    assert body["govwin_ace_lifecycle_stage"] == "Closed Lost"
+    assert body["govwin_ace_closed_lost_reason"] == "No Opportunity"
+    hubspot_mock.get_stage_id_by_label.assert_called_with("Closed Lost")
+
+
+def test_launched_terminal_stage_maps_to_closed_won(state_mock, ace_mock, hubspot_mock) -> None:
+    """A Launched opp also keeps ReviewStatus=Approved; mirror it to the
+    Closed Won pipeline stage and a "Launched" cosell status."""
+    ace_mock.get_opportunity.return_value = {
+        "Id": "O1",
+        "PartnerOpportunityIdentifier": "OPP1",
+        "LifeCycle": {"ReviewStatus": "Approved", "Stage": "Launched"},
+        "LastModifiedDate": "2026-06-03T00:00:00Z",
+    }
+    hubspot_mock.get_deal.return_value = {"properties": {}}
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(_opportunity_event(), context=None)
+    assert result["status"] == "updated"
+    assert result["stage"] == "Closed Won"
+    body = hubspot_mock.update_deal.call_args.args[1]
+    assert body["govwin_aws_cosell_status"] == "Launched"
+    assert body["dealstage"] == "stage-id-123"
+    assert body["govwin_ace_lifecycle_stage"] == "Launched"
+    assert "govwin_ace_closed_lost_reason" not in body
+    hubspot_mock.get_stage_id_by_label.assert_called_with("Closed Won")
+
+
+def test_non_terminal_stage_still_maps_by_review_status(state_mock, ace_mock, hubspot_mock) -> None:
+    """A non-terminal LifeCycle.Stage must not hijack the ReviewStatus map:
+    an in-flight (Qualified) Approved opp stays "Approved by AWS"."""
+    ace_mock.get_opportunity.return_value = {
+        "Id": "O1",
+        "PartnerOpportunityIdentifier": "OPP1",
+        "LifeCycle": {"ReviewStatus": "Approved", "Stage": "Qualified"},
+        "LastModifiedDate": "2026-06-03T00:00:00Z",
+    }
+    hubspot_mock.get_deal.return_value = {"properties": {}}
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(_opportunity_event(), context=None)
+    assert result["status"] == "updated"
+    assert result["stage"] == "Approved by AWS"
+    body = hubspot_mock.update_deal.call_args.args[1]
+    assert body["govwin_aws_cosell_status"] == "Approved"
+    assert body["govwin_ace_lifecycle_stage"] == "Qualified"
+    assert "govwin_ace_closed_lost_reason" not in body
+
+
 def test_opportunity_updated_skips_when_no_partner_id(state_mock, ace_mock, hubspot_mock) -> None:
     ace_mock.get_opportunity.return_value = {"Id": "O1"}
     with (
