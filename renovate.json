@@ -17,12 +17,16 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security", "vulnerability"],
-    "schedule": ["at any time"],
-    "automerge": true,
-    "matchUpdateTypes": ["patch", "pin", "digest"],
-    "addLabels": ["security"]
+    "schedule": ["at any time"]
   },
   "packageRules": [
+    {
+      "description": "Auto-merge low-risk vulnerability fixes (patch/pin/digest only)",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "isVulnerabilityAlert": true,
+      "automerge": true,
+      "addLabels": ["security"]
+    },
     {
       "description": "Terraform / HashiCorp ecosystem",
       "matchManagers": ["terraform"],
