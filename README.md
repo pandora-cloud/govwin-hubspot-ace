@@ -389,6 +389,10 @@ docs/
 - [Testing in your AWS account](docs/testing-in-your-account.md) - The full test pyramid (unit -> static -> LocalStack -> validate -> dry-run -> sandbox smoke -> production smoke), the 11-scenario smoke matrix, MFA / Sandbox-Solution gotchas, criteria for flipping to the AWS catalog
 - [Operations](docs/operations.md) - CloudWatch alarms, stuck-deal recovery, fault-injection, scaling + fan-out detection, disaster recovery
 
+**Architecture decisions**
+
+- [Architecture Decision Records](docs/decisions/) - Significant technical and project decisions, numbered and dated. Start with [0001 License: Apache 2.0](docs/decisions/0001-license-apache-2.0.md).
+
 ## Security
 
 - All API credentials (GovWin Client ID/Secret, username/password, HubSpot token) are stored in AWS Secrets Manager and never passed as plaintext environment variables.
