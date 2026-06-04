@@ -1,14 +1,15 @@
 # AWS cost model
 
 This is a planning document for operators evaluating the AWS bill at
-different deployment sizes. All numbers are based on AWS pricing as of
-2026-05 in `us-east-1` and assume ARM64 (Graviton2) Lambda runtime.
+different deployment sizes. Numbers assume `us-east-1` and ARM64
+(Graviton2) Lambda runtime, and reflect publicly listed AWS prices at
+the time of writing.
 
-These are model estimates; your actual bill depends on real opportunity
-volume, BD activity patterns, and any other workloads in the same
-account. Use AWS Cost Explorer post-deploy to validate; the project's
-resource tags (`Application = <project_name>-<environment>`) make the
-filter trivial.
+These are model estimates only; your actual bill depends on real
+opportunity volume, BD activity patterns, current AWS pricing, and any
+other workloads in the same account. Validate against AWS Cost
+Explorer post-deploy; the project's resource tags
+(`Application = <project_name>-<environment>`) make the filter trivial.
 
 ## TL;DR
 
@@ -50,7 +51,7 @@ ops/day, ~30 ACE submissions/month.
 
 ## Per-service breakdown (small tier ~$6/month)
 
-Sized for the original Pandora deployment: ~1,000 opportunities,
+Sized for a typical small federal AWS partner: ~1,000 opportunities,
 4-hour cadence, ~10 BD ops/day, ~5 ACE submissions/month.
 
 | Service | Monthly cost |

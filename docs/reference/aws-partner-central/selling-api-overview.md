@@ -77,7 +77,7 @@ Per the [Best Practices doc](https://docs.aws.amazon.com/partner-central/latest/
 
 **Option B — Polling.** Periodically call `ListOpportunities` with `FilterList=[{Name: AfterLastModifiedDate, ValueList: [<last seen>]}]`. Simpler, no EventBridge wiring needed, but burns more of the daily quota.
 
-The govwin-hubspot-integration design will combine both: outbound sync (HubSpot → ACE) is push-driven from HubSpot webhooks; inbound sync (ACE status → HubSpot) is event-driven from EventBridge.
+The govwin-hubspot-ace design combines both: outbound sync (HubSpot to ACE) is push-driven from HubSpot webhooks; inbound sync (ACE status to HubSpot) is event-driven from EventBridge.
 
 ## Important behavioral notes
 

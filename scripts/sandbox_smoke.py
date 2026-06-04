@@ -1,4 +1,7 @@
-"""Sandbox smoke matrix for the AWS Partner Central submission half (Phase 4.1).
+"""Sandbox smoke matrix for the AWS Partner Central submission path.
+
+Audience: operator. Run after deployment, before flipping ``ace_catalog`` to
+``AWS``, to exercise the full ACE submission path against the Sandbox catalog.
 
 Runs scenarios 1-10 from docs/testing-in-your-account.md against a real Sandbox catalog in
 the deployer's AWS account. Cleans up sandbox opportunities at the end.

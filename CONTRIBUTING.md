@@ -30,11 +30,7 @@ Thanks for considering a contribution. This project is an open-source pipeline f
 
 ## Response time
 
-This is a side-of-desk project for Pandora Cloud. We aim to respond to issues and PRs within five business days. If a thread goes longer than two weeks without a maintainer reply, ping it once and move on; we'll get to it.
-
-## Paid support
-
-If you need a faster turnaround, deployment help, federal compliance review, or feature work prioritized, Pandora Cloud offers paid services around this codebase. Reach out at <pc@pandoracloud.net>.
+This is a side-of-desk project. Maintainers aim to respond to issues and PRs within five business days. If a thread goes longer than two weeks without a maintainer reply, ping it once and move on; we will get to it.
 
 ## Repository topics
 

@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-The govwin-hubspot-integration repository is being released publicly on GitHub
+The govwin-hubspot-ace repository is being released publicly on GitHub
 and will also be listed on the Amazon Web Services (AWS) Marketplace as a
 deployable solution. Two distribution channels share the same codebase:
 

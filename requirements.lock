@@ -11,7 +11,7 @@ anyio==4.13.0 \
 boto3==1.42.85 \
     --hash=sha256:1cd3dcbfaba85c6071ba9397c1804b6a94a1a97031b8f1993fdba27c0c5d6eba \
     --hash=sha256:4f6ac066e41d18ec33f532253fac0f35e0fdca373724458f983ce3d531340b7a
-    # via govwin-hubspot-integration
+    # via govwin-hubspot-ace
 botocore==1.42.85 \
     --hash=sha256:2ee61f80b7724a143e16d0a85408ef5fa20b99dce7a3c8ec5d25cc8dced164c1 \
     --hash=sha256:828b67722caeb7e240eefedee74050e803d1fa102958ead9c4009101eefd5381
@@ -35,7 +35,7 @@ httpcore==1.0.9 \
 httpx==0.28.1 \
     --hash=sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc \
     --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
-    # via govwin-hubspot-integration
+    # via govwin-hubspot-ace
 idna==3.16 \
     --hash=sha256:cc246e3a3f89580c3a951b5ad298ca4638078b2cdd4f115654332b5c26daded5 \
     --hash=sha256:d7a6da03db833450fca25d2358ac9ff06cd624577a4aea3a596d5c0f77b8e03d
@@ -51,7 +51,7 @@ jmespath==1.1.0 \
 pydantic==2.12.5 \
     --hash=sha256:4d351024c75c0f085a9febbb665ce8c0c6ec5d30e903bdb6394b7ede26aebb49 \
     --hash=sha256:e561593fccf61e8a20fc46dfc2dfe075b8be7d0188df33f221ad1f0139180f9d
-    # via govwin-hubspot-integration
+    # via govwin-hubspot-ace
 pydantic-core==2.41.5 \
     --hash=sha256:0177272f88ab8312479336e1d777f6b124537d47f2123f89cb37e0accea97f90 \
     --hash=sha256:01a3d0ab748ee531f4ea6c3e48ad9dac84ddba4b0d82291f87248f2f9de8d740 \
@@ -120,7 +120,7 @@ python-dateutil==2.9.0.post0 \
     --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
     # via
     #   botocore
-    #   govwin-hubspot-integration
+    #   govwin-hubspot-ace
 s3transfer==0.16.0 \
     --hash=sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe \
     --hash=sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920
@@ -132,7 +132,7 @@ six==1.17.0 \
 tenacity==8.5.0 \
     --hash=sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78 \
     --hash=sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687
-    # via govwin-hubspot-integration
+    # via govwin-hubspot-ace
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \
     --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548

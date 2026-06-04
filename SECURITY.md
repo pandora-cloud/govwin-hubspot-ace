@@ -14,7 +14,7 @@ Pandora Cloud takes security seriously. This project handles credentials for thr
 
 **Do not open a public GitHub issue for security reports.** Use one of these channels instead, in order of preference:
 
-1. **GitHub private security advisory** (preferred). [Open one here](https://github.com/pandora-cloud/govwin-hubspot-integration/security/advisories/new). This routes to the maintainers without becoming public.
+1. **GitHub private security advisory** (preferred). [Open one here](https://github.com/pandora-cloud/govwin-hubspot-ace/security/advisories/new). This routes to the maintainers without becoming public.
 2. **Encrypted email** to <pc@pandoracloud.net>. Encrypt with our PGP public key:
    - Fingerprint: `59B2414BE40D2BC8F1A67745D1165A8FF46CC177`
    - Public key: `.well-known/security/pandora-cloud-public.asc` in this repo, also published to `keys.openpgp.org`.

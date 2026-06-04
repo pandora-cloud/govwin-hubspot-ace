@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Audience: maintainer. Generates the project's own GPG keypair used to receive
+# encrypted security disclosures; published key lives at .well-known/security/.
+# Downstream deployers do not run this.
 # Generate the GPG keypair used for encrypted security disclosures.
 #
 # WHY YOU RUN THIS, NOT ME:

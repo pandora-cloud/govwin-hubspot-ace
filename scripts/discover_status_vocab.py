@@ -1,5 +1,9 @@
 """Discover the full GovWin status vocabulary from live data.
 
+Audience: maintainer. Run when adding or revisiting the GovWin status to
+HubSpot stage mapping; samples the live status enum out of GovWin so the
+mapping configuration can be updated against ground truth.
+
 Iterates over a broad federal opportunity search (no opp-type filter,
 sorted by recency) across multiple pages and collects every unique
 status string encountered, plus a tally of how often each appears.

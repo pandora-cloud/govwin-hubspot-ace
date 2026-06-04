@@ -1,5 +1,8 @@
 """Refresh ``resources/aws_products.json`` from AWS's canonical catalog.
 
+Audience: maintainer. Re-fetches the AWS-published AwsProducts catalog
+and commits the result so downstream deployers ship a current copy.
+
 AWS Partner Central publishes the AwsProducts catalog used by
 ``AssociateOpportunity(RelatedEntityType=AwsProducts)`` at a public GitHub
 URL, linked from the AssociateOpportunity API reference page itself:

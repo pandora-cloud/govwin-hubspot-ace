@@ -9,7 +9,7 @@ The integration ships sandbox-first by default: the IAM policy on every Lambda i
 You need:
 
 1. **A clean AWS account** (or a sub-account in your organization) where this integration will live. Region must be `us-east-1` because the Partner Central Selling API only operates in that region.
-2. **Linked AWS Marketplace Seller and Partner Central accounts.** Required for any Partner Central Selling API access at all. Confirm via the Partner Central console: https://partnercentral.awspartner.com.
+2. **An AWS Partner Central account in good standing.** Confirm via the Partner Central console: https://partnercentral.awspartner.com.
 3. **Sandbox catalog access.** Run `aws partnercentral-selling list-opportunities --catalog Sandbox --region us-east-1` from a workstation with Partner Central IAM access. It should return an empty list, not an `AccessDeniedException`. If you get a permission error, your account is not yet enrolled in the Partner Central Selling API. Contact your AWS Partner Development Manager.
 4. **A Deltek GovWin IQ account** with WSAPI V3 access enabled (separate from regular IQ access; talk to your Deltek rep). You'll need a client id, client secret, username, and password.
 5. **A HubSpot account** with a private app token (Settings -> Integrations -> Private Apps), plus a developer-platform 2025.2+ app uploaded for webhooks. The HubSpot CLI (`hs`) is required for the second step: `npm install -g @hubspot/cli`.
@@ -55,8 +55,8 @@ The deployer role is also tagged with `compliance:RiskMode = "sandbox-no-mfa"` a
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/<org>/govwin-hubspot-integration.git
-cd govwin-hubspot-integration
+git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+cd govwin-hubspot-ace
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 $EDITOR terraform/terraform.tfvars
 ```
@@ -252,7 +252,7 @@ Run by the integration owner (typically your BD lead) once the pipeline is live.
 
 | # | Scenario | What to do | What to verify |
 |---|---|---|---|
-| 1 | OPP type | Mark a tracked-opportunity (`OPP*`) for Web Services Download. Trigger sync. | Deal appears in the Government pipeline with NAICS, agency, contacts populated. |
+| 1 | OPP type | Mark a tracked-opportunity (`OPP*`) for Web Services Download. Trigger sync. | Deal appears in the GovWin Pipeline with NAICS, agency, contacts populated. |
 | 2 | BID type | Mark a `BID*` opportunity. Trigger sync. | Deal appears, no validation errors in CloudWatch. |
 | 3 | TNS type | Mark a `TNS*` opportunity. Trigger sync. | Deal appears, deal stage maps correctly from GovWin status. |
 | 4 | FBO type | Mark a `FBO*` opportunity. Trigger sync. | Deal appears, `govwin_source_url` populated with sam.gov link. |
@@ -281,9 +281,9 @@ Run before flipping `ace_catalog` from `Sandbox` to `AWS`. Each test is scriptab
 | 10 | HubSpot webhook signature validation (negative) | Send a forged `X-HubSpot-Signature-v3` header to the API Gateway URL; verify 401 |
 | 11 | End-to-end: GovWin marked -> HubSpot synced -> BD edits -> stage transition -> ACE submission | Full pipeline against the Sandbox catalog; verify the AWS Partner Central UI shows the opportunity with correct fields |
 
-### Sandbox findings (from the maintainer's initial rollout)
+### Sandbox findings the integration already handles
 
-These observations from the first end-to-end smoke run are baked into the mapper and the smoke script. They're recorded here so a downstream reader knows what AWS validation idiosyncrasies the integration is already handling, and what to expect if AWS changes them:
+These AWS Sandbox validation idiosyncrasies are baked into the mapper and the smoke script. They are recorded here so a downstream reader knows what the integration handles automatically and what to expect if AWS changes them:
 
 - `Customer.Account.CountryCode` is nested under `Address`, not flat on `Account`.
 - `Customer.Account.WebsiteUrl`, `Address.PostalCode`, and `Address.StateOrRegion` are required by Sandbox business validation.
@@ -295,7 +295,7 @@ These observations from the first end-to-end smoke run are baked into the mapper
 - AWS `UpdateOpportunity` is **PUT, not PATCH**. Omitted fields are treated as cleared. The production `update_in_ace.py` and the smoke script both fetch the current opportunity, whitelist to the Update input schema (`PrimaryNeedsFromAws`, `NationalSecurity`, `Customer`, `Project`, `OpportunityType`, `Marketing`, `SoftwareRevenue`, `LifeCycle`), apply the delta, and send the full payload. `ACEClient.scrub_for_update` is the helper.
 - AWS Partner Central is eventually consistent: `GetOpportunity` immediately after `CreateOpportunity` can return `ResourceNotFoundException` for several seconds. The script retries with backoff (5s, 10s, 15s, 20s, 25s, 30s).
 
-## Reference: results from the maintainer's initial production rollout
+## Reference: example results from a representative production rollout
 
 These numbers reflect what "passing" looks like for an established federal AWS partner running this against a real GovWin tenant and a real HubSpot account. Your numbers will differ; what matters is that the test categories all show PASS.
 
@@ -317,7 +317,7 @@ These numbers reflect what "passing" looks like for an established federal AWS p
 | 12 | Deal-to-company associations | PASS | All deals linked to their agency |
 | 13 | Deal-to-contact associations | PASS | 18 associations created across 8 deals |
 | 14 | HubSpot custom properties | PASS | 30 deal, 5 company, 3 contact properties |
-| 15 | Government pipeline stage mapping | PASS | Existing "Government" pipeline used |
+| 15 | GovWin Pipeline stage mapping | PASS | Existing GovWin Pipeline used |
 
 ### Dedup and incremental sync
 

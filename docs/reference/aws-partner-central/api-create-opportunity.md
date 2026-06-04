@@ -87,7 +87,7 @@ After step 3, the opportunity is locked from edits until AWS finishes its review
 
 ## Field mapping notes for this project
 
-The govwin-hubspot-integration uses these fields when generating the ACE payload from a HubSpot deal:
+The govwin-hubspot-ace integration uses these fields when generating the ACE payload from a HubSpot deal:
 
 | ACE field | Source |
 |---|---|

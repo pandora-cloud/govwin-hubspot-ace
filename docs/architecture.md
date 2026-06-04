@@ -6,11 +6,11 @@ This integration sits between three external APIs and orchestrates data flow on 
 
 ![Pipeline Overview](diagrams/pipeline-overview.svg)
 
-### GovWin to HubSpot (v2.1)
+### GovWin to HubSpot
 
 EventBridge Scheduler invokes the orchestrator Lambda on a configurable cadence (default: hourly). The orchestrator refreshes the GovWin OAuth token, runs discovery, filters by `updateDate`, batches the changed opportunities, and fans them out as SQS messages. The worker Lambda drains the queue, fetches each opportunity bundle from GovWin, and pushes deals/companies/contacts/associations to HubSpot. Worker concurrency is governed by Lambda `reservedConcurrentExecutions` (default 2, sized for the GovWin 4,000 calls/hour budget).
 
-The v2.0 Step Function chain (Authenticate → DiscoverChanges → Map(FetchDetails + SyncToHubSpot) → UpdateSyncState) is gone. Replacing the Map state with SQS removes the 256KB inter-state payload limit and lets each opportunity batch retry independently.
+The orchestrator + SQS + worker topology decouples discovery from per-opportunity work: each batch retries independently and there is no inter-state payload limit on what flows between stages.
 
 ![GovWin to HubSpot architecture](diagrams/architecture.svg)
 

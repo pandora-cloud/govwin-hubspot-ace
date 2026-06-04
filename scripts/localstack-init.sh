@@ -1,4 +1,5 @@
 #!/bin/bash
+# Audience: contributor / operator running the LocalStack integration suite.
 # Initialize LocalStack with AWS resources matching Terraform definitions.
 # This script runs automatically when LocalStack is ready (mounted in /etc/localstack/init/ready.d/).
 

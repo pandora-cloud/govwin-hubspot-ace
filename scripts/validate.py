@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Pre-deployment validation script.
 
+Audience: operator. Run before the first ``terraform apply`` to confirm
+GovWin, HubSpot, DynamoDB, and Secrets Manager credentials and reachability.
+
 Tests connectivity and credentials for GovWin API, HubSpot API,
 DynamoDB, and Secrets Manager. Works against real AWS or LocalStack.
 

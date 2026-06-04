@@ -8,7 +8,7 @@
   "prerelease": false,
   "packages": {
     ".": {
-      "package-name": "govwin-hubspot-integration",
+      "package-name": "govwin-hubspot-ace",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         "pyproject.toml"

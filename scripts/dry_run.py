@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Dry-run sync simulation.
 
+Audience: operator. Run after ``scripts/validate.py`` and before the first
+real sync to confirm the mapper produces the expected HubSpot payload from
+real GovWin data.
+
 Discovers opportunities from GovWin, fetches details, maps fields,
 and reports what WOULD be synced without writing to HubSpot or DynamoDB.
 

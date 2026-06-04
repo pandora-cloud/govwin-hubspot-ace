@@ -1,5 +1,9 @@
 """Mark or unmark a GovWin opportunity for Web Services Download via the WSAPI.
 
+Audience: operator. CLI shortcut for marking opportunities for sync without
+opening the GovWin IQ web UI; useful for scripted setup and tear-down of
+end-to-end tests.
+
 Per the Deltek WSAPI Quick Reference (March 2025), the marking endpoints are:
     GET /neo-ws/opportunities/{OppID}?setMark=2.2
     GET /neo-ws/opportunities/{OppID}?clearMark=2.2

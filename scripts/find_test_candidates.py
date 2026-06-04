@@ -1,5 +1,8 @@
 """Find one or two unmarked candidate opportunities of each type for the smoke test.
 
+Audience: operator. Helps the BD lead pick representative opportunities to
+mark for the end-to-end GovWin -> HubSpot smoke matrix.
+
 Usage: load .env first, then `python scripts/find_test_candidates.py`.
 
 Hits the GovWin WSAPI directly (no AWS, no HubSpot) and prints a small markdown

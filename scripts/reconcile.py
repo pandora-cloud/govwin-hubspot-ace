@@ -1,5 +1,8 @@
 """Diagnostic: print the 4-way state for a single GovWin opportunity.
 
+Audience: operator. Read-only triage tool for self-heal mismatch alerts and
+stuck-deal investigations.
+
 For a given GovWin opp id, walks the four sources of truth and prints
 each side's view so an operator can spot drift:
 

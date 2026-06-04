@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 End-to-end pipeline from Deltek GovWin IQ through HubSpot CRM into AWS Partner Central, deployed on AWS via Terraform. v2 ships its own AWS Partner Central Selling-API client on top of the v1 GovWin-to-HubSpot sync.
 
-- **Public repo**: `github.com/pandora-cloud-llc/govwin-hubspot-integration` (also mirrored to a private GitLab; both `.gitlab-ci.yml` and `.github/workflows/ci.yml` run on every push)
+- **Public repo**: `github.com/pandora-cloud/govwin-hubspot-ace` (also mirrored to a private GitLab; both `.gitlab-ci.yml` and `.github/workflows/ci.yml` run on every push)
 - **CI**: lint + types + unit tests + secret scan
 - **Language**: Python 3.12
 - **AWS Services**: Lambda, DynamoDB, Secrets Manager, EventBridge Scheduler, SNS, SQS, API Gateway

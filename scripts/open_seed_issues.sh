@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
+# Audience: maintainer. One-time bootstrap of the project's own GitHub issue
+# tracker from a seed manifest. Not for downstream operator use.
 # Open every issue in .github/seed-issues.yml against the configured repo.
 #
 # Run AFTER:
-#   1. The GitHub repo `github.com/pandora-cloud/govwin-hubspot-integration` exists.
+#   1. The GitHub repo `github.com/pandora-cloud/govwin-hubspot-ace` exists.
 #   2. The GitLab -> GitHub mirror is wired and has propagated at least once.
 #   3. `gh auth login` has been run (brew install gh && gh auth login).
 #
@@ -12,7 +14,7 @@
 
 set -euo pipefail
 
-REPO="${REPO:-pandora-cloud/govwin-hubspot-integration}"
+REPO="${REPO:-pandora-cloud/govwin-hubspot-ace}"
 SEED="${SEED:-.github/seed-issues.yml}"
 MODE="${1:-create}"
 

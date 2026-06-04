@@ -15,40 +15,25 @@ After submission, the opportunity is locked from edits while AWS reviews. EventB
 ## Prerequisites
 
 - This integration deployed end-to-end (see [Deployment Guide](deployment-guide.md))
-- AWS Partner Central account linked to AWS Marketplace Seller
+- An AWS Partner Central account in good standing
 - At least one Approved Solution registered in Partner Central. Discover via:
   ```
   aws partnercentral-selling list-solutions --catalog AWS --region us-east-1
   ```
   Set `ace_default_solution_id` in `terraform.tfvars` to the chosen `S-...` ID.
-- HubSpot developer-platform app (2025.2+) created via `hs project create` and uploaded; `appId` and `clientSecret` provided as Terraform variables.
+- HubSpot developer-platform app (2025.2+) uploaded from the bundled `hubspot-app/` project; `appId` and `clientSecret` provided as Terraform variables.
 
 ## End-to-end workflow
 
 ### 1. Opportunity syncs from GovWin
 
-The hourly orchestrator Lambda (triggered by EventBridge Scheduler) picks up marked opportunities and fans batches out to the worker via SQS. The worker writes them into HubSpot. The deal lands in the **Government** pipeline with 25+ properties pre-populated, including 9 of the 12 fields ACE requires.
+The hourly orchestrator Lambda (triggered by EventBridge Scheduler) picks up marked opportunities and fans batches out to the worker via SQS. The worker writes them into HubSpot. The deal lands in the **GovWin Pipeline** with 25+ properties pre-populated, including most of the fields ACE requires.
 
-### 2. BD reviews the deal and fills three manual fields
+### 2. BD reviews the deal and fills the manual fields on the Submit card
 
-Three fields cannot be reliably auto-populated from GovWin and must be filled in HubSpot before submission:
+Three fields cannot be reliably auto-populated from GovWin and must be filled on the Submit card before submission:
 
-#### Delivery Model (`govwin_ace_delivery_model`)
-
-One or more of (semicolon-separated for multiple):
-
-- `SaaS or PaaS`
-- `BYOL or AMI`
-- `Managed Services`
-- `Professional Services`
-- `Resell`
-- `Other`
-
-#### Solution (defaulted from `ace_default_solution_id`, or override per deal)
-
-The Partner Central Solution to associate with this opportunity. Defaults to whatever `ace_default_solution_id` is set to in Terraform (recommended: a single solution for the federal practice). Override per deal by setting the `govwin_ace_solution_id` HubSpot property to a different `S-...` ID.
-
-#### Partner Primary Need from AWS (`govwin_ace_partner_need`)
+#### Partner Need from AWS (`govwin_ace_partner_need`)
 
 One or more of (semicolon-separated):
 
@@ -61,11 +46,30 @@ One or more of (semicolon-separated):
 - `Co-Sell - Deal Support`
 - `Co-Sell - Support for Public Tender / RFx`
 
-The Lambda validates these three fields against the AWS-published enum and rejects deals with invalid values before any API call.
+#### Delivery Model (`govwin_ace_delivery_model`)
 
-### 3. Move the deal to "Submit to AWS"
+One or more of (semicolon-separated for multiple):
 
-Drag the deal to the **Submit to AWS** stage in the Government pipeline. (Stage internal id `submit_to_aws` by default; configurable via `ace_trigger_stages`.)
+- `SaaS or PaaS`
+- `BYOL or AMI`
+- `Managed Services`
+- `Professional Services`
+- `Resell`
+- `Other`
+
+#### Customer Use Case (`govwin_ace_use_case`)
+
+The primary AWS use case for the customer. Pick one value from the AWS-published Customer Use Case enum (38 service categories such as Migration, Data Analytics, Machine Learning, Storage, and so on).
+
+The Lambda validates all three fields against the AWS-published enums and rejects deals with invalid values before any API call.
+
+#### AWS Solution (conditional)
+
+The Partner Central Solution to associate with the opportunity. The card defaults this from the `ace_default_solution_id` Terraform variable and the BD user can override per-deal. In the AWS production catalog a Solution is required; in the Sandbox catalog it is optional.
+
+### 3. Submit the deal from the card
+
+Click **Submit to AWS** on the Submit card. The card advances the deal stage automatically; BD does not drag pipeline stages by hand. The stage that the integration moves the deal to (and recognizes for re-submission as a no-op) is configurable via `ace_trigger_stages`.
 
 ### 4. The integration submits automatically
 
@@ -125,7 +129,7 @@ The Sandbox catalog mirrors production validation but is isolated. Run the sandb
 | `Project.Title` | `dealname` | `title` | Auto |
 | `Project.ExpectedCustomerSpend[].Amount` | `amount` | `oppValue` x 1000 | Auto |
 | `Project.CustomerBusinessProblem` | `description` | `description` | Auto (sanitized) |
-| `Project.CustomerUseCase` | `description` | `description` | Auto (same as business problem in v2; track for split) |
+| `Project.CustomerUseCase` | `govwin_ace_use_case` |; | **Manual** (AWS-published enum) |
 | `Project.DeliveryModels[]` | `govwin_ace_delivery_model` |; | **Manual** |
 | `LifeCycle.TargetCloseDate` | `closedate` | `pAwardDateTo` | Auto |
 | `LifeCycle.NextSteps` |; |; | Reserved for future use |

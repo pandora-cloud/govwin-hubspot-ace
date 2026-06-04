@@ -1,7 +1,7 @@
 # GovWin to AWS Partner Central, end-to-end and open-source
 
-[![CI](https://github.com/pandora-cloud/govwin-hubspot-integration/actions/workflows/ci.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-integration/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/pandora-cloud/govwin-hubspot-integration/actions/workflows/codeql.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-integration/actions/workflows/codeql.yml)
+[![CI](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/ci.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/codeql.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/codeql.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Terraform >= 1.11](https://img.shields.io/badge/terraform-%3E%3D1.11-7B42BC.svg)](https://developer.hashicorp.com/terraform)
@@ -24,7 +24,7 @@ Federal AWS partners use this to mark opportunities in GovWin and have them flow
 2. **HubSpot to AWS Partner Central.** When a deal moves to a "Submit to AWS" stage, a HubSpot webhook fires, the integration calls `CreateOpportunity` -> `AssociateOpportunity` -> `StartEngagementFromOpportunityTask` against the AWS Partner Central Selling API, and the engagement is queued for AWS review.
 3. **AWS Partner Central back to HubSpot.** EventBridge events on `aws.partnercentral-selling` flow into a handler that updates the HubSpot deal stage. It mirrors AWS review status (Submitted to AWS, Under AWS Review, Approved by AWS, Action Required) and, when a deal reaches a terminal lifecycle stage, that wins over review status: Closed Lost mirrors to Closed Lost (with the closed-lost reason), and Launched mirrors to Closed Won.
 
-Nine of the twelve mandatory ACE fields are auto-populated from GovWin data. Three fields require manual entry by BD in HubSpot before the deal is submission-ready: **Delivery Model**, **AWS Solution**, and **Partner Primary Need from AWS**. This is intentional, and the README calls it out so users do not expect a fully-automated flow.
+Most of the mandatory ACE fields are auto-populated from GovWin data. Three fields require manual entry by BD on the Submit card because they reflect business judgment that cannot be derived from GovWin: **Partner Need from AWS**, **Delivery Model**, and **Customer Use Case**. In the AWS production catalog, **AWS Solution** is also required (it has a Terraform-set default for the typical case); in the Sandbox catalog it is optional.
 
 The sync runs incrementally and respects both GovWin's 4,000 calls/hour cap and the AWS Partner Central 1 write/sec, 10 reads/sec quotas.
 
@@ -35,7 +35,7 @@ The sync runs incrementally and respects both GovWin's 4,000 calls/hour cap and 
 ### For your BD team
 
 1. **Find an opportunity in GovWin IQ** and click "Add to Web Services Download" on the opportunity detail page.
-2. **The integration syncs it to HubSpot** on the next scheduled run (default: every 4 hours). A deal appears in your **Government** pipeline with the opportunity details, agency, and contacts already filled in.
+2. **The integration syncs it to HubSpot** on the next scheduled run (default: every hour). A deal appears in your **GovWin Pipeline** with the opportunity details, agency, and contacts already filled in.
 3. **Open the deal and use the "Submit to AWS Partner Central" card.** In the Submit form, fill the three ACE fields (Delivery Model, AWS Solution, Partner Primary Need from AWS) plus any optional context, then click Submit. The card writes the fields and advances the deal stage for you; BD never drags pipeline stages by hand.
 4. **The submission fires automatically** via HubSpot webhook. The deal moves through the AWS Partner Central review and the card's read-only status follows AWS as it responds. To close or launch a live deal, use the card's Update form (LifeCycle Stage dropdown), not a manual stage move.
 
@@ -43,7 +43,7 @@ For the step-by-step operator walkthrough, see the [BD User Guide](docs/bd-user-
 
 ### Under the hood
 
-The GovWin to HubSpot half (v2.1):
+The GovWin to HubSpot half:
 
 ![GovWin to HubSpot architecture](docs/diagrams/architecture.svg)
 
@@ -54,7 +54,7 @@ The GovWin to HubSpot half (v2.1):
 - **Secrets Manager** stores GovWin credentials, OAuth tokens, and the HubSpot REST token.
 - **SNS** sends email notifications on terminal failures; an SQS dead-letter queue captures messages that exceed the retry budget.
 
-The HubSpot to AWS Partner Central half (new in v2):
+The HubSpot to AWS Partner Central half:
 
 ![HubSpot to AWS Partner Central architecture](docs/diagrams/architecture-v2-ace.svg)
 
@@ -64,19 +64,9 @@ The HubSpot to AWS Partner Central half (new in v2):
 - **Three new AWS Lambdas:** `submit_to_ace` runs the three-call submission with resume-from-step idempotency, `update_in_ace` handles UpdateOpportunity with optimistic locking, and `handle_ace_event` consumes EventBridge events from `aws.partnercentral-selling` to mirror AWS-side state changes back into HubSpot.
 - **DynamoDB** ACE# pk pattern stores the AWS opportunity ID, ClientToken, engagement task ID, and last-modified date for optimistic locking on subsequent updates.
 
-## How does this compare to other tools?
-
-| | This project (v2) | This project (v1) | Salesforce Connector |
-|---|---|---|---|
-| GovWin to HubSpot | Yes | Yes | No |
-| HubSpot to AWS Partner Central | Yes (direct API) | No (out of scope in v1) | No |
-| Open source | Yes (Apache-2.0) | Yes (Apache-2.0) | No |
-| Cost | Free | Free | $$/seat/month |
-| Federal-aware (NAICS, GovWin status) | Yes | Yes | No |
-
 ## ACE-Ready Deals
 
-The integration auto-populates the majority of mandatory fields required by AWS Partner Central (ACE). After a deal syncs to HubSpot, your team only needs to fill in three fields before submitting to AWS Partner Central.
+The integration auto-populates most of the mandatory fields required by AWS Partner Central (ACE). The remaining fields are entered by BD on the Submit card because they reflect business judgment that cannot be derived from GovWin.
 
 | # | ACE Mandatory Field | HubSpot Property | Source | Auto-populated |
 |---|---|---|---|---|
@@ -89,9 +79,11 @@ The integration auto-populates the majority of mandatory fields required by AWS 
 | 7 | Expected AWS Monthly Revenue | `amount` | GovWin `oppValue` x 1000 | Yes |
 | 8 | Opportunity Type | `govwin_ace_opportunity_type` | Default: "Net New Business" | Yes |
 | 9 | Stage | `dealstage` | Mapped from GovWin `status` | Yes |
-| 10 | Delivery Model | `govwin_ace_delivery_model` | BD-entered (Submit card) | **Manual** |
-| 11 | Solution Offered | `govwin_ace_solution_id` | BD-entered (Submit card) | **Manual** |
-| 12 | Partner Primary Need from AWS | `govwin_ace_partner_need` | BD-entered (Submit card) | **Manual** |
+| 10 | Partner Need from AWS | `govwin_ace_partner_need` | BD-entered (Submit card) | **Manual** |
+| 11 | Delivery Model | `govwin_ace_delivery_model` | BD-entered (Submit card) | **Manual** |
+| 12 | Customer Use Case | `govwin_ace_use_case` | BD-entered (Submit card) | **Manual** |
+
+The **AWS Solution** to associate with each opportunity is set at the project level via the `ace_default_solution_id` Terraform variable. In the AWS production catalog the BD user can override it per-deal on the Submit card and a Solution is required; in the Sandbox catalog the Solution is optional.
 
 For the full end-to-end ACE submission workflow, see the [ACE Integration Guide](docs/ace-integration.md).
 
@@ -103,7 +95,7 @@ Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It co
 
 - [ ] **Deltek GovWin IQ** subscription with WSAPI V3 access (Client ID, Client Secret, username, password)
 - [ ] **HubSpot** account (Professional or Enterprise) with a private-app token plus a separate developer-platform app for webhook delivery (created via `hs project create`, see [Deployment Guide](docs/deployment-guide.md))
-- [ ] **AWS Partner Central account** in good standing, with at least one **Approved Solution** registered (run `aws partnercentral-selling list-solutions --catalog AWS` to confirm). Marketplace seller linking is **not** required for this project.
+- [ ] **AWS Partner Central account** in good standing, with at least one **Approved Solution** registered (run `aws partnercentral-selling list-solutions --catalog AWS` to confirm).
 - [ ] **AWS account** in `us-east-1` (the Partner Central Selling API is region-locked). **No AWS administrator access is required at any step.** The project ships a `terraform/bootstrap/` module that creates a least-privilege deployer role; a one-time bootstrap operator runs that module with a scoped policy (`terraform/bootstrap/policies/bootstrap-operator.json`) and is deleted afterwards. See [SECURITY.md](SECURITY.md#iam-model) for the full IAM story.
 - [ ] **Terraform** >= 1.11 ([install guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli))
 - [ ] **AWS CLI** configured with credentials (`aws configure`)
@@ -117,8 +109,8 @@ Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It co
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/pandora-cloud/govwin-hubspot-integration.git
-cd govwin-hubspot-integration
+git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+cd govwin-hubspot-ace
 ```
 
 ### 2. Create a HubSpot API token
@@ -175,7 +167,7 @@ terraform plan    # Review what will be created
 terraform apply   # Deploy (type "yes" when prompted)
 ```
 
-Terraform creates all AWS resources, stores credentials in Secrets Manager, creates the HubSpot custom properties, and schedules the first sync. The HubSpot pipeline named **"Government"** must already exist in your account (see [Deployment Guide](docs/deployment-guide.md#step-1-prepare-hubspot)). Stage labels must match those in `src/hubspot/properties.py` (`GOVWIN_STATUS_TO_STAGE`).
+Terraform creates all AWS resources, stores credentials in Secrets Manager, creates the HubSpot custom properties, and schedules the first sync. The **GovWin Pipeline** must already exist in your HubSpot account; the [Deployment Guide](docs/deployment-guide.md#step-1-prepare-hubspot) walks through creating it with the expected stages.
 
 ### 6. Mark opportunities and verify
 
@@ -188,9 +180,9 @@ aws lambda invoke --function-name govwin-hubspot-prod-govwin-orchestrator \
   --region us-east-1 /tmp/orch.json && cat /tmp/orch.json
 ```
 
-The orchestrator does discovery + token refresh + SQS fan-out; the worker Lambda then drains the queue. v2.1 replaced the previous Step Functions chain with this Lambda + SQS pattern (see [`docs/architecture.md`](docs/architecture.md) for the why).
+The orchestrator does discovery + token refresh + SQS fan-out; the worker Lambda then drains the queue. See [`docs/architecture.md`](docs/architecture.md) for the full design rationale.
 
-Verify in HubSpot under **Settings > Objects > Deals > Pipelines** that the "Government" pipeline shows the synced deals.
+Verify in HubSpot under **Settings > Objects > Deals > Pipelines** that the **GovWin Pipeline** shows the synced deals.
 
 ## Configuration
 
@@ -248,7 +240,7 @@ This is not recommended for production - GovWin contains hundreds of thousands o
 
 ## Data Mapping
 
-The integration creates 30 custom deal properties, 5 company properties, and 3 contact properties in HubSpot, all under the `govwin_` prefix. Deals are placed in your existing **"Government"** pipeline, with GovWin statuses mapped to its stage labels.
+The integration creates 30 custom deal properties, 5 company properties, and 3 contact properties in HubSpot, all under the `govwin_` prefix. Deals are placed in your existing **GovWin Pipeline**, with GovWin statuses mapped to its stage labels.
 
 ### Key field mappings
 
@@ -269,7 +261,7 @@ The integration creates 30 custom deal properties, 5 company properties, and 3 c
 
 ### Pipeline stages
 
-GovWin statuses map to stage labels in your existing **"Government"** pipeline. The labels below must exist in that pipeline; adjust `GOVWIN_STATUS_TO_STAGE` in `src/hubspot/properties.py` if yours differ.
+GovWin statuses map to stage labels in your **GovWin Pipeline**. The labels below must exist in that pipeline; the Deployment Guide explains how to override the default mapping if your stages differ.
 
 | GovWin Status | HubSpot Stage Label |
 |---|---|
@@ -333,7 +325,7 @@ src/
     orchestrator.py          # High-level sync coordination
   lambdas/
     govwin_orchestrator.py      # EventBridge Scheduler -> discovery + token refresh + SQS fan-out
-    govwin_worker.py            # SQS -> per-batch fetch + HubSpot sync (replaces v1 fetch + sync chain)
+    govwin_worker.py            # SQS -> per-batch fetch + HubSpot sync
     setup_hubspot.py            # One-time property/pipeline creation
     hubspot_webhook_receiver.py # API Gateway -> validate signature -> route submit / update / audit
     submit_to_ace.py            # SQS -> three-call ACE submission with resume-from-step idempotency
@@ -478,7 +470,7 @@ Today this won't work end-to-end because AWS does not expose `partnercentral-sel
 No. The project's identity is the GovWin -> HubSpot -> AWS Partner Central triad. Forks with adapters for other CRMs are welcome but won't be merged upstream. See [CONTRIBUTING.md](CONTRIBUTING.md#what-we-will-likely-not-merge).
 
 **Where do I report security issues?**
-[GitHub private security advisories](https://github.com/pandora-cloud/govwin-hubspot-integration/security/advisories/new) or email <pc@pandoracloud.net> (PGP key in [.well-known/security/](.well-known/security/)). Do not open a public issue. SLAs in [SECURITY.md](SECURITY.md).
+[GitHub private security advisories](https://github.com/pandora-cloud/govwin-hubspot-ace/security/advisories/new) or email <pc@pandoracloud.net> (PGP key in [.well-known/security/](.well-known/security/)). Do not open a public issue. SLAs in [SECURITY.md](SECURITY.md).
 
 ## License
 

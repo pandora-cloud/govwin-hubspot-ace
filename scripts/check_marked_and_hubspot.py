@@ -1,4 +1,8 @@
-"""Print the current marked-for-sync list from GovWin and check HubSpot for a deal by govwin_id."""
+"""Print the current marked-for-sync list from GovWin and check HubSpot for a deal by govwin_id.
+
+Audience: operator. Read-only triage utility for "I marked an opp but the
+HubSpot deal isn't appearing" investigations.
+"""
 
 from __future__ import annotations
 

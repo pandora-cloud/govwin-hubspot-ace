@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# One-time: generate a GPG key for your maintainer identity and configure
-# git to sign every commit and tag with it. Run from the repo root.
+# Audience: contributor. One-time setup for a contributor: generates a GPG
+# key for your committer identity and configures git to sign every commit
+# and tag with it. Run from the repo root.
 #
 # After this completes, every `git commit` produces a signed commit;
 # pushes to GitHub will show "Verified" once you upload the public key

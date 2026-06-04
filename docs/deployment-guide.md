@@ -6,16 +6,15 @@ Step-by-step instructions for deploying the GovWin-to-HubSpot integration on AWS
 
 ### AWS-side (upstream of this project)
 
-These are AWS account-level prerequisites that this project does **not** automate. They depend on the deploying partner's relationship with AWS Partner Network and need to be in place before you deploy.
+These are AWS account-level prerequisites that this project does **not** automate. They must be in place before you deploy.
 
-- [ ] **AWS Partner Central account** in good standing. See the [AWS Partner Network onboarding guide](https://aws.amazon.com/partners/welcome/) for the broader registration flow.
+- [ ] **AWS Partner Central account** in good standing. You enroll once per organization; see https://partnercentral.aws.com for the registration flow.
 - [ ] **At least one Approved Solution** registered in Partner Central. Verify with:
   ```
   aws partnercentral-selling list-solutions --catalog AWS --region us-east-1 \
     --query 'SolutionSummaries[?Status==`Active`].{Id:Id,Name:Name}'
   ```
   If this is empty, register a Solution in the Partner Central UI under **Sell -> My Solutions** before continuing. Approval typically takes 24-72 hours.
-- [ ] **AWS Marketplace seller linking** is **not required** for this project. We submit co-sell engagements via `partnercentral-selling`, which does not transact through Marketplace. Set this up only if you separately need Marketplace functionality.
 
 ### Tooling on your machine
 
@@ -51,8 +50,8 @@ The day-to-day deployer's personal IAM identity needs only `sts:AssumeRole` on t
 ## Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/pandora-cloud/govwin-hubspot-integration.git
-cd govwin-hubspot-integration
+git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+cd govwin-hubspot-ace
 ```
 
 ## Step 1a: Run the bootstrap (one-time per environment)
@@ -76,11 +75,11 @@ You will not need the bootstrap operator again unless you change the list of `de
 
 ## Step 1b: Prepare HubSpot
 
-Before deploying, the integration expects an existing pipeline named **"Government"** in HubSpot. The integration does not create a pipeline (HubSpot Professional accounts are limited to two custom pipelines, so creating one for every deployer is unsafe).
+Before deploying, the integration expects an existing pipeline named **"GovWin Pipeline"** in HubSpot. The integration does not create a pipeline (HubSpot Professional accounts are limited to two custom pipelines, so creating one for every deployer is unsafe).
 
 1. Go to **Settings > Objects > Deals > Pipelines**.
-2. Either create a new pipeline named exactly `Government` or rename an existing one.
-3. Add stages with these labels (or the labels you prefer; if you change them, update `GOVWIN_STATUS_TO_STAGE` in `src/hubspot/properties.py` to match):
+2. Either create a new pipeline named exactly `GovWin Pipeline` or rename an existing one.
+3. Add stages with these labels (or the labels you prefer; if you change them, the configuration variable `GOVWIN_STATUS_TO_STAGE` in the project's HubSpot properties module must be updated to match):
    - Opportunity Identified
    - Reviewing Requirements
    - Preparing Response
@@ -90,13 +89,13 @@ Before deploying, the integration expects an existing pipeline named **"Governme
    - Declined
    - Other
 
-If you want a different pipeline name, set `PIPELINE_NAME` in `src/hubspot/properties.py` before building the Lambda layer.
+If you want a different pipeline name, set the `PIPELINE_NAME` configuration before building the Lambda layer.
 
 ## Step 2: Create HubSpot API Token
 
 HubSpot offers two methods for API authentication. Use **Service Keys** (recommended) or Private Apps (legacy).
 
-### Option A: Service Key (Recommended, 2026+)
+### Option A: Service Key (Recommended)
 
 Service Keys are HubSpot's modern replacement for Private Apps. They provide a non-expiring bearer token for API-only integrations.
 
@@ -113,7 +112,7 @@ Service Keys are HubSpot's modern replacement for Private Apps. They provide a n
    - `crm.schemas.contacts.read` and `crm.schemas.contacts.write`
 6. Click **Create** and copy the token (starts with `pat-na1-` or `pat-na2-`)
 
-Service Keys are in public beta (as of February 2026). If you don't see "Service Keys" in your HubSpot settings, use Option B below.
+If your HubSpot account does not yet expose Service Keys, use Option B below.
 
 ### Option B: Private App (Legacy, still works)
 
@@ -233,7 +232,7 @@ govwin_password      = "your-password"
 # Required - HubSpot credentials (existing private-app token)
 hubspot_private_app_token = "pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# Required for v2 (HubSpot to AWS Partner Central submission)
+# Required for the HubSpot to AWS Partner Central submission path
 ace_default_solution_id       = "S-1234567"          # from `aws partnercentral-selling list-solutions`
 ace_trigger_stages            = "3590200042,3590200043"  # numeric HubSpot pipeline-stage IDs (see step 9b.i)
 hubspot_webhook_app_id        = "12345678"           # from `hs project upload`
@@ -315,7 +314,7 @@ By default, only opportunities your BD team explicitly marks in GovWin IQ will s
 
 The `setup_hubspot` Lambda runs automatically during deployment and creates the custom properties (it does not create a pipeline). Verify in HubSpot:
 - Go to **Settings > Properties > Deal properties**; you should see `govwin_*` properties
-- Go to **Settings > Objects > Deals > Pipelines**; the **"Government"** pipeline you prepared in Step 1a is where new deals will appear
+- Go to **Settings > Objects > Deals > Pipelines**; the **GovWin Pipeline** you prepared in Step 1b is where new deals will appear
 
 ### Trigger First Sync
 
@@ -326,7 +325,7 @@ aws lambda invoke --function-name govwin-hubspot-prod-govwin-orchestrator \
   --region us-east-1 /tmp/orch.json && cat /tmp/orch.json
 ```
 
-The orchestrator handles token refresh, runs the configured discovery mode (marked / saved-search / bookmarked / date-range), and fans the resulting opportunity batches out to SQS. The worker Lambda then drains the queue. v2.1 replaced the v2.0 Step Functions chain with this Lambda + SQS pattern; if you see references to `terraform output step_function_arn` in older docs, they are stale.
+The orchestrator handles token refresh, runs the configured discovery mode (marked / saved-search / bookmarked / date-range), and fans the resulting opportunity batches out to SQS. The worker Lambda then drains the queue.
 
 ### Monitor
 
@@ -335,7 +334,7 @@ The orchestrator handles token refresh, runs the configured discovery mode (mark
 - **SQS console**: backlog and DLQ depth for the sync, ACE submission, ACE update, and webhook queues
 - **SNS Notifications**: summary email after each sync (if `notification_email` is set)
 
-## Step 9: Wire up the AWS Partner Central submission half (v2)
+## Step 9: Wire up the AWS Partner Central submission half
 
 The GovWin to HubSpot half is now running. To submit deals onward to AWS Partner Central via this project's own Selling-API client:
 
@@ -378,7 +377,7 @@ Webhooks for ACE submission fire when a HubSpot deal moves to one of the stages 
 To find them:
 
 ```bash
-# Replace <PIPELINE_ID> with your "Government" pipeline ID. Get pipeline IDs from:
+# Replace <PIPELINE_ID> with your GovWin Pipeline ID. Get pipeline IDs from:
 #   curl -s -H "Authorization: Bearer $HUBSPOT_TOKEN" \
 #     https://api.hubapi.com/crm/v3/pipelines/deals | jq '.results[] | {id, label}'
 
@@ -395,7 +394,7 @@ ace_trigger_stages = "3590200042,3590200043"
 
 If you skip this step, the webhook receiver will still receive HubSpot events but will never recognize a stage match, and no ACE submission will ever fire. Symptom: `hs project upload` succeeds and deals appear in HubSpot, but nothing arrives in AWS Partner Central.
 
-### 9c. Set the v2 Terraform variables
+### 9c. Set the Partner Central Terraform variables
 
 ```hcl
 ace_catalog                   = "Sandbox"             # flip to "AWS" only after sandbox tests pass

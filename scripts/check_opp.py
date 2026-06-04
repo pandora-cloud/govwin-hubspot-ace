@@ -1,4 +1,8 @@
-"""Look up a single GovWin opportunity by its global ID and print what the API returns."""
+"""Look up a single GovWin opportunity by its global ID and print what the API returns.
+
+Audience: operator. Read-only inspection of a single GovWin opportunity for
+debugging mapping or sync issues.
+"""
 
 from __future__ import annotations
 

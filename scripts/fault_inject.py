@@ -1,9 +1,10 @@
 """End-to-end failure-path verification.
 
+Audience: operator. Run before flipping ``ace_catalog`` to ``AWS`` and
+after any change to the monitoring stack.
+
 Confirms that the DLQ + SNS + EventBridge dedup paths actually fire when
-abuse / malformed input / synthetic events land in the system. Run this
-before flipping ``ace_catalog`` to ``AWS`` and after any change to the
-monitoring stack.
+abuse / malformed input / synthetic events land in the system.
 
 Usage::
 

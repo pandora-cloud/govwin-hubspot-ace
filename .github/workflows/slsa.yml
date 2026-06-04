@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build source archive
-        run: git archive --format=tar.gz --prefix=govwin-hubspot-integration/ HEAD > source.tar.gz
+        run: git archive --format=tar.gz --prefix=govwin-hubspot-ace/ HEAD > source.tar.gz
       - name: Generate hash
         id: hash
         run: |

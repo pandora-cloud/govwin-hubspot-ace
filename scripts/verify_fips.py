@@ -1,8 +1,8 @@
 """Verify every AWS service we use resolves to a FIPS endpoint.
 
-Run with the same Python environment as the Lambdas. Useful as a CI gate
-and as part of an internal audit checklist (NIST 800-53 SC-13, CMMC L2
-SC.L2-3.13.11).
+Audience: operator. Run as a CI gate or as part of an internal audit
+checklist (NIST 800-53 SC-13, CMMC L2 SC.L2-3.13.11). Uses the same
+Python environment as the Lambdas.
 
 Exits 0 if every service resolves to ``<service>-fips.<region>.amazonaws.com``;
 exits 1 otherwise. Prints a one-line status per service so the failure mode

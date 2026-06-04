@@ -310,7 +310,7 @@ wheels = [
 ]
 
 [[package]]
-name = "govwin-hubspot-integration"
+name = "govwin-hubspot-ace"
 version = "2.1.0"
 source = { editable = "." }
 dependencies = [
