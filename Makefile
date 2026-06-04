@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile release
+.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile release merge-pr
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -55,6 +55,10 @@ audit: ## Audit dependencies for known CVEs
 release: ## Cut a release (VERSION=X.Y.Z required); does not push
 	@if [ -z "$(VERSION)" ]; then echo "usage: make release VERSION=2.2.0"; exit 1; fi
 	@.venv/bin/python scripts/release.py $(VERSION)
+
+merge-pr: ## Replay a GitHub PR onto GitLab main (PR=<number> required); does not push
+	@if [ -z "$(PR)" ]; then echo "usage: make merge-pr PR=42"; exit 1; fi
+	@./scripts/merge_github_pr.sh $(PR)
 
 # ---------------------------------------------------------------------------
 # DLQ operations

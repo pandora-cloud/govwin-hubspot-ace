@@ -6,8 +6,8 @@ This project is maintained by [Pandora Cloud](https://pandoracloud.net).
 
 | Name | GitHub | GitLab | Areas | Time zone |
 |---|---|---|---|---|
-| Isi Lawson | @isi-pandora | @isi-pandora | All; CTO and primary maintainer | US Eastern |
-| Kim | @kim-pandora | @kim-pandora | Maintainer | US Eastern |
+| Isi Lawson | @isi-pandora | @isi-pandora | All; primary maintainer | US Eastern |
+| Kim | _pending GitHub account_ | @kim-pandora | Maintainer | US Eastern |
 
 ## Response expectations
 
@@ -48,6 +48,24 @@ We're a small project and don't have a formal escalation path. The route is:
 3. After demonstrated sustained contribution (several months, multiple merged PRs), an existing maintainer can propose adding you to `MAINTAINERS.md` and `CODEOWNERS`. Decision requires unanimous consent of current maintainers.
 
 We will not add anyone whose primary affiliation is with a competing CRM-integration product or a paid-CRM-connector vendor.
+
+## Reviewing external pull requests
+
+External contributors fork the GitHub repo and open pull requests against `pandora-cloud/govwin-hubspot-ace:main`. Because the canonical source is GitLab (push-mirrored to GitHub one-way), a maintainer cannot merge on GitHub directly: the next mirror push would clobber the merge commit. Instead, the maintainer replays the PR's commits onto GitLab `main` and lets the mirror reflect them back.
+
+The mechanical part is automated by `scripts/merge_github_pr.sh` (run via `make merge-pr PR=<number>`):
+
+1. Review the PR on GitHub as usual. Once you're ready to merge:
+2. Locally, from a clean working tree on `main`:
+   ```
+   make merge-pr PR=42
+   ```
+   The script fetches the PR via `gh pr checkout`, rebases its commits onto the latest GitLab `main`, and fast-forwards local `main`. It does not push.
+3. Run the test suite if the PR touched code: `make test`.
+4. Push when satisfied: `git push origin main`.
+5. The mirror pushes the new commits to GitHub within a few minutes. The PR on GitHub auto-closes as "merged" once the commits land.
+
+If the PR's commits do not rebase cleanly, the script aborts mid-rebase and leaves you on the PR branch. Resolve conflicts, finish the rebase, then re-run the merge step manually.
 
 ## Token rotation schedule
 

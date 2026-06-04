@@ -13,7 +13,6 @@ project-lifecycle:
   bug-fixes-only: false
   core-maintainers:
     - https://github.com/isi-pandora
-    - https://github.com/kim-pandora
 
 contribution-policy:
   accepts-pull-requests: true

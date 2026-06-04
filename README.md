@@ -1,4 +1,4 @@
-# GovWin to AWS Partner Central, end-to-end and open-source
+# GovWin to HubSpot to AWS Partner Central, end-to-end and open-source
 
 [![CI](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/ci.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/codeql.yml/badge.svg)](https://github.com/pandora-cloud/govwin-hubspot-ace/actions/workflows/codeql.yml)
@@ -6,7 +6,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Terraform >= 1.11](https://img.shields.io/badge/terraform-%3E%3D1.11-7B42BC.svg)](https://developer.hashicorp.com/terraform)
 
-The first fully open-source pipeline from Deltek GovWin IQ to AWS Partner Central, via HubSpot CRM. No paid third-party connector dependencies. Apache-2.0 licensed.
+Open-source pipeline from Deltek GovWin IQ to AWS Partner Central via HubSpot CRM. Serverless on AWS, Terraform-deployed, Apache 2.0. No paid connector dependencies.
 
 Built and maintained by [Pandora Cloud](https://pandoracloud.net).
 
