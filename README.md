@@ -22,7 +22,7 @@ Federal AWS partners use this to mark opportunities in GovWin and have them flow
 
 1. **GovWin IQ to HubSpot.** Marked opportunities sync into HubSpot every few hours with their agency, contacts, and contract details pre-populated across 30 custom properties.
 2. **HubSpot to AWS Partner Central.** When a deal moves to a "Submit to AWS" stage, a HubSpot webhook fires, the integration calls `CreateOpportunity` -> `AssociateOpportunity` -> `StartEngagementFromOpportunityTask` against the AWS Partner Central Selling API, and the engagement is queued for AWS review.
-3. **AWS Partner Central back to HubSpot.** EventBridge events on `aws.partnercentral-selling` flow into a handler that updates the HubSpot deal stage based on AWS's review outcome (Approved / Action Required / Rejected / Expired).
+3. **AWS Partner Central back to HubSpot.** EventBridge events on `aws.partnercentral-selling` flow into a handler that updates the HubSpot deal stage. It mirrors AWS review status (Submitted to AWS, Under AWS Review, Approved by AWS, Action Required) and, when a deal reaches a terminal lifecycle stage, that wins over review status: Closed Lost mirrors to Closed Lost (with the closed-lost reason), and Launched mirrors to Closed Won.
 
 Nine of the twelve mandatory ACE fields are auto-populated from GovWin data. Three fields require manual entry by BD in HubSpot before the deal is submission-ready: **Delivery Model**, **AWS Solution**, and **Partner Primary Need from AWS**. This is intentional, and the README calls it out so users do not expect a fully-automated flow.
 
@@ -36,8 +36,10 @@ The sync runs incrementally and respects both GovWin's 4,000 calls/hour cap and 
 
 1. **Find an opportunity in GovWin IQ** and click "Add to Web Services Download" on the opportunity detail page.
 2. **The integration syncs it to HubSpot** on the next scheduled run (default: every 4 hours). A deal appears in your **Government** pipeline with the opportunity details, agency, and contacts already filled in.
-3. **Review the deal in HubSpot**, fill in three ACE fields (Delivery Model, AWS Solution, Partner Primary Need from AWS), and move the stage to **Submit to AWS**.
-4. **The submission fires automatically** via HubSpot webhook. The deal moves through the AWS Partner Central review and the HubSpot stage updates as AWS responds.
+3. **Open the deal and use the "Submit to AWS Partner Central" card.** In the Submit form, fill the three ACE fields (Delivery Model, AWS Solution, Partner Primary Need from AWS) plus any optional context, then click Submit. The card writes the fields and advances the deal stage for you; BD never drags pipeline stages by hand.
+4. **The submission fires automatically** via HubSpot webhook. The deal moves through the AWS Partner Central review and the card's read-only status follows AWS as it responds. To close or launch a live deal, use the card's Update form (LifeCycle Stage dropdown), not a manual stage move.
+
+For the step-by-step operator walkthrough, see the [BD User Guide](docs/bd-user-guide.md).
 
 ### Under the hood
 
@@ -87,9 +89,9 @@ The integration auto-populates the majority of mandatory fields required by AWS 
 | 7 | Expected AWS Monthly Revenue | `amount` | GovWin `oppValue` x 1000 | Yes |
 | 8 | Opportunity Type | `govwin_ace_opportunity_type` | Default: "Net New Business" | Yes |
 | 9 | Stage | `dealstage` | Mapped from GovWin `status` | Yes |
-| 10 | Delivery Model | `govwin_ace_delivery_model` |; | **Manual** |
-| 11 | Solution Offered | `govwin_ace_solution` |; | **Manual** |
-| 12 | Partner Primary Need from AWS | `govwin_ace_partner_need` |; | **Manual** |
+| 10 | Delivery Model | `govwin_ace_delivery_model` | BD-entered (Submit card) | **Manual** |
+| 11 | Solution Offered | `govwin_ace_solution_id` | BD-entered (Submit card) | **Manual** |
+| 12 | Partner Primary Need from AWS | `govwin_ace_partner_need` | BD-entered (Submit card) | **Manual** |
 
 For the full end-to-end ACE submission workflow, see the [ACE Integration Guide](docs/ace-integration.md).
 
@@ -201,12 +203,14 @@ All configuration is managed through Terraform variables in `terraform/terraform
 | `govwin_username` | (required) | GovWin user email for API access |
 | `govwin_password` | (required) | GovWin user password for API access |
 | `hubspot_private_app_token` | (required) | HubSpot Service Key or Private App access token |
+| `hubspot_webhook_app_id` | (required) | HubSpot developer-platform app id (numeric string from `hs project upload`); used to recognize the integration's own webhook events |
+| `hubspot_webhook_client_secret` | (required) | HubSpot client secret used to validate the `X-HubSpot-Signature-v3` header on inbound webhooks |
 | `aws_profile` | `default` | AWS CLI profile name for authentication |
 | `aws_region` | `us-east-1` | AWS region for deployment |
 | `environment` | `prod` | Environment name: `prod`, `staging`, or `dev` |
 | `project_name` | `govwin-hubspot` | Project name prefix for resource naming |
 | `sync_schedule` | `rate(1 hour)` | EventBridge schedule expression for sync frequency |
-| `ace_partner_company_name` | `Partner Company` (placeholder) | Your company's legal name. Surfaced to AWS Partner Central as `ExpectedCustomerSpend.TargetCompany` on every co-sell submission. **Required for production deployments** — the placeholder is harmless in Sandbox but should not appear on real submissions. |
+| `ace_catalog` | `Sandbox` | AWS Partner Central catalog: `Sandbox` (testing) or `AWS` (production). Production deployments must explicitly set `AWS`; the Sandbox default is a safety guard so a misconfigured deploy cannot write to production. |
 | `ace_default_solution_id` | (required for ACE) | AWS Partner Central Solution ID (e.g. `S-1234567`). Discover via `aws partnercentral-selling list-solutions --catalog AWS --region us-east-1`. |
 | `ace_trigger_stages` | `submit_to_aws,submitted_to_aws` | Comma-separated HubSpot deal-stage internal IDs that trigger an ACE submission. Production deployments must override this with the numeric stage IDs from the HubSpot pipeline editor (e.g. `3590200042`). See [docs/deployment-guide.md](docs/deployment-guide.md#9bi-find-your-hubspot-pipeline-stage-internal-ids-ace_trigger_stages). |
 | `govwin_opp_types` | `ALL` | Opportunity types to sync: `OPP`, `BID`, `TNS`, `FBO`, `OPN`, `TOP`, or `ALL` |
@@ -335,6 +339,7 @@ src/
     submit_to_ace.py            # SQS -> three-call ACE submission with resume-from-step idempotency
     update_in_ace.py            # SQS -> UpdateOpportunity with optimistic locking
     handle_ace_event.py         # EventBridge -> mirror AWS state changes to HubSpot
+    reconcile_pending.py        # Sweep deals whose content edits were deferred during AWS review, retry once review exits
     _ui_extension_common.py     # Shared signature / CORS / replay gates for the UI Extension Lambdas
     ui_extension_reads.py       # GET /solutions, GET /aws-products (tight IAM)
     ui_extension_writes.py      # POST /submit, POST /update (full write-path IAM, no Create)
@@ -353,7 +358,7 @@ terraform/
     secrets/                 # Secrets Manager secrets
     monitoring/              # SNS, SQS, CloudWatch alarms (incl. fan-out detector)
 tests/
-  unit/                      # 558+ unit tests (hermetic; lint + mypy + drift-CI gates)
+  unit/                      # 600+ unit tests (hermetic; lint + mypy + drift-CI gates)
   integration/               # LocalStack integration tests (skipped without AWS_ENDPOINT_URL)
   conftest.py                # Shared pytest fixtures
 scripts/
@@ -416,7 +421,7 @@ Main cost drivers: Lambda invocations, DynamoDB reads/writes, CloudWatch logs + 
 
 ```bash
 make install-dev    # Install development dependencies (ruff, mypy, pytest, etc.)
-make test           # Run 558+ unit tests (no Docker required)
+make test           # Run 600+ unit tests (no Docker required)
 make local-up       # Start LocalStack 3.8 (community edition; no auth token needed)
 make local-test     # Run 6 LocalStack integration tests
 make local-down     # Tear down LocalStack
@@ -461,7 +466,7 @@ AWS Lambda's Python runtime has the smallest cold-start surface for this workloa
 Apache-2.0 includes an explicit patent grant from contributors. For a project that touches federal contracting workflows, that grant is meaningful. AWS's open-source amplification programs also prefer Apache-2.0 over MIT.
 
 **What's the difference between `ace_catalog = "Sandbox"` and `"AWS"`?**
-Sandbox is AWS's safe-to-test catalog: opportunities you create are not visible to AWS reviewers and don't count against any partner reporting. The IAM policy gates this with a `partnercentral:Catalog: Sandbox` condition so you cannot accidentally write to production. Flip to `"AWS"` only after the sandbox smoke matrix is green and you've set `ace_partner_company_name` to your real legal company name. See [docs/testing-in-your-account.md](docs/testing-in-your-account.md#8-criteria-for-flipping-ace_catalog--aws).
+Sandbox is AWS's safe-to-test catalog: opportunities you create are not visible to AWS reviewers and don't count against any partner reporting. The IAM policy gates this with a `partnercentral:Catalog: Sandbox` condition so you cannot accidentally write to production. Flip to `"AWS"` only after the sandbox smoke matrix is green. See [docs/testing-in-your-account.md](docs/testing-in-your-account.md#8-criteria-for-flipping-ace_catalog--aws).
 
 **What does the AWS bill look like?**
 About $6/month at ~1,000 opportunities and ~10 ACE submissions per month. Lambda invocations + DynamoDB + Secrets Manager dominate; everything else sits in free-tier territory. Lambda runs on ARM64 (Graviton2). See "Estimated Cost" above and [docs/testing-in-your-account.md](docs/testing-in-your-account.md#cost-expectations).

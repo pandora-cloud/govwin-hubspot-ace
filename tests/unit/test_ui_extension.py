@@ -290,7 +290,7 @@ class TestSolutionsEndpoint:
 
 def _good_payload() -> dict[str, Any]:
     return {
-        "deal_id": "326365244126",
+        "deal_id": "100000000004",
         "govwin_opp_id": "DEMO-TEST-001",
         "govwin_agency": "Test Agency",
         "govwin_industry": "Government",
@@ -303,7 +303,7 @@ def _good_payload() -> dict[str, Any]:
         "ace_use_case": "Migration / Database Migration",
         "ace_opportunity_type": "Net New Business",
         "ace_sales_activities": ["Initialized discussions with customer"],
-        "ace_aws_account_id": "555049241846",
+        "ace_aws_account_id": "123456789012",
     }
 
 
@@ -413,7 +413,7 @@ class TestClosedateNormalization:
         self, mock_secrets: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         mock_state_mgr = MagicMock()
-        mock_state_mgr.get_ace_mapping = MagicMock(return_value={"ace_opportunity_id": "O13740398"})
+        mock_state_mgr.get_ace_mapping = MagicMock(return_value={"ace_opportunity_id": "O10000004"})
         monkeypatch.setattr(lambda_mod, "SyncStateManager", MagicMock(return_value=mock_state_mgr))
         body = json.dumps(_good_payload())
         event = _event("POST", "/ui-extension/submit", body=body)
@@ -421,7 +421,7 @@ class TestClosedateNormalization:
         assert response["statusCode"] == 409
         result = json.loads(response["body"])
         assert result["status"] == "already_submitted"
-        assert result["ace_opportunity_id"] == "O13740398"
+        assert result["ace_opportunity_id"] == "O10000004"
 
     def test_rejects_short_description(
         self, mock_secrets: Any, monkeypatch: pytest.MonkeyPatch
@@ -492,7 +492,7 @@ class TestReplayProtection:
 
 def _good_update_payload() -> dict[str, Any]:
     return {
-        "deal_id": "326811999945",
+        "deal_id": "100000000001",
         "govwin_opp_id": "DEMO-TEST-001",
         "lifecycle_stage": "Qualified",
     }
@@ -500,7 +500,7 @@ def _good_update_payload() -> dict[str, Any]:
 
 def _stub_ace_get_opportunity_response() -> dict[str, Any]:
     return {
-        "Id": "O13753208",
+        "Id": "O10000001",
         "PartnerOpportunityIdentifier": "DEMO-TEST-001",
         "LastModifiedDate": "2026-05-27T15:00:00Z",
         "PrimaryNeedsFromAws": ["Co-Sell - Deal Support"],
@@ -569,7 +569,7 @@ def _patch_update_dependencies(
         ace.update_with_retry.side_effect = update_raises
     else:
         ace.update_with_retry.return_value = {
-            "Id": "O13753208",
+            "Id": "O10000001",
             "LastModifiedDate": "2026-05-27T16:00:00Z",
             "LifeCycle": {"ReviewStatus": "Submitted"},
         }
@@ -595,7 +595,7 @@ class TestUpdateEndpoint:
     ) -> None:
         hs, ace = _patch_update_dependencies(
             monkeypatch,
-            mapping={"ace_opportunity_id": "O13753208", "hubspot_deal_id": "326811999945"},
+            mapping={"ace_opportunity_id": "O10000001", "hubspot_deal_id": "100000000001"},
         )
         body = json.dumps(_good_update_payload())
         event = _event("POST", "/ui-extension/update", body=body)
@@ -603,7 +603,7 @@ class TestUpdateEndpoint:
         assert response["statusCode"] == 200
         result = json.loads(response["body"])
         assert result["status"] == "updated"
-        assert result["ace_opportunity_id"] == "O13753208"
+        assert result["ace_opportunity_id"] == "O10000001"
         ace.update_with_retry.assert_called_once()
         # HubSpot writeback fired (cosell_status + lifecycle_stage).
         hs.update_deal.assert_called_once()
@@ -617,7 +617,7 @@ class TestUpdateEndpoint:
         the no-op UpdateOpportunity (PUT semantics preserve existing state)."""
         _, ace = _patch_update_dependencies(
             monkeypatch,
-            mapping={"ace_opportunity_id": "O13753208", "hubspot_deal_id": "326811999945"},
+            mapping={"ace_opportunity_id": "O10000001", "hubspot_deal_id": "100000000001"},
         )
         body = json.dumps(_good_update_payload())
         event = _event("POST", "/ui-extension/update", body=body)
@@ -632,7 +632,7 @@ class TestUpdateEndpoint:
 
         _patch_update_dependencies(
             monkeypatch,
-            mapping={"ace_opportunity_id": "O13753208", "hubspot_deal_id": "326811999945"},
+            mapping={"ace_opportunity_id": "O10000001", "hubspot_deal_id": "100000000001"},
             get_opp_raises=ACEAPIError("GetOpportunity broken", code="ResourceNotFoundException"),
         )
         body = json.dumps(_good_update_payload())
@@ -662,7 +662,7 @@ class TestUpdateEndpoint:
         """DDB mapping points at a DIFFERENT HubSpot deal: refuse."""
         _patch_update_dependencies(
             monkeypatch,
-            mapping={"ace_opportunity_id": "O13753208", "hubspot_deal_id": "999000999000"},
+            mapping={"ace_opportunity_id": "O10000001", "hubspot_deal_id": "999000999000"},
         )
         body = json.dumps(_good_update_payload())
         event = _event("POST", "/ui-extension/update", body=body)
@@ -678,14 +678,14 @@ class TestUpdateEndpoint:
         state = MagicMock()
         state.reserve_webhook_signature = MagicMock(return_value=True)
         # Mapping has ace_opportunity_id but NO hubspot_deal_id.
-        state.get_ace_mapping = MagicMock(return_value={"ace_opportunity_id": "O13753208"})
+        state.get_ace_mapping = MagicMock(return_value={"ace_opportunity_id": "O10000001"})
         state.update_ace_mapping = MagicMock()
         monkeypatch.setattr(lambda_mod, "SyncStateManager", MagicMock(return_value=state))
 
         ace = MagicMock()
         ace.get_opportunity.return_value = _stub_ace_get_opportunity_response()
         ace.update_with_retry.return_value = {
-            "Id": "O13753208",
+            "Id": "O10000001",
             "LastModifiedDate": "x",
             "LifeCycle": {"ReviewStatus": "Submitted"},
         }
@@ -705,7 +705,7 @@ class TestUpdateEndpoint:
         backfill_calls = [
             c
             for c in state.update_ace_mapping.call_args_list
-            if c.kwargs.get("hubspot_deal_id") == "326811999945"
+            if c.kwargs.get("hubspot_deal_id") == "100000000001"
         ]
         assert backfill_calls, "Expected a backfill update_ace_mapping call with the deal_id"
 
@@ -729,7 +729,7 @@ class TestUpdateEndpoint:
 
         _patch_update_dependencies(
             monkeypatch,
-            mapping={"ace_opportunity_id": "O13753208", "hubspot_deal_id": "326811999945"},
+            mapping={"ace_opportunity_id": "O10000001", "hubspot_deal_id": "100000000001"},
             update_raises=ACEAPIError("sensitive detail with PII", code=error_code),
         )
         body = json.dumps(_good_update_payload())

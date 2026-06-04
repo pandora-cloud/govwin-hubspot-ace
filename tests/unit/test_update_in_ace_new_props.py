@@ -169,10 +169,10 @@ class TestAwsProductsDiff:
             current=["AWSLambda"],
         )
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         ace.associate_opportunity.assert_called_once_with(
-            opportunity_identifier="O13753001",
+            opportunity_identifier="O10000003",
             related_entity_identifier="AmazonS3",
             related_entity_type="AwsProducts",
         )
@@ -186,7 +186,7 @@ class TestAwsProductsDiff:
             current=["AWSLambda", "AmazonS3", "AWSAppMesh"],
         )
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         ace.associate_opportunity.assert_not_called()
         # Sorted disassociate order is deterministic.
@@ -198,7 +198,7 @@ class TestAwsProductsDiff:
             current=["AWSLambda", "Other"],  # legacy state with "Other"
         )
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         ace.associate_opportunity.assert_not_called()
         ace.disassociate_opportunity.assert_not_called()
@@ -210,7 +210,7 @@ class TestAwsProductsDiff:
             requested="",
             current=["AWSLambda", "AmazonS3"],
         )
-        _handle_aws_products_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        _handle_aws_products_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         assert ace.disassociate_opportunity.call_count == 2
 
     def test_no_change_is_no_op(self) -> None:
@@ -219,7 +219,7 @@ class TestAwsProductsDiff:
             current=["AmazonS3", "AWSLambda"],
         )
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         ace.associate_opportunity.assert_not_called()
         ace.disassociate_opportunity.assert_not_called()
@@ -236,7 +236,7 @@ class TestAwsProductsDiff:
             "already associated", code="ConflictException"
         )
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         assert result["products_associated"] == []  # didn't count the conflict as success
         assert result["status"] == "updated"
@@ -257,7 +257,7 @@ class TestAwsProductsDiff:
 
         ace.associate_opportunity.side_effect = _conditional_associate
         result = _handle_aws_products_diff(
-            ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot
+            ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot
         )
         assert "AWSLambda" in result["products_associated"]
         assert "AmazonS3" in result["products_associated"]
@@ -314,9 +314,9 @@ class TestSolutionDiff:
 
     def test_adds_new_solution(self) -> None:
         ace, hubspot = self._setup(requested="S-0050888", current=[])
-        result = _handle_solution_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        result = _handle_solution_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         ace.associate_opportunity.assert_called_once_with(
-            opportunity_identifier="O13753001",
+            opportunity_identifier="O10000003",
             related_entity_identifier="S-0050888",
             related_entity_type="Solutions",
         )
@@ -325,29 +325,29 @@ class TestSolutionDiff:
 
     def test_replaces_solution(self) -> None:
         ace, hubspot = self._setup(requested="S-0050888", current=["S-0050887"])
-        _handle_solution_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        _handle_solution_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         # Disassociate fires before Associate (AWS allows only one Solution).
         ace.disassociate_opportunity.assert_called_once_with(
-            opportunity_identifier="O13753001",
+            opportunity_identifier="O10000003",
             related_entity_identifier="S-0050887",
             related_entity_type="Solutions",
         )
         ace.associate_opportunity.assert_called_once_with(
-            opportunity_identifier="O13753001",
+            opportunity_identifier="O10000003",
             related_entity_identifier="S-0050888",
             related_entity_type="Solutions",
         )
 
     def test_removes_solution_when_cleared(self) -> None:
         ace, hubspot = self._setup(requested="", current=["S-0050887"])
-        result = _handle_solution_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        result = _handle_solution_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         ace.disassociate_opportunity.assert_called_once()
         ace.associate_opportunity.assert_not_called()
         assert result["solution_disassociated"] == "S-0050887"
 
     def test_no_change_is_no_op(self) -> None:
         ace, hubspot = self._setup(requested="S-0050888", current=["S-0050888"])
-        result = _handle_solution_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        result = _handle_solution_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         ace.associate_opportunity.assert_not_called()
         ace.disassociate_opportunity.assert_not_called()
         assert result["status"] == "updated"
@@ -359,7 +359,7 @@ class TestSolutionDiff:
         ace.associate_opportunity.side_effect = ACEAPIError(
             "already associated", code="ConflictException"
         )
-        result = _handle_solution_diff(ace=ace, ace_id="O13753001", deal_id="123", hubspot=hubspot)
+        result = _handle_solution_diff(ace=ace, ace_id="O10000003", deal_id="123", hubspot=hubspot)
         # Conflict means AWS already has the association we wanted; the
         # call was logically a no-op. Don't fail.
         assert result["status"] == "updated"

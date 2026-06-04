@@ -24,7 +24,7 @@ from src.models import SubmitFormMarketing, UpdateFormRequest
 def _form(**overrides: object) -> UpdateFormRequest:
     """Build an UpdateFormRequest with sensible defaults for tests."""
     base: dict[str, object] = {
-        "deal_id": "326811999945",
+        "deal_id": "100000000001",
         "govwin_opp_id": "DEMO-TEST-001",
         "lifecycle_stage": "Qualified",
     }
@@ -35,7 +35,7 @@ def _form(**overrides: object) -> UpdateFormRequest:
 def _current() -> dict:
     """Realistic GetOpportunity output with non-trivial existing state."""
     return {
-        "Id": "O13753208",
+        "Id": "O10000001",
         "PartnerOpportunityIdentifier": "DEMO-TEST-001",
         "LastModifiedDate": "2026-05-27T15:00:00Z",
         "PrimaryNeedsFromAws": ["Co-Sell - Deal Support"],

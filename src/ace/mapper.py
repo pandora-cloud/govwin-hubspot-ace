@@ -1316,7 +1316,7 @@ def map_update_form_to_ace_payload(
         life_cycle["TargetCloseDate"] = form.lifecycle_target_close_date[:10]
     # AWS reviewer-owned fields: echo the current values back unchanged.
     # UpdateOpportunity has PUT semantics; popping these would clear them
-    # on the AWS side (verified: an update on O13753317 with these popped
+    # on the AWS side (verified: an update on O10000002 with these popped
     # wiped ReviewStatus="Submitted" to null, 2026-05-27). The fields ARE
     # in the boto3 Update input shape; AWS accepts the same value we just
     # GET'd, which is a no-op for the reviewer's state machine.

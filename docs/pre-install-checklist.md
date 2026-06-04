@@ -25,16 +25,12 @@ sensible defaults.
 
 ## What to set in `terraform.tfvars`
 
-Three values actually need attention. The rest have sensible defaults.
+Two values actually need attention. The rest have sensible defaults.
 
 1. **`ace_catalog`** — leave at `"Sandbox"` for the first deploy. Flip
    to `"AWS"` only after the sandbox smoke matrix passes. AWS-catalog
    submissions are permanent per opportunity.
-2. **`ace_partner_company_name`** — your legal company name. Surfaced
-   to AWS Partner Central as the `ExpectedCustomerSpend.TargetCompany`
-   on every submission. The placeholder default is harmless in Sandbox
-   but should not appear on production submissions.
-3. **`ace_default_solution_id`** — the AWS Solution ID you noted above.
+2. **`ace_default_solution_id`** — the AWS Solution ID you noted above.
 
 Worth setting on first install:
 

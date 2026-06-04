@@ -163,7 +163,7 @@ class ACEClient:
     def get_opportunity(self, identifier: str) -> dict[str, Any]:
         """Fetch the full opportunity payload by AWS opportunity id.
 
-        :param identifier: The AWS opportunity id (e.g. ``O13753208``).
+        :param identifier: The AWS opportunity id (e.g. ``O10000001``).
         :returns: The full opportunity dict, including
             ``LastModifiedDate`` needed for optimistic locking on
             subsequent updates.

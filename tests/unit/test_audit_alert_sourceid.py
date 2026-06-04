@@ -23,7 +23,7 @@ from src.lambdas import hubspot_webhook_receiver as receiver
 
 SECRET = "topsecret"
 TARGET_URL = "https://api.example.com/hubspot"
-OUR_APP_ID = "38079082"
+OUR_APP_ID = "12345678"
 
 
 def _signed_headers(method: str, url: str, body: bytes) -> dict[str, str]:
@@ -95,10 +95,10 @@ def test_integration_event_from_our_app_does_not_alert(mock_clients) -> None:
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
-                "propertyValue": "O13753208",
+                "propertyValue": "O10000001",
                 "changeSource": "INTEGRATION",
                 "sourceId": OUR_APP_ID,
             }
@@ -117,7 +117,7 @@ def test_integration_event_from_foreign_app_alerts(mock_clients) -> None:
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
                 "propertyValue": "O99999999",
@@ -146,10 +146,10 @@ def test_no_app_id_configured_accepts_any_integration(mock_clients, monkeypatch)
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
-                "propertyValue": "O13753208",
+                "propertyValue": "O10000001",
                 "changeSource": "INTEGRATION",
                 "sourceId": "anyone",
             }
@@ -166,7 +166,7 @@ def test_crm_ui_edit_still_alerts_with_hand_edit_subject(mock_clients) -> None:
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
                 "propertyValue": "O99999999",

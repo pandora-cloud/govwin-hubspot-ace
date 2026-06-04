@@ -63,7 +63,7 @@ def test_aws_opportunity_id(value, expected) -> None:
 @pytest.mark.parametrize(
     "value,expected",
     [
-        ("555049241846", True),
+        ("123456789012", True),
         ("139720215713", True),
         ("000000000000", True),
         ("", False),
@@ -71,8 +71,8 @@ def test_aws_opportunity_id(value, expected) -> None:
         ("12345", False),  # too short
         ("1234567890123", False),  # too long
         ("12345678901a", False),  # non-digit
-        ("555-049-241846", False),  # dashes not allowed
-        (" 555049241846", False),  # leading whitespace
+        ("123-456-789012", False),  # dashes not allowed
+        (" 123456789012", False),  # leading whitespace
     ],
 )
 def test_aws_account_id(value, expected) -> None:

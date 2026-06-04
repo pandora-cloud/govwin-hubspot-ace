@@ -235,12 +235,6 @@ hubspot_private_app_token = "pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 # Required for v2 (HubSpot to AWS Partner Central submission)
 ace_default_solution_id       = "S-1234567"          # from `aws partnercentral-selling list-solutions`
-ace_partner_company_name      = "Acme Cloud LLC"     # YOUR company's legal name; surfaces as
-                                                     # ExpectedCustomerSpend.TargetCompany on every AWS
-                                                     # co-sell submission. The default ("Partner Company")
-                                                     # is harmless in Sandbox but is NOT what you want
-                                                     # in production. Set this before flipping
-                                                     # ace_catalog = "AWS".
 ace_trigger_stages            = "3590200042,3590200043"  # numeric HubSpot pipeline-stage IDs (see step 9b.i)
 hubspot_webhook_app_id        = "12345678"           # from `hs project upload`
 hubspot_webhook_client_secret = "<from HubSpot dev portal>"

@@ -31,7 +31,7 @@ def state_mock() -> MagicMock:
 @pytest.fixture
 def hubspot_mock() -> MagicMock:
     hs = MagicMock()
-    hs.get_deal = MagicMock(return_value={"id": "327148407530", "properties": {}})
+    hs.get_deal = MagicMock(return_value={"id": "100000000002", "properties": {}})
     return hs
 
 
@@ -43,7 +43,7 @@ def ace_mock() -> MagicMock:
 
 def _event(prop: str = "dealname", value: str = "Test Deal") -> dict[str, Any]:
     return {
-        "objectId": 327148407530,
+        "objectId": 100000000002,
         "subscriptionType": "object.propertyChange",
         "propertyName": prop,
         "propertyValue": value,
@@ -55,10 +55,10 @@ def test_self_heal_recovers_from_deal_property(state_mock, hubspot_mock, ace_moc
     # The govwin id resolution itself works (it lives in deal properties);
     # the failure is the opportunity_id cache miss.
     hubspot_mock.get_deal.return_value = {
-        "id": "327148407530",
+        "id": "100000000002",
         "properties": {
             "govwin_opp_id": "DEMO-CACHE-MISS-001",
-            "govwin_aws_cosell_id": "O13753999",
+            "govwin_aws_cosell_id": "O10000005",
         },
     }
     # _resolve_govwin_id reads via state first then hubspot; stub state to return
@@ -67,7 +67,7 @@ def test_self_heal_recovers_from_deal_property(state_mock, hubspot_mock, ace_moc
     # PartnerOpportunityIdentifier matches govwin_id so the self-heal
     # verify step succeeds.
     ace_mock.get_opportunity.return_value = {
-        "Id": "O13753999",
+        "Id": "O10000005",
         "PartnerOpportunityIdentifier": "DEMO-CACHE-MISS-001",
         "LastModifiedDate": "2026-05-27T00:00:00Z",
         "Project": {"Title": "Old Title"},
@@ -87,8 +87,8 @@ def test_self_heal_recovers_from_deal_property(state_mock, hubspot_mock, ace_moc
     # Backfill was attempted with the recovered opportunity id.
     state_mock.update_ace_mapping.assert_any_call(
         govwin_id="DEMO-CACHE-MISS-001",
-        ace_opportunity_id="O13753999",
-        hubspot_deal_id="327148407530",
+        ace_opportunity_id="O10000005",
+        hubspot_deal_id="100000000002",
     )
     # We did NOT return "skipped: no ace mapping yet"; the self-heal kicked in.
     assert result["status"] != "skipped"
@@ -99,7 +99,7 @@ def test_returns_skipped_when_neither_cache_nor_deal_have_opportunity_id(
 ) -> None:
     """Cache miss + no deal property => legit "skipped" (create not yet complete)."""
     hubspot_mock.get_deal.return_value = {
-        "id": "327148407530",
+        "id": "100000000002",
         "properties": {
             "govwin_opp_id": "DEMO-CACHE-MISS-001",
             # govwin_aws_cosell_id absent; AWS side never acked yet.
@@ -129,16 +129,16 @@ def test_self_heal_refuses_when_partner_id_mismatches(state_mock, hubspot_mock, 
     deal redirecting our pipeline at a foreign-partner opportunity. Refuse
     to mutate; backfill nothing; SNS-alert; return skipped."""
     hubspot_mock.get_deal.return_value = {
-        "id": "327148407530",
+        "id": "100000000002",
         "properties": {
             "govwin_opp_id": "DEMO-CACHE-MISS-001",
-            "govwin_aws_cosell_id": "O13753999",  # someone else's opp
+            "govwin_aws_cosell_id": "O10000005",  # someone else's opp
         },
     }
     state_mock.find_govwin_by_hubspot_deal_id.return_value = "DEMO-CACHE-MISS-001"
     # AWS-side opp reports a DIFFERENT PartnerOpportunityIdentifier.
     ace_mock.get_opportunity.return_value = {
-        "Id": "O13753999",
+        "Id": "O10000005",
         "PartnerOpportunityIdentifier": "SOMEONE-ELSES-OPP",
     }
 

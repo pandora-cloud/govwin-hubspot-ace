@@ -33,14 +33,14 @@ def test_stage_first_backfills_reason_from_deal(hubspot_mock: MagicMock) -> None
         "Project": {},
     }
     hubspot_mock.get_deal.return_value = {
-        "id": "326811999945",
+        "id": "100000000001",
         "properties": {"govwin_ace_closed_lost_reason": "Price"},
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     assert payload["LifeCycle"]["Stage"] == "Closed Lost"
     assert payload["LifeCycle"]["ClosedLostReason"] == "Price"
     hubspot_mock.get_deal.assert_called_once_with(
-        "326811999945", properties=["govwin_ace_closed_lost_reason"]
+        "100000000001", properties=["govwin_ace_closed_lost_reason"]
     )
 
 
@@ -53,10 +53,10 @@ def test_reason_first_backfills_stage_when_deal_has_closed_lost(
         "Project": {},
     }
     hubspot_mock.get_deal.return_value = {
-        "id": "326811999945",
+        "id": "100000000001",
         "properties": {"govwin_ace_lifecycle_stage": "Closed Lost"},
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     assert payload["LifeCycle"]["Stage"] == "Closed Lost"
     assert payload["LifeCycle"]["ClosedLostReason"] == "Price"
 
@@ -68,10 +68,10 @@ def test_reason_without_closed_lost_stage_is_dropped(hubspot_mock: MagicMock) ->
         "Project": {},
     }
     hubspot_mock.get_deal.return_value = {
-        "id": "326811999945",
+        "id": "100000000001",
         "properties": {"govwin_ace_lifecycle_stage": "Qualified"},
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     assert "ClosedLostReason" not in payload["LifeCycle"]
     # Stage remains as Qualified (we don't touch it).
     assert payload["LifeCycle"]["Stage"] == "Qualified"
@@ -83,7 +83,7 @@ def test_consistent_pair_is_no_op(hubspot_mock: MagicMock) -> None:
         "LifeCycle": {"Stage": "Closed Lost", "ClosedLostReason": "Price"},
         "Project": {},
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     hubspot_mock.get_deal.assert_not_called()
     assert payload["LifeCycle"]["Stage"] == "Closed Lost"
     assert payload["LifeCycle"]["ClosedLostReason"] == "Price"
@@ -95,7 +95,7 @@ def test_no_closed_lost_in_payload_is_no_op(hubspot_mock: MagicMock) -> None:
         "LifeCycle": {"Stage": "Qualified"},
         "Project": {},
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     hubspot_mock.get_deal.assert_not_called()
     assert payload["LifeCycle"] == {"Stage": "Qualified"}
 
@@ -108,7 +108,7 @@ def test_get_deal_failure_falls_through(hubspot_mock: MagicMock) -> None:
     }
     hubspot_mock.get_deal.side_effect = RuntimeError("HubSpot 5xx")
     # Should not raise; the function logs and returns.
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     # Stage remains; AWS will reject this UpdateOpportunity which surfaces
     # via the existing permanent-error SNS alert path; preferred over
     # silently writing an incomplete payload.
@@ -122,10 +122,10 @@ def test_deal_missing_reason_property_drops_through(hubspot_mock: MagicMock) -> 
         "Project": {},
     }
     hubspot_mock.get_deal.return_value = {
-        "id": "326811999945",
+        "id": "100000000001",
         "properties": {},  # no govwin_ace_closed_lost_reason
     }
-    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "326811999945")
+    _ensure_closed_lost_pair_consistency(payload, hubspot_mock, "100000000001")
     # No ClosedLostReason was injected; AWS will reject the call but at
     # least we didn't write garbage.
     assert "ClosedLostReason" not in payload["LifeCycle"]

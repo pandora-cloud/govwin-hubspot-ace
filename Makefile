@@ -58,7 +58,7 @@ audit: ## Audit dependencies for known CVEs
 
 # Project-wide deployment identifiers. Overridable per target:
 #   make <target> PROFILE=ops PREFIX=acme-cosell-stg REGION=us-east-2
-PROFILE ?= pcmgmt
+PROFILE ?= default
 PREFIX  ?= govwin-hubspot-prod
 REGION  ?= us-east-1
 

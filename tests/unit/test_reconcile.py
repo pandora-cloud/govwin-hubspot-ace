@@ -13,7 +13,7 @@ from src.ace.reconcile import (
     reconcile_pending_props,
 )
 
-DEAL_ID = "320194741966"
+DEAL_ID = "100000000005"
 
 
 def _current_full() -> dict:

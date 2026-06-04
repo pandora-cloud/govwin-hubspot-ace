@@ -8,7 +8,6 @@ Future entries are generated automatically by [release-please](https://github.co
 
 ### Added
 - Apache License, Version 2.0 (replaces MIT) with explicit patent grant.
-- `ace_partner_company_name` Terraform variable + `ACE_PARTNER_COMPANY_NAME` env var. Sets `ExpectedCustomerSpend.TargetCompany` on every AWS Partner Central submission. Default `"Partner Company"` is harmless in Sandbox; production must override per deployment.
 - `src/aws_clients.py`: centralized boto3 client construction with FIPS endpoint enforcement and us-east-1 pinning for `partnercentral-selling`. All call sites refactored.
 - `scripts/verify_fips.py`: CI-runnable check that every AWS service we use resolves to a FIPS endpoint.
 - FIPS endpoints active in production: `AWS_USE_FIPS_ENDPOINT=true` on every Lambda, `use_fips_endpoint = true` on the Terraform AWS provider. Tests and LocalStack opt out via the same env var because moto / LocalStack do not implement FIPS-suffixed hostnames.
@@ -58,7 +57,7 @@ Future entries are generated automatically by [release-please](https://github.co
 - Documentation merged: `docs/testing.md` consolidated into `docs/testing-in-your-account.md`. The merged doc is the single canonical place for the test pyramid + smoke matrices + production rollout reference.
 - README + deployment guide: stale Step Functions references replaced with `aws lambda invoke` of the orchestrator (the v2.1 architecture used Lambda + SQS, not Step Functions).
 - README + deployment guide Terraform-version requirement aligned at `>= 1.11`.
-- README configuration table: added `ace_partner_company_name`, `ace_default_solution_id`, `ace_trigger_stages`. Default `sync_schedule` corrected to `rate(1 hour)`.
+- README configuration table: added `ace_default_solution_id`, `ace_trigger_stages`, `hubspot_webhook_app_id`, `hubspot_webhook_client_secret`. Default `sync_schedule` corrected to `rate(1 hour)`.
 - `hubspot-app/src/app/webhooks/webhooks-hsmeta.json`: every subscription reset to `"active": false` so first `hs project upload` does not flood a placeholder URL.
 - Repository scrubbed of maintainer-specific identifiers in places where the OSS audience would otherwise inherit them: AWS account IDs, real Solution IDs, real API gateway hostnames, contact emails, and "Pandora-only" prose all replaced with placeholders, generic phrasing, or parameterized config.
 

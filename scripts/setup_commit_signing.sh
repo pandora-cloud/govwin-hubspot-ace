@@ -16,8 +16,8 @@
 
 set -euo pipefail
 
-NAME="${SIGNING_NAME:-Isi Lawson}"
-EMAIL="${SIGNING_EMAIL:-isi@pandoracloud.net}"
+NAME="${SIGNING_NAME:-Your Name}"
+EMAIL="${SIGNING_EMAIL:-you@example.com}"
 EXPIRY="${SIGNING_EXPIRY:-2y}"
 
 if ! command -v gpg >/dev/null 2>&1; then

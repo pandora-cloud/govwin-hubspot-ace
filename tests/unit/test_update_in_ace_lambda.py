@@ -28,7 +28,7 @@ def _ace_env(monkeypatch):
     monkeypatch.setenv("ACE_DEFAULT_SOLUTION_ID", "S-1234567")
 
 
-def _record(prop: str, value: object, deal_id: str = "320194741966") -> dict:
+def _record(prop: str, value: object, deal_id: str = "100000000005") -> dict:
     """Build an SQS Records[0] entry for a HubSpot property-change webhook."""
     body = {
         "objectId": int(deal_id),
@@ -97,14 +97,14 @@ def _patches(deal_payload: dict | None = None):
     state.find_govwin_by_hubspot_deal_id.return_value = "OPP1234"
     state.get_ace_mapping.return_value = {
         "ace_opportunity_id": "O-EXISTING",
-        "hubspot_deal_id": "320194741966",
+        "hubspot_deal_id": "100000000005",
         "last_modified_date": "2026-04-30T17:09:00Z",
     }
 
     hubspot = MagicMock()
     hubspot.__enter__.return_value = hubspot
     hubspot.__exit__.return_value = False
-    hubspot.get_deal.return_value = deal_payload or {"id": "320194741966", "properties": {}}
+    hubspot.get_deal.return_value = deal_payload or {"id": "100000000005", "properties": {}}
     return ace, state, hubspot
 
 
@@ -160,7 +160,7 @@ class TestApplyDelta:
     def test_dealname_writes_project_title(self):
         ace, state, hubspot = _patches()
         hubspot.get_deal.return_value = {
-            "id": "320194741966",
+            "id": "100000000005",
             "properties": {"dealname": "New Deal Title"},
         }
         result = _run(_event(_record("dealname", "Truncated...")), ace, state, hubspot)
@@ -230,7 +230,7 @@ class TestDescription:
         ace, state, hubspot = _patches()
         full_text = "A " * 100  # 200 chars, well above the 20-char minimum
         hubspot.get_deal.return_value = {
-            "id": "320194741966",
+            "id": "100000000005",
             "properties": {"description": full_text},
         }
         result = _run(_event(_record("description", "TRUNCATED")), ace, state, hubspot)
@@ -246,7 +246,7 @@ class TestDescription:
         existing project title to satisfy the 20-char regex."""
         ace, state, hubspot = _patches()
         hubspot.get_deal.return_value = {
-            "id": "320194741966",
+            "id": "100000000005",
             "properties": {"description": "tiny"},
         }
         result = _run(_event(_record("description", "tiny")), ace, state, hubspot)
@@ -265,7 +265,7 @@ class TestDescription:
             **_full_get_opp_response(),
             "Project": {**_full_get_opp_response()["Project"], "Title": ""},
         }
-        hubspot.get_deal.return_value = {"id": "320194741966", "properties": {"description": "x"}}
+        hubspot.get_deal.return_value = {"id": "100000000005", "properties": {"description": "x"}}
         result = _run(_event(_record("description", "x")), ace, state, hubspot)
         assert result["results"][0]["status"] == "skipped"
         ace.update_with_retry.assert_not_called()
@@ -298,7 +298,7 @@ class TestSkips:
     def test_no_govwin_mapping_skipped(self):
         ace, state, hubspot = _patches()
         state.find_govwin_by_hubspot_deal_id.return_value = None
-        hubspot.get_deal.return_value = {"id": "320194741966", "properties": {}}
+        hubspot.get_deal.return_value = {"id": "100000000005", "properties": {}}
         result = _run(_event(_record("amount", "1000")), ace, state, hubspot)
         assert result["results"][0]["status"] == "skipped"
 

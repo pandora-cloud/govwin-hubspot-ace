@@ -234,16 +234,16 @@ def test_update_event_from_our_integration_is_dropped(mock_secrets, mock_sqs, mo
     re-enqueue the change. Otherwise the path writes-on-error -> webhook
     -> update_in_ace -> writes-on-error loops indefinitely against the
     AWS Partner Central quota."""
-    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "38079082")
+    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "12345678")
     body = json.dumps(
         [
             {
-                "objectId": 327176399578,
+                "objectId": 100000000003,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_ace_next_steps",
                 "propertyValue": "AWS rejected: ...",
                 "changeSource": "INTEGRATION",
-                "sourceId": "38079082",
+                "sourceId": "12345678",
             }
         ]
     )
@@ -262,11 +262,11 @@ def test_update_event_from_foreign_integration_is_routed(
     installed on the same portal still routes to update; it represents
     a real value change another integration made that we must reflect
     to AWS. Only events where sourceId matches OUR app id are dropped."""
-    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "38079082")
+    monkeypatch.setenv("HUBSPOT_INTEGRATION_APP_ID", "12345678")
     body = json.dumps(
         [
             {
-                "objectId": 327176399578,
+                "objectId": 100000000003,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_ace_next_steps",
                 "propertyValue": "Updated by foreign integration",
@@ -290,10 +290,10 @@ def test_audit_property_from_integration_does_not_alert(mock_secrets, mock_sqs) 
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
-                "propertyValue": "O13753208",
+                "propertyValue": "O10000001",
                 "changeSource": "INTEGRATION",
             }
         ]
@@ -315,7 +315,7 @@ def test_audit_property_from_crm_ui_alerts(mock_secrets, mock_sqs) -> None:
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
                 "propertyValue": "O99999999",
@@ -333,7 +333,7 @@ def test_audit_property_from_crm_ui_alerts(mock_secrets, mock_sqs) -> None:
     assert body_json["dropped"] == 0
     mock_publish.assert_called_once()
     call_kwargs = mock_publish.call_args.kwargs
-    assert "326811999945" in call_kwargs["subject"]
+    assert "100000000001" in call_kwargs["subject"]
     assert "govwin_aws_cosell_id" in call_kwargs["message"]
     assert "CRM_UI" in call_kwargs["message"]
 
@@ -345,7 +345,7 @@ def test_audit_property_alert_failure_does_not_break_webhook(mock_secrets, mock_
     body = json.dumps(
         [
             {
-                "objectId": 326811999945,
+                "objectId": 100000000001,
                 "subscriptionType": "object.propertyChange",
                 "propertyName": "govwin_aws_cosell_id",
                 "propertyValue": "O99999999",

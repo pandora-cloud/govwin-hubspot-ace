@@ -336,7 +336,7 @@ def test_orphan_opportunity_returns_orphan_status_after_self_heal_fails(
 
     The SNS publish is wired in production via config.aws.sns_topic_arn
     (verified manually during the 2026-05-27 E2E pass with deal
-    326811999945). This unit test just confirms the handler routes the
+    100000000001). This unit test just confirms the handler routes the
     event through the orphan branch and does NOT touch HubSpot when self-
     heal exhausts.
     """

@@ -87,12 +87,16 @@ Typical timeline: 24-72 hours. Review status flows back via EventBridge:
 
 | AWS event | Mapped HubSpot stage |
 |---|---|
+| `Opportunity Updated` with `LifeCycle.Stage = Closed Lost` | `Closed Lost` (mirrors `ClosedLostReason`) |
+| `Opportunity Updated` with `LifeCycle.Stage = Launched` | `Closed Won` |
 | `Opportunity Updated` with `LifeCycle.ReviewStatus = Approved` | `approved_by_aws` |
 | `Opportunity Updated` with `LifeCycle.ReviewStatus = Action Required` | `action_required` |
 | `Opportunity Updated` with `LifeCycle.ReviewStatus = Rejected` | `closedlost` |
 | `Engagement Invitation Accepted` | `approved_by_aws` |
 | `Engagement Invitation Rejected` | `closedlost` |
 | `Engagement Invitation Expired` | `closedlost` |
+
+A terminal `LifeCycle.Stage` (Closed Lost or Launched) takes precedence over `ReviewStatus`. A closed or launched opportunity keeps `ReviewStatus = Approved`, so mapping by review status alone would revert a just-closed deal back to `approved_by_aws`; the stage check wins so the deal stays terminal. When AWS reports Closed Lost, the handler also mirrors `ClosedLostReason` onto the deal.
 
 The handler dedups on EventBridge `id` with a 24-hour TTL via a conditional `put_item` so duplicate deliveries are no-ops.
 

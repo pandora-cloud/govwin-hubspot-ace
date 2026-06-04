@@ -18,7 +18,7 @@ from src.models import SubmitFormRequest, UpdateFormRequest
 
 def _update_req(**overrides: object) -> UpdateFormRequest:
     base: dict[str, object] = {
-        "deal_id": "326811999945",
+        "deal_id": "100000000001",
         "govwin_opp_id": "OPP-CLEAR-TEST",
         "lifecycle_stage": "Qualified",
     }
@@ -28,7 +28,7 @@ def _update_req(**overrides: object) -> UpdateFormRequest:
 
 def _submit_req(**overrides: object) -> SubmitFormRequest:
     base: dict[str, object] = {
-        "deal_id": "326811999945",
+        "deal_id": "100000000001",
         "govwin_opp_id": "OPP-CLEAR-TEST",
         "dealname": "Test deal",
         "govwin_industry": "Government",

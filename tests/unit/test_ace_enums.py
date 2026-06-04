@@ -93,7 +93,7 @@ def test_opportunity_team_business_title_documents_server_enum() -> None:
     """The OpportunityTeam[].BusinessTitle enum is server-only, not in boto3.
 
     Confirmed via INVALID_VALUE response from CreateOpportunity on
-    2026-05-26 (SLD45 submission O13740398). If AWS later publishes this
+    2026-05-26 (SLD45 submission O10000004). If AWS later publishes this
     enum in the boto3 model, expand the parametrize above to include it.
     """
     assert mapper.ALLOWED_OPPORTUNITY_TEAM_BUSINESS_TITLES == frozenset(
