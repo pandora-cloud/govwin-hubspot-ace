@@ -19,6 +19,7 @@
     "labels": ["security", "vulnerability"],
     "schedule": ["at any time"],
     "automerge": true,
+    "matchUpdateTypes": ["patch", "pin", "digest"],
     "addLabels": ["security"]
   },
   "packageRules": [
