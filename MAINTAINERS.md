@@ -7,7 +7,7 @@ This project is maintained by [Pandora Cloud](https://pandoracloud.net).
 | Name | GitHub | GitLab | Areas | Time zone |
 |---|---|---|---|---|
 | Isi Lawson | @isi-pandora | @isi-pandora | All; primary maintainer | US Eastern |
-| Kim | _pending GitHub account_ | @kim-pandora | Maintainer | US Eastern |
+| Kim | @kim-pandora | @kim-pandora | Maintainer | US Eastern |
 
 ## Response expectations
 
