@@ -9,5 +9,5 @@ python-dateutil>=2.8
 # the resolver above known-vulnerable releases.
 # idna < 3.15: CVE-2026-45409 idna.encode() DoS on crafted long inputs.
 # urllib3 < 2.7.0: PYSEC-2026-141/142 cross-origin header leak + decompression bomb.
-idna>=3.15
+idna>=3.18
 urllib3>=2.7.0
