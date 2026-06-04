@@ -17,39 +17,15 @@ Decision, Consequences.
 | # | Title | Status |
 |---|---|---|
 | [0001](0001-license-apache-2.0.md) | License: Apache License 2.0 | Accepted |
-
-## Decisions worth recording (backlog)
-
-These decisions are documented in code or in commentary today, but warrant
-their own ADRs so the rationale survives independently of the source. They
-are listed in rough priority order; contributions welcome.
-
-- **Sandbox-first ACE catalog default.** Why production deployments must
-  explicitly set `ace_catalog = "AWS"` and why the IAM policy carries a
-  `partnercentral:Catalog: Sandbox` condition in Sandbox mode.
-- **Direct AWS Partner Central Selling API client instead of a paid
-  third-party connector.** Why the integration owns its boto3 client and
-  the resulting tradeoffs.
-- **Orchestrator + worker via SQS instead of a Step Function Map.** Why
-  the inter-state payload limit and per-batch retry semantics drove the
-  current Lambda + SQS topology.
-- **Two-queue webhook routing.** Why deal-stage transitions and content
-  property changes consume separate SQS queues (avoiding the
-  load-balancing-vs-fan-out trap of multiple consumers on one queue).
-- **Atomic ClientToken reservation in DynamoDB.** Why both
-  `CreateOpportunity` and `StartEngagementFromOpportunityTask` reserve
-  tokens with conditional writes so concurrent SQS retries cannot mint
-  duplicate ACE opportunities.
-- **DynamoDB for state, Secrets Manager for credentials.** Why each is
-  preferred over alternatives such as RDS or SSM Parameter Store.
-- **HubSpot batch upsert with `idProperty` instead of search-before-upsert.**
-  Why the integration relies on idempotent upserts to halve the HubSpot
-  API call count.
-- **Marked-for-sync default in GovWin discovery.** Why only BD-marked
-  opportunities flow into HubSpot rather than every opportunity in the
-  GovWin tenant.
-- **ARM64 (Graviton2) Lambda runtime.** Why the integration deploys on
-  ARM64 and the cost / performance tradeoff that motivated it.
+| [0002](0002-sandbox-first-ace-catalog.md) | Sandbox-first ACE catalog default | Accepted |
+| [0003](0003-direct-partner-central-client.md) | Direct AWS Partner Central Selling API client, not a paid third-party connector | Accepted |
+| [0004](0004-orchestrator-worker-sqs.md) | Orchestrator and worker via SQS, not a Step Functions Map state | Accepted |
+| [0005](0005-two-queue-webhook-routing.md) | Two-queue webhook routing for HubSpot inbound events | Accepted |
+| [0006](0006-atomic-client-token-reservation.md) | Atomic ClientToken reservation in DynamoDB | Accepted |
+| [0007](0007-dynamodb-and-secrets-manager.md) | DynamoDB for state, Secrets Manager for credentials | Accepted |
+| [0008](0008-hubspot-batch-upsert-id-property.md) | HubSpot batch upsert via idProperty, not search-before-upsert | Accepted |
+| [0009](0009-marked-for-sync-default.md) | Marked-for-sync default for GovWin discovery | Accepted |
+| [0010](0010-lambda-arm64-runtime.md) | ARM64 (Graviton2) Lambda runtime | Accepted |
 
 ## Writing a new ADR
 

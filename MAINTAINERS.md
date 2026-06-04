@@ -1,6 +1,6 @@
 # Maintainers
 
-This project is maintained by [Pandora Cloud](https://pandoracloud.net), a Woman-Owned Small Business (WOSB), AWS Advanced Tier Partner, and federal contractor.
+This project is maintained by [Pandora Cloud](https://pandoracloud.net).
 
 ## Current maintainers
 
@@ -19,11 +19,13 @@ If a thread goes more than two weeks without a maintainer reply, ping it once an
 
 ## Release ownership
 
-Releases are cut by a current maintainer. The process:
+Releases are cut by a current maintainer. The process is currently manual:
 
-1. Conventional commits since the last tag are aggregated into `CHANGELOG.md` automatically by [release-please](https://github.com/googleapis/release-please).
-2. The release-please bot opens a PR with the version bump and changelog. A maintainer reviews and merges.
-3. Merging the release PR triggers tag creation, GitHub release notes, and the SBOM + SLSA provenance attachments.
+1. Aggregate conventional commits since the last tag into `CHANGELOG.md` under a new version heading.
+2. Tag the commit with `vX.Y.Z` and push the tag.
+3. The SBOM and SLSA provenance workflows attach release artifacts automatically when a tag is published.
+
+A future move to an automated release flow (semantic-release on GitLab CI, or a successor to release-please that runs on the GitLab side) is tracked in the ADR backlog.
 
 ## Becoming a maintainer
 
@@ -35,6 +37,19 @@ We're a small project and don't have a formal escalation path. The route is:
 
 We will not add anyone whose primary affiliation is with a competing CRM-integration product or a paid-CRM-connector vendor.
 
-## Paid support
+## Token rotation schedule
 
-Pandora Cloud offers paid services around this codebase: deployment, federal compliance review, prioritized feature work, production incident support. Contact <pc@pandoracloud.net>.
+The integration itself depends on several long-lived credentials. Maintainers track expiry here so rotation does not catch us by surprise. GitLab and GitHub both email warnings 30 days before expiry, but the table is the durable record.
+
+| Token | Where it lives | Used by | Expires | Renewal |
+|---|---|---|---|---|
+| GitLab project access token `renovate-bot` | GitLab project access tokens (`gitlab.com/pandora-cloud/oss/govwin-hubspot-ace/-/settings/access_tokens`); stored as masked CI variable `RENOVATE_TOKEN` | Renovate scheduled pipeline | 2027-06-04 | Create a new project access token (same scopes: `api`, `read_repository`, `write_repository`; Developer role), update the CI variable, revoke the old token. |
+| GitHub `GITHUB_COM_TOKEN` CI variable | GitLab CI variable, masked | Renovate (release-notes fetching from GitHub-hosted upstreams) | rotates with the human's GitHub OAuth | Run `gh auth refresh -h github.com -s repo,workflow,gist,read:org` to rotate the underlying token; copy the new value into the CI variable. |
+| GitHub repository access for the GitLab → GitHub push mirror | GitLab project mirror config (`Settings → Repository → Mirroring`) | The push mirror | rotates with the human's GitHub OAuth | Same as above; update the mirror config's password field. |
+| GitLab user PATs (maintainer-personal) | `gitlab.com/-/user_settings/personal_access_tokens` | Individual maintainer day-to-day | per maintainer | Each maintainer maintains their own. |
+
+When GitLab emails an expiry warning, treat it as a P2 work item, not a "later." Renovate goes silent without warning if its token lapses, and the next vulnerability advisory will sit in a dashboard nobody is watching.
+
+## Commercial support
+
+For commercial support, see [SUPPORT.md](SUPPORT.md).
