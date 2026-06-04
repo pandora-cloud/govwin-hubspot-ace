@@ -50,7 +50,7 @@ The day-to-day deployer's personal IAM identity needs only `sts:AssumeRole` on t
 ## Step 1: Clone the Repository
 
 ```bash
-git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+git clone https://github.com/pandora-cloud/govwin-hubspot-ace.git
 cd govwin-hubspot-ace
 ```
 

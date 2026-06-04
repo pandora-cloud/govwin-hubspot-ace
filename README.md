@@ -109,7 +109,7 @@ Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It co
 ### 1. Clone the repository
 
 ```bash
-git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+git clone https://github.com/pandora-cloud/govwin-hubspot-ace.git
 cd govwin-hubspot-ace
 ```
 

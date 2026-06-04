@@ -55,7 +55,7 @@ The deployer role is also tagged with `compliance:RiskMode = "sandbox-no-mfa"` a
 ### 1. Clone and configure
 
 ```bash
-git clone https://gitlab.com/pandora-cloud-public/oss/govwin-hubspot-ace.git
+git clone https://github.com/pandora-cloud/govwin-hubspot-ace.git
 cd govwin-hubspot-ace
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 $EDITOR terraform/terraform.tfvars
