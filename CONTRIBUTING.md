@@ -8,9 +8,17 @@ Thanks for considering a contribution. This project is an open-source pipeline f
 - **Feature requests.** Use the feature-request template. We prioritize requests that reflect a real federal AWS partner workflow over hypothetical extensions.
 - **Pull requests.** See below.
 
+## Repository structure
+
+Day-to-day development happens on GitLab (the canonical source), and `main` is mirrored to GitHub (`pandora-cloud/govwin-hubspot-ace`) as the public-facing surface. Both sides stay in sync via an automatic push mirror.
+
+If you are an **external contributor**: fork on GitHub and open your pull request against the GitHub repo's `main`. The maintainer applies your PR's commits to the GitLab side where they pass through CI and mirror back to GitHub. Your PR closes automatically as "merged" once those commits land on GitHub. You do not need a GitLab account.
+
+If you are a **maintainer**: clone from GitLab. The push mirror runs every few minutes; you can also trigger it on demand in GitLab's Settings → Repository → Mirroring repositories.
+
 ## Pull requests
 
-1. Fork the repo and create a topic branch from `main` (e.g. `feature/add-FOO`, `fix/BAR-edge-case`).
+1. Fork the repo (on GitHub) and create a topic branch from `main` (e.g. `feature/add-FOO`, `fix/BAR-edge-case`).
 2. Match existing code style:
    - Python: ruff for lint, mypy for types, pytest for tests. `make lint` and `make test` must pass.
    - Terraform: `terraform fmt -recursive` and `terraform validate` must pass.
