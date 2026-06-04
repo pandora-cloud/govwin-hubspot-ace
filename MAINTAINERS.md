@@ -19,13 +19,25 @@ If a thread goes more than two weeks without a maintainer reply, ping it once an
 
 ## Release ownership
 
-Releases are cut by a current maintainer. The process is currently manual:
+Releases are cut by a current maintainer via a scripted local flow. See ADR [0011](docs/decisions/0011-manual-release-flow.md) for the rationale; the day-to-day procedure:
 
-1. Aggregate conventional commits since the last tag into `CHANGELOG.md` under a new version heading.
-2. Tag the commit with `vX.Y.Z` and push the tag.
-3. The SBOM and SLSA provenance workflows attach release artifacts automatically when a tag is published.
+1. Confirm the `[Unreleased]` section of `CHANGELOG.md` lists every notable change since the last tag. Edit if it does not.
+2. Pick the next version per semver. `feat` commits since the last tag mean a minor bump; `fix` commits alone mean a patch.
+3. Run `make release VERSION=X.Y.Z`. The script bumps `pyproject.toml`, promotes the changelog heading, refreshes the compare-URL footnotes, commits, and tags. It does not push.
+4. Review locally:
+   ```
+   git log --stat -1
+   git show vX.Y.Z
+   ```
+5. Push: `git push origin main --follow-tags`.
+6. The tag flows through the GitLab to GitHub mirror within a few minutes. On the GitHub side, the `sbom.yml` and `slsa.yml` workflows attach release artifacts to the new tag.
 
-A future move to an automated release flow (semantic-release on GitLab CI, or a successor to release-please that runs on the GitLab side) is tracked in the ADR backlog.
+If you need to back out a release that has not been pushed yet:
+```
+git tag -d vX.Y.Z
+git reset --hard HEAD~1
+```
+After push, back out is not safe; cut the next release with the fix instead.
 
 ## Becoming a maintainer
 

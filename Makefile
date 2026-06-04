@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile
+.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile release
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -51,6 +51,10 @@ lock: ## Regenerate requirements.lock with hashes from uv.lock
 audit: ## Audit dependencies for known CVEs
 	@command -v pip-audit >/dev/null 2>&1 || uv tool install pip-audit
 	pip-audit -r requirements.lock --disable-pip
+
+release: ## Cut a release (VERSION=X.Y.Z required); does not push
+	@if [ -z "$(VERSION)" ]; then echo "usage: make release VERSION=2.2.0"; exit 1; fi
+	@.venv/bin/python scripts/release.py $(VERSION)
 
 # ---------------------------------------------------------------------------
 # DLQ operations
