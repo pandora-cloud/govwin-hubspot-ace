@@ -1,0 +1,518 @@
+# Curated issue seed for the post-v1.0 backlog.
+#
+# Run once after the GitHub repo is created and the GitLab to GitHub
+# mirror has propagated:
+#
+#     ./scripts/open_seed_issues.sh
+#
+# After a successful run, delete or truncate this file so re-runs do
+# not duplicate. The script also accepts `--check` for a dry-run.
+#
+# These issues represent the curated next-step backlog identified during
+# the 2026-06-05 professional-polish pass. They are sized for individual
+# focused work sessions between v1.0 and the AWS Marketplace workstream;
+# they are not v1.0 blockers.
+
+issues:
+  - title: "test: LocalStack integration test for submit_to_ace (atomic ClientToken pattern)"
+    labels: ["test", "integration", "ace"]
+    body: |
+      ## Background
+
+      Tier 5.2 of the polish-pass plan. The unit suite under `tests/unit/`
+      uses [moto](https://github.com/getmoto/moto) to mock AWS; moto has
+      documented divergences from real AWS on DynamoDB conditional writes,
+      which is exactly the surface ADR [0006](docs/decisions/0006-atomic-client-token-reservation.md)
+      relies on for the atomic `ClientToken` reservation that prevents
+      duplicate ACE opportunities under concurrent SQS retries.
+
+      The LocalStack integration suite at `tests/integration/` runs against
+      a real emulator (LocalStack 3.8 community) and gates merges in CI as
+      of commit d532e4a. This issue adds the first handler-level test
+      against that gate.
+
+      ## Scope
+
+      New file: `tests/integration/test_submit_to_ace_localstack.py`.
+
+      Pattern is in `tests/integration/test_localstack_state.py`: module
+      skips when `AWS_ENDPOINT_URL` is unset, fixtures create boto3 clients
+      against LocalStack, tests assert on concrete DDB/SQS state after the
+      handler runs.
+
+      Cover at minimum:
+      - Happy path: handler receives a webhook event, atomically reserves
+        a `ClientToken` in DynamoDB via conditional write, calls the
+        mocked `partnercentral-selling` API, writes the resulting
+        `ACE#{govwin_id}` row.
+      - Idempotent retry: a second invocation with the same event re-reads
+        the persisted token and reuses it rather than minting a new one.
+      - Resume from step: a retry mid-flow (e.g. after `CreateOpportunity`
+        but before `StartEngagement`) picks up where the prior attempt
+        stopped.
+
+      Mock the boto3 `partnercentral-selling` client at the application
+      seam (LocalStack does not emulate Partner Central); LocalStack
+      handles only DDB and SQS.
+
+      ## Acceptance
+
+      - CI integration stage stays green on push.
+      - Concrete DDB row state asserted at the end of each test.
+      - No test depends on moto.
+
+  - title: "test: LocalStack integration test for update_in_ace (optimistic-lock path)"
+    labels: ["test", "integration", "ace"]
+    body: |
+      ## Background
+
+      Tier 5.2 of the polish-pass plan. The `update_in_ace` Lambda uses
+      `LastModifiedDate`-based optimistic locking against `UpdateOpportunity`
+      and retries on `ConflictException`. The unit tests under moto cover
+      the happy path but moto's conditional-write evaluation diverges from
+      real AWS, so the retry path is not fully validated.
+
+      ## Scope
+
+      New file: `tests/integration/test_update_in_ace_localstack.py`.
+
+      Cover:
+      - Happy path: handler updates a property, reads the persisted
+        `LastModifiedDate` from DDB, sends `UpdateOpportunity` with the
+        token. Mocked Partner Central returns success; DDB row is updated
+        with the new `LastModifiedDate`.
+      - Conflict + retry: simulate a `ConflictException` from the mocked
+        Partner Central client; verify the handler re-reads the DDB row,
+        gets the fresh `LastModifiedDate`, and retries. Assert exactly
+        one retry was issued.
+      - Permanent error: a `ValidationException` is dropped from the SQS
+        batch without retry; verify no DDB write occurred and an SNS
+        alert was published.
+
+      ## Acceptance
+
+      - CI integration stage green.
+      - Each test asserts on the final state of the `ACE#{govwin_id}` DDB
+        row, not just on whether the handler returned without exception.
+
+  - title: "test: LocalStack integration test for handle_ace_event (terminal-stage + ClosedLostReason mirror)"
+    labels: ["test", "integration", "ace"]
+    body: |
+      ## Background
+
+      Tier 5.2 of the polish-pass plan. The `handle_ace_event` Lambda
+      received a regression bugfix (commit 0614890) for the terminal
+      LifeCycle stage clobbering ReviewStatus on Closed Lost / Launched.
+      The fix is covered by unit tests but those use MagicMock for the
+      HubSpot client; an integration test that exercises the full
+      event-to-DDB-to-HubSpot path against LocalStack would catch a
+      reintroduction.
+
+      ## Scope
+
+      New file: `tests/integration/test_handle_ace_event_localstack.py`.
+
+      Cover at minimum:
+      - `Opportunity Updated` event with `LifeCycle.Stage = Closed Lost`:
+        the handler writes `Closed Lost` to HubSpot stage AND mirrors the
+        `ClosedLostReason` onto the deal property. Verify the DDB row's
+        `last_ace_stage` field reflects the terminal stage.
+      - `Opportunity Updated` event with `LifeCycle.Stage = Launched`:
+        maps to HubSpot `Closed Won`.
+      - `Opportunity Updated` event with `LifeCycle.Stage` empty but
+        `ReviewStatus = Approved`: maps via ReviewStatus (the non-terminal
+        path).
+      - Dedup: same EventBridge `id` arrives twice; second invocation is a
+        no-op via the conditional `put_item` on `EVT#{id}` with TTL.
+
+      The HubSpot client can be MagicMock'd; LocalStack covers DDB + EVT
+      dedup table only.
+
+      ## Acceptance
+
+      - CI integration stage green.
+      - Dedup test asserts the second invocation does NOT call the HubSpot
+        client even though the event was delivered.
+
+  - title: "test: LocalStack integration test for govwin_worker (SQS fan-out + partial batch failures)"
+    labels: ["test", "integration", "govwin-sync"]
+    body: |
+      ## Background
+
+      Tier 5.2 of the polish-pass plan. The GovWin worker reports partial
+      batch failures via `ReportBatchItemFailures` so a stuck opportunity
+      does not block the rest of the queue. moto's SQS implementation
+      handles batch failures differently from real AWS in some edge cases.
+
+      ## Scope
+
+      New file: `tests/integration/test_govwin_worker_localstack.py`.
+
+      Cover:
+      - Happy path: orchestrator enqueues 3 opportunity batches, worker
+        drains the queue, all 3 succeed; queue is empty at end.
+      - Partial failure: one of 3 batches fails (mock the HubSpot client
+        to raise on the second); verify the worker returns the correct
+        `batchItemFailures` payload with the failed `messageId` and the
+        SQS message becomes visible again after the visibility timeout.
+      - DLQ path: configure max receive count to 1; the failed batch
+        moves to the DLQ on second receive.
+
+      Mock GovWin via respx (already done in the unit suite); LocalStack
+      handles SQS only.
+
+      ## Acceptance
+
+      - CI integration stage green.
+      - DLQ test asserts the message lands in the DLQ queue with the
+        expected `messageAttributes`.
+
+  - title: "test: LocalStack integration test for hubspot_webhook_receiver (signature + replay-detect)"
+    labels: ["test", "integration", "ace"]
+    body: |
+      ## Background
+
+      Tier 5.2 of the polish-pass plan. The webhook receiver validates
+      `X-HubSpot-Signature-v3`, routes events to the submit/update/audit
+      queues based on changed property, and uses a DDB-backed `WHK#`
+      replay-detection table to drop duplicate deliveries.
+
+      ## Scope
+
+      New file: `tests/integration/test_hubspot_webhook_receiver_localstack.py`.
+
+      Cover:
+      - Valid signature, dealstage event: routed to submit SQS queue.
+      - Valid signature, amount-property event: routed to update SQS queue.
+      - Valid signature, audit-only event (govwin_aws_cosell_id hand-edit
+        from a non-integration source): no SQS message; SNS alert
+        published.
+      - Invalid signature: 401 response, no SQS write, no replay-table
+        write.
+      - Replay: same event id arrives twice; second invocation returns
+        409 and does not write to SQS.
+      - Expired timestamp: signature is valid but `X-HubSpot-Request-Timestamp`
+        is older than 5 minutes; rejected.
+
+      LocalStack handles DDB (replay table) + SQS (4 routing queues) + SNS
+      (alerts). API Gateway is not in scope for this test; invoke the
+      handler directly with a synthesized event.
+
+      ## Acceptance
+
+      - CI integration stage green.
+      - Each test asserts on the resulting SQS queue depth or SNS message
+        attribute, not just the HTTP response.
+
+  - title: "test: migrate moto conditional-write tests from tests/unit/test_state.py to LocalStack"
+    labels: ["test", "integration", "polish"]
+    body: |
+      ## Background
+
+      Tier 5.3 of the polish-pass plan. moto has documented divergences
+      from real AWS on DynamoDB `ConditionExpression` evaluation,
+      particularly around `attribute_not_exists` interplay with
+      `attribute_type` checks. ADR [0006](docs/decisions/0006-atomic-client-token-reservation.md)
+      relies on these for the atomic ClientToken reservation, so the unit
+      tests under moto may pass while real AWS would behave differently.
+
+      ## Scope
+
+      - Identify which tests in `tests/unit/test_state.py` exercise
+        conditional writes (atomic reservations, optimistic-lock
+        increments).
+      - Move those tests into `tests/integration/test_localstack_state.py`
+        (extend the existing file).
+      - In `tests/unit/test_state.py`, either remove the migrated tests
+        (if they're fully superseded) or keep simplified versions that
+        validate the call shape without depending on conditional-write
+        semantics.
+
+      ## Acceptance
+
+      - CI unit stage stays at >= 75% coverage (the migration may shift a
+        few percent of coverage from unit to integration).
+      - CI integration stage green.
+      - Net test count visible in CI logs confirms nothing was silently
+        dropped.
+
+  - title: "refactor: move _apply_delta and friends out of src/lambdas/update_in_ace.py into src/ace/"
+    labels: ["refactor", "architecture"]
+    body: |
+      ## Background
+
+      `src/ace/reconcile.py:25-30` imports private functions
+      (`_apply_delta`, `_PERMANENT_ERROR_CODES`, the per-property dispatch
+      handlers) from a Lambda handler module. A shared-library module
+      should not reach into a Lambda module's internals; the right place
+      for those helpers is `src/ace/` so both `update_in_ace.py` and
+      `reconcile.py` can import from a stable seam.
+
+      ## Scope
+
+      - Create `src/ace/property_delta.py` (or similar) and move the
+        dispatch table + per-property handlers there.
+      - Update `src/lambdas/update_in_ace.py` to import from the new
+        module.
+      - Update `src/ace/reconcile.py` to import from the new module.
+      - Run `make test` + the LocalStack integration suite to verify no
+        behavior regression. Tier 2.3 of the polish pass landed a
+        coverage gate at 75%; the refactor must keep coverage at or
+        above that threshold.
+
+      ## Why deferred
+
+      The dispatch table touches around 15 property handlers plus their
+      tests. The move is mostly mechanical but warrants a focused
+      session with the coverage gate watching.
+
+      ## Acceptance
+
+      - `grep -rn "from src.lambdas" src/ace/` returns no matches.
+      - All tests pass (unit + integration).
+      - Coverage holds at >= 75%.
+
+  - title: "refactor: split hubspot-app/src/app/cards/SubmitForm.tsx (833 lines) into focused sub-components"
+    labels: ["refactor", "hubspot-app"]
+    body: |
+      ## Background
+
+      `SubmitForm.tsx` (833 lines as of 2026-06) holds validation, payload
+      builders, error handling, and rendering in one file. The polish-pass
+      audit flagged this as a real but non-blocking architectural smell.
+
+      ## Scope
+
+      Sequence of changes from cheapest to most invasive:
+
+      1. Extract pure `validate*` functions into `SubmitForm.validation.ts`.
+      2. Extract payload-builder helpers (the functions that turn form
+         state into the POST body) into `SubmitForm.payload.ts`.
+      3. Break the component into sub-components keyed on the section
+         boundaries already visible in the rendered form: Source picker,
+         ACE classification, Customer, Project, Notes. Each becomes its
+         own file in `hubspot-app/src/app/cards/SubmitForm/`.
+
+      The component's state remains owned by the top-level `SubmitForm.tsx`;
+      sub-components receive state + setters via props.
+
+      ## Why deferred
+
+      Real TypeScript refactor with state-management implications. Not a
+      polish-pass item; warrants a focused session with eyes on the
+      rendered UI to confirm no regressions.
+
+      ## Acceptance
+
+      - `hs project upload` succeeds.
+      - The Submit form renders identically before and after.
+      - The three required validation rules (Partner Need, Delivery Model,
+        Customer Use Case) still gate submission.
+      - No new TypeScript errors.
+
+  - title: "test: factory-function fixture pattern for state_mock / ace_mock / hubspot_mock in tests/conftest.py"
+    labels: ["test", "polish", "good first issue"]
+    body: |
+      ## Background
+
+      Tier 2.1 of the polish-pass plan, deferred during the 2026-06-05
+      session. The MagicMock fixtures `state_mock`, `ace_mock`, and
+      `hubspot_mock` are duplicated across several Lambda test files
+      with subtly different defaults per file. Moving them to a single
+      shared fixture would change behavior in tests that rely on the
+      local defaults.
+
+      ## Scope
+
+      Replace the duplicated fixtures with helper factory functions in
+      `tests/conftest.py`:
+
+      ```python
+      def make_state_manager_mock(**overrides) -> MagicMock:
+          state = MagicMock(spec=SyncStateManager)
+          # sensible defaults shared across all uses
+          state.mark_event_seen_atomic.return_value = True
+          state.get_ace_mapping.return_value = {}
+          for k, v in overrides.items():
+              ... apply override
+          return state
+      ```
+
+      Each test file's local `state_mock` / `ace_mock` / `hubspot_mock`
+      fixture then calls the factory with the per-file overrides. The
+      shared baseline lives in one place; per-file customization is
+      explicit and minimal.
+
+      Test files to refactor (per `grep -rln "^def state_mock" tests/`):
+      `test_handle_ace_event_lambda.py`,
+      `test_update_in_ace_self_heal.py`,
+      `test_update_in_ace_closed_lost_race.py`,
+      `test_orchestrator.py`.
+
+      ## Acceptance
+
+      - All 601+ unit tests still pass.
+      - `grep -rln "^def state_mock" tests/` returns zero matches outside
+        of `conftest.py`.
+      - The local fixtures in each test file are 3-5 lines (call the
+        factory + apply overrides + return).
+
+  - title: "test: ratchet coverage threshold from 75% to 80% once Tier 5.2 lands"
+    labels: ["test", "polish", "good first issue"]
+    body: |
+      ## Background
+
+      The CI coverage gate at `pyproject.toml [tool.coverage.report]`
+      `fail_under = 75` is the conservative initial threshold from the
+      2026-06-05 polish pass. The baseline is 79% line+branch and the
+      policy in `MAINTAINERS.md` says "never lower; raise when comfortable."
+
+      ## Scope
+
+      Once the Tier 5.2 LocalStack integration tests have landed (the
+      5 separate handler-test issues above), and a few weeks of stable
+      green CI have elapsed, raise `fail_under` to 80% in one PR. Land
+      the bump in its own commit so the change is explicit in git
+      history.
+
+      ## Acceptance
+
+      - `pytest --cov=src --cov-fail-under=80` exits 0 locally.
+      - The change is in its own commit; commit message names the new
+        threshold and confirms `tests/unit` still passes.
+
+  - title: "ci: evaluate semantic-release on GitLab CI to replace the manual make release flow"
+    labels: ["ci", "release"]
+    body: |
+      ## Background
+
+      ADR [0011](docs/decisions/0011-manual-release-flow.md) chose a
+      scripted manual release flow (`make release VERSION=X.Y.Z` backed
+      by `scripts/release.py`) over `semantic-release` for the 2026-06
+      release cadence. The ADR's deferral note: "A future migration to
+      semantic-release (or a successor tool) is a documented escape
+      hatch: this script is small enough that throwing it away is not
+      painful when the project earns its automation."
+
+      ## Scope
+
+      Evaluate `semantic-release` on GitLab CI:
+
+      - Spike: add a `.releaserc.json` and a GitLab CI job that runs
+        `semantic-release` on `main` after CI passes.
+      - Auth: needs a Project Access Token (Maintainer role, not
+        Developer) so it can push the version-bump commit and tag back
+        to `main`. The current renovate PAT is Developer role; cannot
+        be reused.
+      - Plugins: at least `@semantic-release/git`,
+        `@semantic-release/gitlab` (or `github` if we flip canonical),
+        and `@semantic-release/changelog`. Test on a feature branch
+        before promoting.
+      - Compare the output against `make release`: are the changelog
+        sections, tag annotations, and compare-URL footnotes correct?
+
+      ## Decision criterion
+
+      Only adopt if `semantic-release` produces a cleaner result than
+      `make release` on at least one real release. Otherwise stay with
+      the scripted flow; "no automation" is a valid steady state.
+
+      ## Acceptance
+
+      Either a working `.gitlab-ci.yml` release stage + a superseding
+      ADR documenting the move, or a one-paragraph note in
+      `docs/decisions/0011-manual-release-flow.md` saying the evaluation
+      happened and the manual flow won.
+
+  - title: "ci: cache pip dependencies in GitLab CI to speed up the test stage"
+    labels: ["ci", "performance", "good first issue"]
+    body: |
+      ## Background
+
+      Each GitLab CI test job currently runs
+      `pip install --quiet -r requirements-dev.txt` from scratch on a
+      fresh `python:3.12-slim` image. With ~20 transitive dependencies
+      the install is ~30-45 seconds. Caching the pip download directory
+      across runs would cut that to a few seconds for cache hits.
+
+      ## Scope
+
+      Add a GitLab CI cache block keyed on the lock file:
+
+      ```yaml
+      test:
+        cache:
+          key:
+            files:
+              - requirements-dev.txt
+              - requirements.lock
+          paths:
+            - .cache/pip
+        variables:
+          PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+        ...
+      ```
+
+      Apply the same pattern to the `lint`, `integration`, and
+      `supply-chain-audit` stages.
+
+      ## Acceptance
+
+      - First push after the change: cache misses, full install (current
+        behavior).
+      - Subsequent pushes with no requirements change: cache hits, pip
+        install completes in under 10 seconds.
+      - Cache invalidation works when `requirements-dev.txt` or
+        `requirements.lock` changes.
+
+  - title: "docs: maintainer-onboarding handoff checklist (tokens, keys, rotation, off-boarding)"
+    labels: ["documentation", "good first issue"]
+    body: |
+      ## Background
+
+      `MAINTAINERS.md` lists who the current maintainers are and has a
+      Token Rotation Schedule section, but there is no end-to-end
+      checklist for either onboarding a new maintainer or off-boarding
+      an existing one. The off-boarding case in particular is fragile;
+      forgetting to revoke a single token leaves a former maintainer
+      with continued access.
+
+      ## Scope
+
+      New section in `MAINTAINERS.md` (or a separate
+      `docs/maintainer-onboarding.md` if the section grows beyond a page):
+
+      **Onboarding a new maintainer**:
+      1. They create GitHub + GitLab accounts (use their work email).
+      2. Invite to `pandora-cloud` GitHub org and `maintainers` team
+         (admin:org-scoped invite; web UI link in the doc).
+      3. Invite to `pandora-cloud/oss` GitLab subgroup with Owner role
+         (link in the doc).
+      4. Add their handles to `MAINTAINERS.md` table.
+      5. Add their GitHub URL to `SECURITY-INSIGHTS.yml` core-maintainers
+         list.
+      6. They generate their own GPG signing key + register on GitHub
+         (link to `scripts/setup_commit_signing.sh`).
+      7. Send them the Token Rotation Schedule and the off-boarding doc
+         so they understand the responsibility.
+
+      **Off-boarding a maintainer**:
+      1. Remove from the GitLab subgroup (revokes all derived access).
+      2. Remove from the GitHub maintainers team.
+      3. Rotate any shared secrets they had access to: HubSpot Private
+         App token, GovWin OAuth credentials, AWS Secrets Manager
+         contents for all three secrets, the GitLab project access
+         token (renovate-bot if they used it), the GitHub PAT in the
+         GitLab mirror config. The Token Rotation Schedule entries in
+         MAINTAINERS.md list each.
+      4. Remove from `MAINTAINERS.md` and `SECURITY-INSIGHTS.yml`.
+      5. Send a follow-up confirming all access is revoked.
+
+      ## Acceptance
+
+      - A new maintainer reading the onboarding section can self-serve
+        through every step without asking the existing maintainer for
+        clarification.
+      - The off-boarding section enumerates every token / credential
+        type the project uses; cross-check against MAINTAINERS.md's
+        Token Rotation Schedule before merging.
