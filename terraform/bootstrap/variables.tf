@@ -27,9 +27,9 @@ variable "deployer_principal_arns" {
     rejected because that produces an unusable role.
 
     Examples:
-      - arn:aws:iam::123456789012:user/jane
-      - arn:aws:iam::123456789012:role/AdminRole
-      - arn:aws:iam::123456789012:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdminAccess_xxxxx
+      - arn:aws:iam::999999999999:user/jane
+      - arn:aws:iam::999999999999:role/AdminRole
+      - arn:aws:iam::999999999999:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdminAccess_xxxxx
   EOT
   type        = list(string)
   validation {
@@ -73,7 +73,7 @@ variable "acknowledge_no_mfa_justification" {
     on the deployer role so audit tooling (Config rules, CloudTrail Lake)
     can surface why MFA was disabled. Required when
     acknowledge_no_mfa_for_sandbox_only is true. Example:
-    "Sandbox account 123456789012 - pre-production smoke testing only;
+    "Sandbox account 999999999999 - pre-production smoke testing only;
     no AWS catalog data; MFA enforced post 2026-06-01."
   EOT
   type        = string

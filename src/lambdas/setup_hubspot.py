@@ -8,7 +8,7 @@ sources outside this codebase:
   via ``scripts/refresh_aws_products.py``).
 * ``govwin_ace_solution_id``; options sourced from a live ACE
   ``ListSolutions`` call so BD's HubSpot dropdown stays in sync with the
-  Pandora Cloud Solutions catalog registered in Partner Central.
+  partner's Solutions catalog registered in Partner Central.
 
 The static option sets (delivery model, partner need, use case,
 competitor, etc.) are baked into ``src/hubspot/properties.py`` and
