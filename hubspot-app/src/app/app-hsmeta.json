@@ -3,7 +3,7 @@
   "type": "app",
   "config": {
     "description": "Receives HubSpot deal-stage and property-change webhooks for the GovWin to AWS Partner Central pipeline. Validates X-HubSpot-Signature-v3 and forwards events to an AWS Lambda for ACE submission.",
-    "name": "GovWin to ACE Webhooks",
+    "name": "GovWin to AWS Partner Central",
     "distribution": "private",
     "auth": {
       "type": "static",

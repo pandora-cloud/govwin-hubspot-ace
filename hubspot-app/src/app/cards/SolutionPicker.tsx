@@ -86,7 +86,7 @@ export const SolutionPicker: React.FC<Props> = ({
     <Select
       name="ace_solution_id"
       label={`AWS Solution${required ? " (required)" : ""}`}
-      description="The Pandora Cloud Solution AWS reviewers will see attached to this opportunity."
+      description="The AWS Solution that reviewers will see attached to this opportunity."
       value={value}
       onChange={(v) => onChange(String(v ?? ""))}
       options={options}
