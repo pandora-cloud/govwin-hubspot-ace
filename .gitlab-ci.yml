@@ -1,6 +1,7 @@
 stages:
   - test
   - lint
+  - integration
   - security
   - maintenance
 
@@ -37,6 +38,67 @@ lint:
     - pip install --quiet ruff
   script:
     - ruff check src/ tests/
+  allow_failure: false
+
+integration:
+  stage: integration
+  image: python:3.12-slim
+  services:
+    # LocalStack community edition pinned to match docker-compose.yml and
+    # ADR 0007's choice of LocalStack as the AWS emulator. The `:3.8` tag
+    # is the last community-licensed line; `:latest` requires a paid auth
+    # token as of mid-2026.
+    - name: localstack/localstack:3.8
+      alias: localstack
+  variables:
+    # boto3 reads AWS_ENDPOINT_URL natively for endpoint overrides; this
+    # is what makes the tests/integration suite point at LocalStack.
+    AWS_ENDPOINT_URL: "http://localstack:4566"
+    AWS_DEFAULT_REGION: "us-east-1"
+    # LocalStack accepts any credentials; the test/test pair is the
+    # conventional placeholder.
+    AWS_ACCESS_KEY_ID: "test"
+    AWS_SECRET_ACCESS_KEY: "test"
+    # The integration tests build AppConfig from these env vars. Names
+    # match what scripts/localstack-init.sh seeds.
+    SYNC_STATE_TABLE: "govwin-hubspot-dev-sync-state"
+    ENTITY_MAPPINGS_TABLE: "govwin-hubspot-dev-entity-mappings"
+    GOVWIN_SECRET_NAME: "govwin-hubspot-dev/govwin"
+    HUBSPOT_SECRET_NAME: "govwin-hubspot-dev/hubspot"
+    GOVWIN_TOKENS_SECRET_NAME: "govwin-hubspot-dev/govwin-tokens"
+    # Tests don't exercise the webhook receiver path against LocalStack
+    # today, but the config validator requires the env var to exist.
+    HUBSPOT_WEBHOOK_SECRET_NAME: "govwin-hubspot-dev/hubspot-webhook"
+    # FIPS endpoint resolution does not work against LocalStack; the
+    # conftest in tests/ already disables it for the unit suite. Mirror
+    # that here for the integration job.
+    AWS_USE_FIPS_ENDPOINT: "false"
+    # awscli-local (awslocal) reads LOCALSTACK_HOSTNAME and EDGE_PORT
+    # to target the endpoint; AWS_ENDPOINT_URL is also respected but
+    # explicit is better. The service container is aliased "localstack".
+    LOCALSTACK_HOSTNAME: "localstack"
+    EDGE_PORT: "4566"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl
+    - pip install --quiet -r requirements-dev.txt awscli awscli-local
+    # Wait for LocalStack to be ready. The health endpoint returns 200
+    # only once every service we plan to use is in "running" state.
+    - |
+      timeout=60
+      until curl -sf http://localstack:4566/_localstack/health > /dev/null 2>&1; do
+        timeout=$((timeout - 2))
+        if [ $timeout -le 0 ]; then echo "LocalStack did not become healthy in 60s"; exit 1; fi
+        sleep 2
+      done
+    # Seed DynamoDB tables, Secrets Manager secrets, SNS, and SQS. The
+    # script already uses awslocal which is awscli-local installed
+    # above; it implicitly targets http://localhost:4566 from inside
+    # the LocalStack container, but in the CI runner it needs to talk
+    # to the `localstack` service container. awscli-local respects
+    # AWS_ENDPOINT_URL, which we set in variables: above.
+    - bash scripts/localstack-init.sh
+  script:
+    - python -m pytest tests/integration -v --tb=short
   allow_failure: false
 
 supply-chain-audit:
