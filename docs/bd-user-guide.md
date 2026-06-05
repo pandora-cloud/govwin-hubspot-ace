@@ -162,6 +162,11 @@ mirrored back onto the deal, so what you see in HubSpot matches AWS.
 *Closing a deal: pick Closed Lost (with a reason) or Launched from the Stage
 dropdown.*
 
+![The Submit to AWS Partner Central card on a closed-lost deal](images/bd/card-closed-lost.png)
+*What a terminal Closed Lost deal looks like: the card status badge reads
+Closed lost, the Update button is disabled, and the AWS opportunity ID is
+locked at the top.*
+
 ---
 
 ## 7. What NOT to do
