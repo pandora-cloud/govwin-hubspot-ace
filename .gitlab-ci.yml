@@ -18,7 +18,16 @@ test:
   before_script:
     - pip install --quiet -r requirements-dev.txt
   script:
-    - python -m pytest tests/ -v --tb=short
+    # Coverage gate is configured in pyproject.toml ([tool.coverage]).
+    # Threshold + ratchet policy documented in MAINTAINERS.md.
+    - python -m pytest tests/unit -v --tb=short --cov=src --cov-report=term-missing --cov-report=xml:coverage.xml
+  coverage: '/^TOTAL.+?(\d+\%)$/'
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
   allow_failure: false
 
 lint:

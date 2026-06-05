@@ -39,6 +39,15 @@ git reset --hard HEAD~1
 ```
 After push, back out is not safe; cut the next release with the fix instead.
 
+## Coverage policy
+
+Unit-test coverage is measured on every CI push and gated at a minimum threshold configured in `pyproject.toml` (`[tool.coverage.report]` `fail_under`). Threshold is set 2 points below the rolling baseline; the gate exists to catch regressions, not to chase 100%.
+
+- **Current threshold**: 75% line + branch coverage on `src/` (baseline 79% line+branch, 82% line-only, as of 2026-06; threshold starts a few points below baseline as a regression guard and will ratchet up).
+- **Scope**: hermetic unit tests in `tests/unit/` only. The LocalStack integration suite under `tests/integration/` runs on a separate CI job and gates merges via pass/fail; it does not contribute to the coverage number.
+- **Ratchet policy**: never lower the threshold. Raise when comfortable that the new floor is stable, in increments of 2 to 5 points, with the bump landing in its own commit so the change is explicit in git history. The point of the ratchet is to lock in gains, not to chase a vanity target.
+- **What to do when a PR drops below**: fix the gap before merging. If the gap is genuine (e.g., a new module is added with low coverage because tests are landing in a follow-up PR), add a `# pragma: no cover` only on the lines that are demonstrably untestable (network handlers, OS-specific branches, etc.). Avoid blanket exclusions; treat coverage as a habit, not a tax.
+
 ## Becoming a maintainer
 
 We're a small project and don't have a formal escalation path. The route is:
