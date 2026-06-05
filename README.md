@@ -45,7 +45,7 @@ For the step-by-step operator walkthrough, see the [BD User Guide](docs/bd-user-
 
 The GovWin to HubSpot half:
 
-![GovWin to HubSpot architecture](docs/diagrams/architecture.svg)
+![GovWin to HubSpot architecture](docs/diagrams/sync-architecture.svg)
 
 - **EventBridge Scheduler** fires the orchestrator Lambda on a configurable cadence (default: hourly).
 - **AWS Lambda (x2)** owns the sync: an orchestrator that does discovery + token refresh + SQS fan-out, and a worker that drains the queue, fetches each opportunity bundle from GovWin, and pushes batches to HubSpot. Concurrency is governed by `reservedConcurrentExecutions`.
@@ -56,7 +56,7 @@ The GovWin to HubSpot half:
 
 The HubSpot to AWS Partner Central half:
 
-![HubSpot to AWS Partner Central architecture](docs/diagrams/architecture-v2-ace.svg)
+![HubSpot to AWS Partner Central architecture](docs/diagrams/submission-architecture.svg)
 
 - **HubSpot developer-platform app** (private, static auth) registers webhook subscriptions for the deal properties we care about.
 - **API Gateway HTTP API** in front of a small Lambda receiver that validates `X-HubSpot-Signature-v3` and routes events into either the submit queue (deal-stage transitions) or the update queue (content-property changes).

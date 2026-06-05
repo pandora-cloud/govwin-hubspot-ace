@@ -62,3 +62,7 @@ docker-compose.override.yml
 
 # Claude Code local project state
 .claude/
+
+# drawio auto-backup files
+.$*
+*.bkp

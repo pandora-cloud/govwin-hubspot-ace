@@ -1,0 +1,276 @@
+<mxfile host="Electron" version="29.6.1">
+  <diagram name="HubSpot to AWS Partner Central Submission" id="arch-submission">
+    <mxGraphModel dx="1674" dy="969" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-group" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="1520" height="83" as="geometry" />
+        </mxCell>
+        <mxCell id="title-text" style="text;html=1;resizable=1;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=30;fontStyle=1;fontFamily=Helvetica;" value="HubSpot to AWS Partner Central submission architecture" vertex="1" parent="title-group">
+          <mxGeometry width="1100" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle-text" style="text;html=1;resizable=0;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=16;fontFamily=Helvetica;" value="HubSpot webhook routes deal events into ACE; AWS state changes flow back via EventBridge" vertex="1" parent="title-group">
+          <mxGeometry x="5" y="40" width="1100" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="title-separator" style="line;strokeWidth=2;html=1;fontSize=14;strokeColor=#FF9900;fontFamily=Helvetica;" value="" vertex="1" parent="title-group">
+          <mxGeometry x="5" y="70" width="1500" height="10" as="geometry" />
+        </mxCell>
+
+        <!-- External: HubSpot CRM (left) -->
+        <mxCell id="hs_box" value="HubSpot CRM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#E8F5E9,#1B2D1F);fillStyle=auto;strokeColor=#3F8624;strokeWidth=2;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#3F8624;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="380" width="170" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="hs_icon" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB3aWR0aD0iMTA2IiBoZWlnaHQ9IjMxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0xMS40OCA0Ljk3NHY4LjQ3NUgzLjY5NFY0Ljk3NEgwdjIwLjIzMWgzLjY5NXYtOC4yaDcuNzg0djguMmgzLjY5NlY0Ljk3NHptMTUuNTIyIDEzLjY5MmEzLjA1NyAzLjA1NyAwIDEgMS02LjExNSAwVjEwaC0zLjUwNXY4LjY2NmE2LjU1NiA2LjU1NiAwIDAgMCAxMy4xMTIgMFYxMGgtMy40OTJ2OC42NjZ6bTI1Ljk3MS03Ljc3M2MwLTEuNzc3IDEuMTc1LTIuMzQgMi40NjItMi4zNCAxLjAzOCAwIDIuNDA4Ljc5IDMuMzA1IDEuNzQ4bDIuMjk1LTIuNzA2Yy0xLjE0Ni0xLjU1LTMuNDctMi42MjEtNS4zNzMtMi42MjEtMy44MDMgMC02LjU1MyAyLjIyNy02LjU1MyA1LjkxOSAwIDYuODUgOC4zNzIgNC42NzYgOC4zNzIgOC41MSAwIDEuMTgyLTEuMTQ4IDIuMjI2LTIuNDYyIDIuMjI2LTIuMDczIDAtMi43NDUtMS4wMTMtMy42OTctMi4wODVsLTIuNTQ4IDIuNjQ5YzEuNjMgMiAzLjY0IDMuMDE2IDYuMDQ3IDMuMDE2IDMuNjEzIDAgNi41MTktMi4yNTQgNi41MTktNS43NzggMC03LjYwNC04LjM3My01LjI0MS04LjM3My04LjUzOG01MS44IDExLjA4Yy0yLjA3MSAwLTIuNjYtLjg5Ni0yLjY2LTIuMjY4VjEzLjYzaDMuMjJ2LTMuMDc4aC0zLjIyVjYuNDkxbC0zLjU1NCAxLjU5NVYyMC40NmMwIDMuMTY1IDIuMTg0IDQuNzYgNS4xNzggNC43Ni40Ny4wMDguOTQtLjAzIDEuNDAyLS4xMTJsLjg2Ny0zLjE5MmMtLjM5MS4wMjctLjg0LjA1NC0xLjIzMy4wNTRNNDAuMzQ0IDEwLjEwMWMtMS43MzYgMC0yLjk0OC41MDQtNC4xMiAxLjY1M1Y1LjA5NWgtMy41MXYxMi4zNDNjMCA0LjYyIDMuMzQgNy43ODYgNy4wOTQgNy43ODYgNC4xNjQgMCA3LjgyNy0zLjIyMiA3LjgyNy03LjU2IDAtNC4yODQtMy4zNzEtNy41Ni03LjI5MS03LjU2bS0uMDIyIDExLjU4N2EzLjk4MyAzLjk4MyAwIDEgMSAwLTcuOTY3IDMuOTgzIDMuOTgzIDAgMCAxIDAgNy45NjdtMzguMTQyLTQuMjExYzAtNC4zNDYtMy42NTUtNy41Ni03LjgyNy03LjU2LTMuNzUzIDAtNy4wOTQgMy4xNjUtNy4wOTQgNy43ODZ2MTIuMzVoMy41MXYtNi42NjhjMS4xNyAxLjE0NyAyLjM4NCAxLjY1MyA0LjExOCAxLjY1MyAzLjkyIDAgNy4yOTItMy4yNzYgNy4yOTItNy41NjFtLTMuMzIzLS4wNDRhMy45ODMgMy45ODMgMCAxIDEtNy45NjcgMCAzLjk4MyAzLjk4MyAwIDAgMSA3Ljk2NyAwIiBmaWxsPSIjMzM0NzVCIi8+PHBhdGggZD0iTTg5LjgwNiA5Ljc1VjYuMjIzYTIuNzE2IDIuNzE2IDAgMCAwIDEuNTY2LTIuNDQ4di0uMDgxYzAtMS41LTEuMjE2LTIuNzE2LTIuNzE2LTIuNzE2aC0uMDgxYTIuNzE2IDIuNzE2IDAgMCAwLTIuNzE2IDIuNzE2di4wODFhMi43MTYgMi43MTYgMCAwIDAgMS41NjYgMi40NDhWOS43NWE3LjY5MSA3LjY5MSAwIDAgMC0zLjY1NyAxLjYxbC05LjY3My03LjUzNGMuMDY5LS4yNDkuMTA1LS41MDUuMTA5LS43NjJhMy4wNiAzLjA2IDAgMSAwLTMuMDY0IDMuMDU0IDMuMDI3IDMuMDI3IDAgMCAwIDEuNTA3LS40MWw5LjUyNSA3LjQxMmE3LjcxNSA3LjcxNSAwIDAgMCAuMTE4IDguNjlsLTIuODk3IDIuODk4YTIuNDg4IDIuNDg4IDAgMCAwLS43MjQtLjExOCAyLjUxMyAyLjUxMyAwIDEgMCAyLjUxNSAyLjUxNSAyLjQ4IDIuNDggMCAwIDAtLjExOC0uNzI0bDIuODY2LTIuODY3QTcuNzI4IDcuNzI4IDAgMSAwIDg5LjgwNiA5Ljc1bS0xLjE4OCAxMS42YTMuOTY1IDMuOTY1IDAgMSAxIDAtNy45MjcgMy45NjUgMy45NjUgMCAwIDEgLjAwNCA3LjkyNSIgZmlsbD0iI0ZGN0E1OSIvPjwvZz48L3N2Zz4=;" value="" vertex="1" parent="hs_box">
+          <mxGeometry x="61" y="28" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="hs_desc" value="&lt;font color=&quot;#666666&quot; style=&quot;font-size: 11px;font-family: Helvetica;&quot;&gt;Deal save fires&lt;br&gt;subscribed webhook&lt;br&gt;HMAC-signed&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;" parent="hs_box" vertex="1">
+          <mxGeometry x="10" y="82" width="150" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- External: AWS Partner Central (right) -->
+        <mxCell id="ace_box" value="AWS Partner Central" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#EDE7F6,#231F3A);fillStyle=auto;strokeColor=#8C4FFF;strokeWidth=2;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=14;fontColor=#8C4FFF;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1370" y="380" width="190" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="ace_icon" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=none;verticalAlign=top;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxOS4wLjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHZpZXdCb3g9IjAgMCAzMDQgMTgyIiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAzMDQgMTgyOyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+DQo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCS5zdDB7ZmlsbDojMjUyRjNFO30NCgkuc3Qxe2ZpbGwtcnVsZTpldmVub2RkO2NsaXAtcnVsZTpldmVub2RkO2ZpbGw6I0ZGOTkwMDt9DQo8L3N0eWxlPg0KPGc+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTg2LjQsNjYuNGMwLDMuNywwLjQsNi43LDEuMSw4LjljMC44LDIuMiwxLjgsNC42LDMuMiw3LjJjMC41LDAuOCwwLjcsMS42LDAuNywyLjNjMCwxLTAuNiwyLTEuOSwzbC02LjMsNC4yDQoJCWMtMC45LDAuNi0xLjgsMC45LTIuNiwwLjljLTEsMC0yLTAuNS0zLTEuNEM3Ni4yLDkwLDc1LDg4LjQsNzQsODYuOGMtMS0xLjctMi0zLjYtMy4xLTUuOWMtNy44LDkuMi0xNy42LDEzLjgtMjkuNCwxMy44DQoJCWMtOC40LDAtMTUuMS0yLjQtMjAtNy4yYy00LjktNC44LTcuNC0xMS4yLTcuNC0xOS4yYzAtOC41LDMtMTUuNCw5LjEtMjAuNmM2LjEtNS4yLDE0LjItNy44LDI0LjUtNy44YzMuNCwwLDYuOSwwLjMsMTAuNiwwLjgNCgkJYzMuNywwLjUsNy41LDEuMywxMS41LDIuMnYtNy4zYzAtNy42LTEuNi0xMi45LTQuNy0xNmMtMy4yLTMuMS04LjYtNC42LTE2LjMtNC42Yy0zLjUsMC03LjEsMC40LTEwLjgsMS4zYy0zLjcsMC45LTcuMywyLTEwLjgsMy40DQoJCWMtMS42LDAuNy0yLjgsMS4xLTMuNSwxLjNjLTAuNywwLjItMS4yLDAuMy0xLjYsMC4zYy0xLjQsMC0yLjEtMS0yLjEtMy4xdi00LjljMC0xLjYsMC4yLTIuOCwwLjctMy41YzAuNS0wLjcsMS40LTEuNCwyLjgtMi4xDQoJCWMzLjUtMS44LDcuNy0zLjMsMTIuNi00LjVjNC45LTEuMywxMC4xLTEuOSwxNS42LTEuOWMxMS45LDAsMjAuNiwyLjcsMjYuMiw4LjFjNS41LDUuNCw4LjMsMTMuNiw4LjMsMjQuNlY2Ni40eiBNNDUuOCw4MS42DQoJCWMzLjMsMCw2LjctMC42LDEwLjMtMS44YzMuNi0xLjIsNi44LTMuNCw5LjUtNi40YzEuNi0xLjksMi44LTQsMy40LTYuNGMwLjYtMi40LDEtNS4zLDEtOC43di00LjJjLTIuOS0wLjctNi0xLjMtOS4yLTEuNw0KCQljLTMuMi0wLjQtNi4zLTAuNi05LjQtMC42Yy02LjcsMC0xMS42LDEuMy0xNC45LDRjLTMuMywyLjctNC45LDYuNS00LjksMTEuNWMwLDQuNywxLjIsOC4yLDMuNywxMC42DQoJCUMzNy43LDgwLjQsNDEuMiw4MS42LDQ1LjgsODEuNnogTTEyNi4xLDkyLjRjLTEuOCwwLTMtMC4zLTMuOC0xYy0wLjgtMC42LTEuNS0yLTIuMS0zLjlMOTYuNywxMC4yYy0wLjYtMi0wLjktMy4zLTAuOS00DQoJCWMwLTEuNiwwLjgtMi41LDIuNC0yLjVoOS44YzEuOSwwLDMuMiwwLjMsMy45LDFjMC44LDAuNiwxLjQsMiwyLDMuOWwxNi44LDY2LjJsMTUuNi02Ni4yYzAuNS0yLDEuMS0zLjMsMS45LTMuOWMwLjgtMC42LDIuMi0xLDQtMQ0KCQloOGMxLjksMCwzLjIsMC4zLDQsMWMwLjgsMC42LDEuNSwyLDEuOSwzLjlsMTUuOCw2N2wxNy4zLTY3YzAuNi0yLDEuMy0zLjMsMi0zLjljMC44LTAuNiwyLjEtMSwzLjktMWg5LjNjMS42LDAsMi41LDAuOCwyLjUsMi41DQoJCWMwLDAuNS0wLjEsMS0wLjIsMS42Yy0wLjEsMC42LTAuMywxLjQtMC43LDIuNWwtMjQuMSw3Ny4zYy0wLjYsMi0xLjMsMy4zLTIuMSwzLjljLTAuOCwwLjYtMi4xLDEtMy44LDFoLTguNmMtMS45LDAtMy4yLTAuMy00LTENCgkJYy0wLjgtMC43LTEuNS0yLTEuOS00TDE1NiwyM2wtMTUuNCw2NC40Yy0wLjUsMi0xLjEsMy4zLTEuOSw0Yy0wLjgsMC43LTIuMiwxLTQsMUgxMjYuMXogTTI1NC42LDk1LjFjLTUuMiwwLTEwLjQtMC42LTE1LjQtMS44DQoJCWMtNS0xLjItOC45LTIuNS0xMS41LTRjLTEuNi0wLjktMi43LTEuOS0zLjEtMi44Yy0wLjQtMC45LTAuNi0xLjktMC42LTIuOHYtNS4xYzAtMi4xLDAuOC0zLjEsMi4zLTMuMWMwLjYsMCwxLjIsMC4xLDEuOCwwLjMNCgkJYzAuNiwwLjIsMS41LDAuNiwyLjUsMWMzLjQsMS41LDcuMSwyLjcsMTEsMy41YzQsMC44LDcuOSwxLjIsMTEuOSwxLjJjNi4zLDAsMTEuMi0xLjEsMTQuNi0zLjNjMy40LTIuMiw1LjItNS40LDUuMi05LjUNCgkJYzAtMi44LTAuOS01LjEtMi43LTdjLTEuOC0xLjktNS4yLTMuNi0xMC4xLTUuMkwyNDYsNTJjLTcuMy0yLjMtMTIuNy01LjctMTYtMTAuMmMtMy4zLTQuNC01LTkuMy01LTE0LjVjMC00LjIsMC45LTcuOSwyLjctMTEuMQ0KCQljMS44LTMuMiw0LjItNiw3LjItOC4yYzMtMi4zLDYuNC00LDEwLjQtNS4yYzQtMS4yLDguMi0xLjcsMTIuNi0xLjdjMi4yLDAsNC41LDAuMSw2LjcsMC40YzIuMywwLjMsNC40LDAuNyw2LjUsMS4xDQoJCWMyLDAuNSwzLjksMSw1LjcsMS42YzEuOCwwLjYsMy4yLDEuMiw0LjIsMS44YzEuNCwwLjgsMi40LDEuNiwzLDIuNWMwLjYsMC44LDAuOSwxLjksMC45LDMuM3Y0LjdjMCwyLjEtMC44LDMuMi0yLjMsMy4yDQoJCWMtMC44LDAtMi4xLTAuNC0zLjgtMS4yYy01LjctMi42LTEyLjEtMy45LTE5LjItMy45Yy01LjcsMC0xMC4yLDAuOS0xMy4zLDIuOGMtMy4xLDEuOS00LjcsNC44LTQuNyw4LjljMCwyLjgsMSw1LjIsMyw3LjENCgkJYzIsMS45LDUuNywzLjgsMTEsNS41bDE0LjIsNC41YzcuMiwyLjMsMTIuNCw1LjUsMTUuNSw5LjZjMy4xLDQuMSw0LjYsOC44LDQuNiwxNGMwLDQuMy0wLjksOC4yLTIuNiwxMS42DQoJCWMtMS44LDMuNC00LjIsNi40LTcuMyw4LjhjLTMuMSwyLjUtNi44LDQuMy0xMS4xLDUuNkMyNjQuNCw5NC40LDI1OS43LDk1LjEsMjU0LjYsOTUuMXoiLz4NCgk8Zz4NCgkJPHBhdGggY2xhc3M9InN0MSIgZD0iTTI3My41LDE0My43Yy0zMi45LDI0LjMtODAuNywzNy4yLTEyMS44LDM3LjJjLTU3LjYsMC0xMDkuNS0yMS4zLTE0OC43LTU2LjdjLTMuMS0yLjgtMC4zLTYuNiwzLjQtNC40DQoJCQljNDIuNCwyNC42LDk0LjcsMzkuNSwxNDguOCwzOS41YzM2LjUsMCw3Ni42LTcuNiwxMTMuNS0yMy4yQzI3NC4yLDEzMy42LDI3OC45LDEzOS43LDI3My41LDE0My43eiIvPg0KCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjg3LjIsMTI4LjFjLTQuMi01LjQtMjcuOC0yLjYtMzguNS0xLjNjLTMuMiwwLjQtMy43LTIuNC0wLjgtNC41YzE4LjgtMTMuMiw0OS43LTkuNCw1My4zLTUNCgkJCWMzLjYsNC41LTEsMzUuNC0xOC42LDUwLjJjLTIuNywyLjMtNS4zLDEuMS00LjEtMS45QzI4Mi41LDE1NS43LDI5MS40LDEzMy40LDI4Ny4yLDEyOC4xeiIvPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K;" value="" vertex="1" parent="ace_box">
+          <mxGeometry x="71" y="28" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="ace_desc" value="&lt;font color=&quot;#666666&quot; style=&quot;font-size: 11px;font-family: Helvetica;&quot;&gt;Selling-API&lt;br&gt;1 write/s, 10 read/s&lt;br&gt;ACE catalog (Sandbox/AWS)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontFamily=Helvetica;" parent="ace_box" vertex="1">
+          <mxGeometry x="10" y="82" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- AWS Cloud container -->
+        <mxCell id="aws_cloud" value="AWS Cloud (customer account, us-east-1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#232F3E0D,#232F3E0D);fillStyle=auto;strokeColor=#232F3E;strokeWidth=1;arcSize=2;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#232F3E;fontFamily=Helvetica;container=1;collapsible=0;dashed=0;" parent="1" vertex="1">
+          <mxGeometry x="260" y="160" width="1060" height="640" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway (row 1, col 1) -->
+        <mxCell id="grp_apigw" value="Networking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#8C4FFF;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#8C4FFF;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="30" y="60" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_apigw" value="API Gateway&lt;div&gt;&lt;i&gt;HTTP API&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fontFamily=Helvetica;" parent="grp_apigw" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- hubspot_webhook_receiver (row 1, col 2) -->
+        <mxCell id="grp_recv" value="Compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2E8;strokeColor=#ED7100;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="220" y="60" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_recv" value="hubspot_webhook_receiver&lt;div&gt;&lt;i&gt;verify HMAC + route&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Helvetica;" parent="grp_recv" vertex="1">
+          <mxGeometry x="56" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ace-submit SQS (row 1, col 3) -->
+        <mxCell id="grp_q_submit" value="App Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="430" y="20" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_q_submit" value="ace-submit SQS&lt;div&gt;&lt;i&gt;dealstage events&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Helvetica;" parent="grp_q_submit" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ace-update SQS (row 1, col 3 lower) -->
+        <mxCell id="grp_q_update" value="App Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="430" y="160" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_q_update" value="ace-update SQS&lt;div&gt;&lt;i&gt;amount/closedate/etc&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fontFamily=Helvetica;" parent="grp_q_update" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- submit_to_ace Lambda -->
+        <mxCell id="grp_submit" value="Compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2E8;strokeColor=#ED7100;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="620" y="20" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_submit" value="submit_to_ace&lt;div&gt;&lt;i&gt;3-call create + assoc + start&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Helvetica;" parent="grp_submit" vertex="1">
+          <mxGeometry x="56" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- update_in_ace Lambda -->
+        <mxCell id="grp_update" value="Compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2E8;strokeColor=#ED7100;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="620" y="160" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_update" value="update_in_ace&lt;div&gt;&lt;i&gt;optimistic lock retry&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Helvetica;" parent="grp_update" vertex="1">
+          <mxGeometry x="56" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- EventBridge bus (for inbound ACE events) -->
+        <mxCell id="grp_eb" value="App Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="850" y="300" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_eb" value="EventBridge&lt;div&gt;&lt;i&gt;aws.partnercentral-selling&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fontFamily=Helvetica;" parent="grp_eb" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- handle_ace_event Lambda -->
+        <mxCell id="grp_handle" value="Compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2E8;strokeColor=#ED7100;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="620" y="300" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_handle" value="handle_ace_event&lt;div&gt;&lt;i&gt;mirror state to HubSpot&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Helvetica;" parent="grp_handle" vertex="1">
+          <mxGeometry x="56" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Scheduler -> reconcile_pending -->
+        <mxCell id="grp_sched" value="App Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="850" y="20" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_sched" value="EventBridge Scheduler&lt;div&gt;&lt;i&gt;reconcile retries&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fontFamily=Helvetica;" parent="grp_sched" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="grp_reconcile" value="Compute" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2E8;strokeColor=#ED7100;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#ED7100;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="850" y="160" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_reconcile" value="reconcile_pending&lt;div&gt;&lt;i&gt;deferred edits&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fontFamily=Helvetica;" parent="grp_reconcile" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- DynamoDB ace-state -->
+        <mxCell id="grp_ddb" value="Database" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5E6F7;strokeColor=#C925D1;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#C925D1;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="430" y="450" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_ddb" value="ace-state&lt;div&gt;&lt;i&gt;ClientTokens, ACE/EVT cursors&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;fontFamily=Helvetica;" parent="grp_ddb" vertex="1">
+          <mxGeometry x="56" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Secrets Manager -->
+        <mxCell id="grp_secrets" value="Security" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#DD344C;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#DD344C;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="30" y="450" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_secrets" value="Secrets Manager&lt;div&gt;&lt;i&gt;hubspot webhook + token&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;fontFamily=Helvetica;" parent="grp_secrets" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- KMS -->
+        <mxCell id="grp_kms" value="Security" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#DD344C;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#DD344C;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="220" y="450" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_kms" value="KMS CMK&lt;div&gt;&lt;i&gt;encrypts all at-rest&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.key_management_service;fontFamily=Helvetica;" parent="grp_kms" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- SNS notifications -->
+        <mxCell id="grp_sns" value="App Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;strokeWidth=1.5;arcSize=10;verticalAlign=top;fontStyle=1;fontSize=12;fontColor=#E7157B;fontFamily=Helvetica;container=1;collapsible=0;shadow=1;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="850" y="450" width="140" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="svc_sns" value="SNS notifications&lt;div&gt;&lt;i&gt;terminal failure alerts&lt;/i&gt;&lt;/div&gt;" style="sketch=0;outlineConnect=0;fontColor=#16191F;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sns;fontFamily=Helvetica;" parent="grp_sns" vertex="1">
+          <mxGeometry x="46" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- EDGES -->
+        <!-- HubSpot -> API Gateway -->
+        <mxCell id="e_hs_apigw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3F8624;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;" parent="1" source="hs_box" target="grp_apigw" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_hs_apigw_lbl" value="webhook POST" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_hs_apigw" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- API Gateway -> receiver -->
+        <mxCell id="e_apigw_recv" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="aws_cloud" source="grp_apigw" target="grp_recv" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- receiver -> ace-submit queue -->
+        <mxCell id="e_recv_qsubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=1;exitY=0.25;entryX=0;entryY=0.5;" parent="aws_cloud" source="grp_recv" target="grp_q_submit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_recv_qsubmit_lbl" value="dealstage" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_recv_qsubmit" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- receiver -> ace-update queue -->
+        <mxCell id="e_recv_qupdate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" parent="aws_cloud" source="grp_recv" target="grp_q_update" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_recv_qupdate_lbl" value="amount, closedate, name" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_recv_qupdate" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ace-submit queue -> submit_to_ace -->
+        <mxCell id="e_qsubmit_lambda" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="aws_cloud" source="grp_q_submit" target="grp_submit" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ace-update queue -> update_in_ace -->
+        <mxCell id="e_qupdate_lambda" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="aws_cloud" source="grp_q_update" target="grp_update" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- submit_to_ace -> ACE -->
+        <mxCell id="e_submit_ace" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8C4FFF;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;" parent="1" source="grp_submit" target="ace_box" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1130" y="80" /><mxPoint x="1330" y="80" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_submit_ace_lbl" value="Create + Assoc + StartEngagement" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_submit_ace" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- update_in_ace -> ACE -->
+        <mxCell id="e_update_ace" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8C4FFF;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;" parent="1" source="grp_update" target="ace_box" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1130" y="220" /><mxPoint x="1330" y="450" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_update_ace_lbl" value="UpdateOpportunity" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_update_ace" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ACE -> EventBridge bus -->
+        <mxCell id="e_ace_eb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#8C4FFF;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;" parent="1" source="ace_box" target="grp_eb" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1340" y="700" /><mxPoint x="1180" y="700" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ace_eb_lbl" value="state-change events" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_ace_eb" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- EventBridge bus -> handle_ace_event -->
+        <mxCell id="e_eb_handle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="aws_cloud" source="grp_eb" target="grp_handle" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- handle_ace_event -> HubSpot -->
+        <mxCell id="e_handle_hs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3F8624;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;" parent="1" source="grp_handle" target="hs_box" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="125" y="600" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_handle_hs_lbl" value="mirror dealstage" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;fontSize=11;fontFamily=Helvetica;fontColor=#666666;" parent="e_handle_hs" connectable="0" vertex="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="-40" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- Scheduler -> reconcile -->
+        <mxCell id="e_sched_reconcile" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#666666;fontSize=11;labelBackgroundColor=none;fontFamily=Helvetica;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="aws_cloud" source="grp_sched" target="grp_reconcile" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- reconcile -> update (re-enqueue) -->
+        <mxCell id="e_reconcile_update" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;" parent="aws_cloud" source="grp_reconcile" target="grp_q_update" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dashed deps to DDB / secrets / sns -->
+        <mxCell id="e_submit_ddb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C925D1;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;startArrow=none;endArrow=none;" parent="aws_cloud" source="grp_submit" target="grp_ddb" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_update_ddb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C925D1;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;startArrow=none;endArrow=none;" parent="aws_cloud" source="grp_update" target="grp_ddb" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_handle_ddb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C925D1;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;startArrow=none;endArrow=none;" parent="aws_cloud" source="grp_handle" target="grp_ddb" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_recv_secrets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DD344C;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;startArrow=none;endArrow=none;" parent="aws_cloud" source="grp_recv" target="grp_secrets" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_handle_sns" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E7157B;strokeWidth=1;fontColor=#666666;fontSize=10;labelBackgroundColor=none;fontFamily=Helvetica;dashed=1;startArrow=none;endArrow=none;" parent="aws_cloud" source="grp_handle" target="grp_sns" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="&lt;font style=&quot;font-size:11px;font-family: Helvetica;font-weight: bold;&quot;&gt;Edge legend&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;font-family: Helvetica;&quot;&gt;solid: primary data flow&lt;br&gt;dashed: state, failure, or read&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=11;labelBackgroundColor=none;whiteSpace=wrap;fontFamily=Helvetica;" parent="aws_cloud" vertex="1">
+          <mxGeometry x="30" y="600" width="200" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

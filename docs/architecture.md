@@ -12,13 +12,13 @@ EventBridge Scheduler invokes the orchestrator Lambda on a configurable cadence 
 
 The orchestrator + SQS + worker topology decouples discovery from per-opportunity work: each batch retries independently and there is no inter-state payload limit on what flows between stages.
 
-![GovWin to HubSpot architecture](diagrams/architecture.svg)
+![GovWin to HubSpot architecture](diagrams/sync-architecture.svg)
 
 ### HubSpot to AWS Partner Central
 
 When a HubSpot deal moves to **Submit to AWS**, the webhook receiver enqueues the event onto SQS, the submit Lambda runs the three-call Selling-API flow, and EventBridge events from `aws.partnercentral-selling` flow back to update the HubSpot deal stage.
 
-![HubSpot to AWS Partner Central architecture](diagrams/architecture-v2-ace.svg)
+![HubSpot to AWS Partner Central architecture](diagrams/submission-architecture.svg)
 
 ## Sync Flow
 
