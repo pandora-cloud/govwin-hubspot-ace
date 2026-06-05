@@ -14,6 +14,14 @@ from __future__ import annotations
 
 import pytest
 
+try:
+    import boto3  # noqa: F401  -- imported to register the service model
+    from botocore.session import Session
+
+    _HAS_BOTOCORE = True
+except ImportError:  # pragma: no cover
+    _HAS_BOTOCORE = False
+
 
 def _shape_for_path(model: object, path: list[str]) -> object:
     """Walk a dotted path into a botocore Shape, returning the leaf shape.
@@ -34,16 +42,12 @@ def _shape_for_path(model: object, path: list[str]) -> object:
 
 
 def _load_create_input_shape() -> object:
-    try:
-        import boto3  # noqa: F401  -- imported to register the service model
-        from botocore.session import Session
-    except ImportError:
-        pytest.skip("botocore not installed; skipping enum drift guard")
     session = Session()
     service_model = session.get_service_model("partnercentral-selling")
     return service_model.operation_model("CreateOpportunity").input_shape
 
 
+@pytest.mark.skipif(not _HAS_BOTOCORE, reason="botocore not installed; lint-only environment")
 @pytest.mark.parametrize(
     "constant_name, shape_path",
     [

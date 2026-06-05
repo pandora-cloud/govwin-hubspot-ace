@@ -20,24 +20,27 @@ from __future__ import annotations
 
 import pytest
 
+try:
+    import boto3  # noqa: F401  -- imported to register the service model
+    from botocore.session import Session
+
+    _HAS_BOTOCORE = True
+except ImportError:  # pragma: no cover
+    _HAS_BOTOCORE = False
+
 
 def _update_input_top_level_fields() -> set[str]:
     """Return the top-level member names of UpdateOpportunity's input shape.
 
-    Reads the live botocore service model. Skips gracefully when boto3
-    isn't installed.
+    Reads the live botocore service model.
     """
-    try:
-        import boto3  # noqa: F401  -- import for service model side-effect
-        from botocore.session import Session
-    except ImportError:
-        pytest.skip("botocore not installed; skipping drift guard")
     session = Session()
     service_model = session.get_service_model("partnercentral-selling")
     op = service_model.operation_model("UpdateOpportunity")
     return set(op.input_shape.members.keys())
 
 
+@pytest.mark.skipif(not _HAS_BOTOCORE, reason="botocore not installed; lint-only environment")
 def test_scrub_allowed_matches_botocore_update_input_shape() -> None:
     from src.ace import client as ace_client
 
