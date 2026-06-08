@@ -4,13 +4,18 @@ Provisions the HubSpot-to-AWS-Partner-Central submission half of the pipeline.
 
 ## What it creates
 
-- Three Lambda functions: `submit_to_ace`, `update_in_ace`, `handle_ace_event`
-- Two UI Extension Lambdas behind API Gateway: `ui_extension_reads` (GET endpoints), `ui_extension_writes` (POST endpoints)
-- The HubSpot webhook receiver Lambda + its API Gateway HTTP API
-- Four SQS queues with DLQs: ACE submit, ACE update, webhook submit-route, webhook update-route
-- Scheduler-driven `reconcile_pending` Lambda to retry deferred edits
-- EventBridge rule subscribing `handle_ace_event` to `aws.partnercentral-selling`
-- IAM execution roles scoped to the catalog (Sandbox or AWS) per `ace_catalog`
+- Seven Lambda functions:
+  - The three core async-pipeline handlers: `submit_to_ace`, `update_in_ace`, `handle_ace_event`
+  - The HubSpot webhook receiver: `hubspot_webhook_receiver`
+  - The two UI Extension Lambdas behind API Gateway: `ui_extension_reads` (GET endpoints) and `ui_extension_writes` (POST endpoints)
+  - The scheduler-driven reconciliation Lambda: `reconcile_pending`
+- One API Gateway HTTP API serving both the webhook receiver and the UI Extension routes
+- The `${name_prefix}/hubspot-webhook` Secrets Manager secret holding the HubSpot developer-platform app's webhook signing secret (kept here, not in `modules/secrets`, because it is consumed only by the receiver Lambda in this module)
+- Five SQS queues:
+  - Two operational queues: `${name_prefix}-ace-submit` and `${name_prefix}-ace-update` (the receiver writes directly into these based on which property changed; no separate webhook-route queue)
+  - Three DLQs: a DLQ per operational queue plus the `reconcile_sweep_dlq` for the scheduler-driven reconciliation Lambda
+- EventBridge rule subscribing `handle_ace_event` to `aws.partnercentral-selling` and an EventBridge Scheduler schedule firing `reconcile_pending` periodically
+- IAM execution roles scoped to the catalog (Sandbox or AWS) per `ace_catalog` so the IAM policy itself denies cross-catalog calls
 
 ## Required inputs
 
@@ -18,7 +23,7 @@ Provisions the HubSpot-to-AWS-Partner-Central submission half of the pipeline.
 
 ## Outputs
 
-`hubspot_webhook_target_url` (paste into the HubSpot developer project's webhook config), the seven Lambda ARNs and four queue URLs for `modules/monitoring` to attach alarms to.
+`webhook_target_url` (paste into the HubSpot developer project's webhook config), the UI Extension base URL and per-route URLs, the seven Lambda ARNs, the two operational queue URLs, the two ACE DLQ URLs/names, and the webhook-signing secret ARN. `modules/monitoring` consumes the queue + Lambda outputs to attach alarms.
 
 ## Depends on
 

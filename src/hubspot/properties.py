@@ -772,10 +772,10 @@ CONTACT_PROPERTIES: list[HubSpotProperty] = [
 
 # Use an existing HubSpot pipeline instead of creating a new one.
 # This avoids hitting the pipeline limit on non-Enterprise accounts.
-PIPELINE_NAME = "Government"
+PIPELINE_NAME = "GovWin Pipeline"
 
 # Map GovWin statuses to stage labels in the existing pipeline.
-# These must match the stage labels in your HubSpot "Government" pipeline.
+# These must match the stage labels in your HubSpot "GovWin Pipeline".
 #
 # The vocabulary below was confirmed against 1,000 live federal+SLED opps on
 # 2026-04-28; Deltek's WSAPI docs (Appendix C) describe `status` as 100-char

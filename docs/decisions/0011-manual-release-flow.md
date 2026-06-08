@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-ADR 0001 records the move to GitLab-canonical and GitHub-mirror. As a consequence of that move (covered in ADR 0011's deferral note in earlier conversations), the GitHub-side `release-please` workflow was removed: it opens release pull requests on GitHub that would be clobbered by the next GitLab to GitHub push mirror.
+This project is canonical on GitLab (`pandora-cloud/oss/govwin-hubspot-ace`) and one-way push-mirrored to GitHub (`pandora-cloud/govwin-hubspot-ace`). The GitHub-side `release-please` workflow that earlier versions of this repo carried was removed for that reason: it opens release pull requests on GitHub, and any GitHub-side merge or branch update gets clobbered by the next GitLab to GitHub push mirror. Release automation has to live on the GitLab side or in a maintainer-driven flow that does not depend on GitHub-side branch state.
 
 Three replacement options were considered for cutting versioned releases:
 

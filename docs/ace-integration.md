@@ -27,7 +27,7 @@ After submission, the opportunity is locked from edits while AWS reviews. EventB
 
 ### 1. Opportunity syncs from GovWin
 
-The hourly orchestrator Lambda (triggered by EventBridge Scheduler) picks up marked opportunities and fans batches out to the worker via SQS. The worker writes them into HubSpot. The deal lands in the **GovWin Pipeline** with 25+ properties pre-populated, including most of the fields ACE requires.
+The hourly orchestrator Lambda (triggered by EventBridge Scheduler) picks up marked opportunities and fans batches out to the worker via SQS. The worker writes them into HubSpot. The deal lands in the **GovWin Pipeline** with around 30 properties pre-populated, including most of the fields ACE requires.
 
 ### 2. BD reviews the deal and fills the manual fields on the Submit card
 
@@ -108,7 +108,7 @@ The handler dedups on EventBridge `id` with a 24-hour TTL via a conditional `put
 
 If the deal's `amount`, `closedate`, `dealname`, or `description` changes after submission, the receiver routes the property-change event to the update queue. `update_in_ace` calls `UpdateOpportunity` using the `LastModifiedDate` we persisted on the prior write. On `ConflictException`, the call refetches and retries up to three times.
 
-The Solution and the three manual fields cannot be changed via update once the engagement task has started (AWS locks the opportunity).
+Edits to any of these fields, including Customer Use Case, Delivery Model, and Partner Need from AWS, are deferred while AWS is actively reviewing (`ReviewStatus = Submitted`, `In review`, or `Rejected`); the `reconcile_pending` Lambda sweeps the parked edits on its schedule and replays them once review exits. See [operations.md "Deferred edits and review-status reconciliation"](operations.md) for the operator view of that flow.
 
 ## Sandbox vs production catalog
 
@@ -127,7 +127,7 @@ The Sandbox catalog mirrors production validation but is isolated. Run the sandb
 | ACE field | HubSpot property | GovWin source | Notes |
 |---|---|---|---|
 | `Project.Title` | `dealname` | `title` | Auto |
-| `Project.ExpectedCustomerSpend[].Amount` | `amount` | `oppValue` x 1000 | Auto |
+| `Project.ExpectedCustomerSpend[].Amount` | `amount` | Two-stage transform: GovWin `oppValue` x 1000 lands as HubSpot `amount`; the mapper then divides by 12 to send a monthly figure to ACE | Auto |
 | `Project.CustomerBusinessProblem` | `description` | `description` | Auto (sanitized) |
 | `Project.CustomerUseCase` | `govwin_ace_use_case` |; | **Manual** (AWS-published enum) |
 | `Project.DeliveryModels[]` | `govwin_ace_delivery_model` |; | **Manual** |

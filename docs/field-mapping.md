@@ -57,19 +57,25 @@ These properties feed `src/ace/mapper.py`, which builds the `CreateOpportunity` 
 | `Customer.Account.Address.CountryCode` | `govwin_country` | `country` | Yes (defaulted to US) |
 | `LifeCycle.TargetCloseDate` | `closedate` | `pAwardDateTo` or `responseDate` | Yes |
 | `Project.Title` | `dealname` | `title` | Yes |
-| `Project.CustomerBusinessProblem` | `description` | `description` (sanitized) | Yes |
-| `Project.CustomerUseCase` | `description` | `description` (same as business problem; track for split) | Yes |
+| `Project.CustomerBusinessProblem` | `description` | `description` (sanitized; padded with the deal title if under 20 chars to satisfy the AWS server-side length minimum) | Yes |
+| `Project.CustomerUseCase` | `govwin_ace_use_case` | BD-entered, validated against the AWS-published enum (`ALLOWED_CUSTOMER_USE_CASES`); falls back to the configured default if the deal omits it, errors out if it carries an invalid non-`Other` value | **MANUAL ENTRY (defaulted)** |
 | `OpportunityType` | `govwin_ace_opportunity_type` | Default: `Net New Business` | Yes |
-| `Project.ExpectedCustomerSpend[].Amount` | `amount` | `oppValue` x 1000 | Yes |
+| `Project.ExpectedCustomerSpend[].Amount` | `amount` | Two-stage transform: GovWin `oppValue` x 1000 lands as HubSpot `amount`, then mapper divides by 12 (`MRR_MONTHS_PER_YEAR`) to send a monthly figure to ACE | Yes |
 | `PartnerOpportunityIdentifier` | `govwin_opp_id` | GovWin opp ID | Yes |
-| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` |; | **MANUAL ENTRY REQUIRED** |
-| Solution association (`AssociateOpportunity`) | `govwin_ace_solution_id` (override) or `ace_default_solution_id` |; | **MANUAL ENTRY REQUIRED** (defaulted) |
-| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` |; | **MANUAL ENTRY REQUIRED** |
-| `Catalog` |; | `ACE_CATALOG` env (`Sandbox` or `AWS`) | Auto |
-| `ClientToken` |; | UUID, persisted in DynamoDB for idempotency | Auto |
-| `Origin` |; | Always `Partner Referral` | Auto |
+| `Project.DeliveryModels[]` | `govwin_ace_delivery_model` | Hard-required; mapper raises `ACEMappingError` if missing or any value is outside `ALLOWED_DELIVERY_MODELS` | **MANUAL ENTRY REQUIRED** |
+| Solution association (`AssociateOpportunity`) | `govwin_ace_solution_id` (override) or `ace_default_solution_id` | Required in the AWS production catalog; optional in Sandbox where the integration falls back to a `_NONE_REGISTERED_` placeholder | **MANUAL ENTRY (defaulted)** |
+| `PrimaryNeedsFromAws[]` | `govwin_ace_partner_need` | Hard-required; mapper raises `ACEMappingError` if missing or any value is outside `ALLOWED_PRIMARY_NEEDS` | **MANUAL ENTRY REQUIRED** |
+| `Catalog` | n/a | `ACE_CATALOG` env (`Sandbox` or `AWS`) | Auto |
+| `ClientToken` | n/a | UUID minted per submit attempt; persisted in DynamoDB ACE# row via a conditional write so concurrent SQS retries cannot duplicate (see ADR 0006) | Auto |
+| `Origin` | n/a | Always `Partner Referral` | Auto |
 
-The three **MANUAL ENTRY REQUIRED** fields cannot be auto-populated from GovWin data. They must come from the BD team in HubSpot before the deal moves to the **Submit to AWS** stage. The mapper validates the partner-need and delivery-model values against the AWS-published enum and rejects deals with invalid values before any API call.
+Three fields require BD manual entry on the Submit card because they reflect business judgment that cannot be derived from GovWin:
+
+- **`govwin_ace_partner_need`** -> `PrimaryNeedsFromAws[]`: hard-required by the mapper.
+- **`govwin_ace_delivery_model`** -> `Project.DeliveryModels[]`: hard-required by the mapper.
+- **`govwin_ace_use_case`** -> `Project.CustomerUseCase`: validated against the AWS enum; falls back to the configured default if the BD leaves it blank but errors out if the BD picks a value the AWS API would reject.
+
+The mapper additionally validates each of the three values against the AWS-published enum and rejects deals with invalid values before any API call. `AWS Solution` is required in the production catalog and defaults to `ace_default_solution_id` per deployment; in the Sandbox catalog it is optional.
 
 ### NAICS to AWS Industry Mapping
 
@@ -98,7 +104,7 @@ The three **MANUAL ENTRY REQUIRED** fields cannot be auto-populated from GovWin 
 
 ### Deal Pipeline Stages
 
-The integration uses an existing HubSpot pipeline named **"Government"** rather than creating a new one (HubSpot Professional accounts are limited to two custom pipelines). The pipeline must exist before deployment, with the stage labels listed below. Update `PIPELINE_NAME` in `src/hubspot/properties.py` if your pipeline uses a different name, and update `GOVWIN_STATUS_TO_STAGE` if your stage labels differ.
+The integration uses an existing HubSpot pipeline named **"GovWin Pipeline"** rather than creating a new one (HubSpot Professional accounts are limited to two custom pipelines). The pipeline must exist before deployment, with the stage labels listed below. Update `PIPELINE_NAME` in `src/hubspot/properties.py` if your pipeline uses a different name, and update `GOVWIN_STATUS_TO_STAGE` if your stage labels differ.
 
 | GovWin Status | HubSpot Stage Label |
 |---|---|

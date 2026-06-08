@@ -138,7 +138,7 @@ After fixing the cause, redrive the DLQ back into the submit queue (see SQS comm
 
 Symptom: webhook receiver returned 200 with `dropped=1` in the log. The deal moved into a stage that isn't in `ace_trigger_stages`.
 
-Fix: either move the deal into a configured trigger stage, or update `ace_trigger_stages` and `terraform apply`. See `docs/deployment-guide.md#9b.i-find-your-numeric-stage-ids`.
+Fix: either move the deal into a configured trigger stage, or update `ace_trigger_stages` and `terraform apply`. See `docs/deployment-guide.md#9bi-find-your-hubspot-pipeline-stage-internal-ids-ace_trigger_stages`.
 
 ### Scenario 3: DynamoDB has stale state from a prior failed attempt
 

@@ -26,6 +26,7 @@ Decision, Consequences.
 | [0008](0008-hubspot-batch-upsert-id-property.md) | HubSpot batch upsert via idProperty, not search-before-upsert | Accepted |
 | [0009](0009-marked-for-sync-default.md) | Marked-for-sync default for GovWin discovery | Accepted |
 | [0010](0010-lambda-arm64-runtime.md) | ARM64 (Graviton2) Lambda runtime | Accepted |
+| [0011](0011-manual-release-flow.md) | Manual release flow, not semantic-release | Accepted |
 
 ## Writing a new ADR
 

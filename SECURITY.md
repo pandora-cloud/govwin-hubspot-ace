@@ -66,7 +66,7 @@ The project follows least privilege at every identity boundary. Three identities
 | Identity | Used by | When | Policy location |
 |---|---|---|---|
 | Bootstrap operator | Security team, one-time per environment | One-shot setup | `terraform/bootstrap/policies/bootstrap-operator.json` (S3 state bucket creation + deployer role creation only) |
-| Deployer role | `terraform apply` for the main module | Every deploy | Inline policies in `terraform/bootstrap/deployer_role.tf`. Scoped to `${name_prefix}-*` resource ARNs across S3, Lambda, API Gateway, SQS, SNS, DynamoDB, Secrets Manager, EventBridge, Step Functions, IAM, and CloudWatch Logs. |
+| Deployer role | `terraform apply` for the main module | Every deploy | Inline policies in `terraform/bootstrap/deployer_role.tf`. Scoped to `${name_prefix}-*` resource ARNs across S3, Lambda, API Gateway, SQS, SNS, DynamoDB, Secrets Manager, EventBridge, EventBridge Scheduler, KMS, IAM, and CloudWatch Logs. |
 | Lambda execution role | The deployed Lambdas at runtime | Continuous | `terraform/modules/lambda/main.tf` and `terraform/modules/ace/iam.tf`. Scoped to specific table / queue / secret ARNs. `partnercentral:*` actions use `Resource = "*"` because the Partner Central Selling API does not support resource-level IAM; this is mitigated by the `partnercentral:Catalog` condition that always pins to the configured catalog. |
 
 The day-to-day deployer's personal IAM identity needs only `sts:AssumeRole` on the deployer role's ARN. CloudTrail records every assumption.

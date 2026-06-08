@@ -72,12 +72,16 @@ src/
   lambdas/
     govwin_orchestrator.py      - EventBridge Scheduler -> token refresh + discovery + SQS fan-out
     govwin_worker.py            - SQS -> per-batch fetch + HubSpot sync (batchItemFailures-aware)
-    setup_hubspot.py            - One-time property/pipeline creation
-    setup_hubspot_webhooks.py   - One-time webhook subscription registration
-    hubspot_webhook_receiver.py - API Gateway -> validate signature -> SQS routing
+    setup_hubspot.py            - One-time custom property creation (pipeline is created manually per docs/deployment-guide.md)
+    hubspot_webhook_receiver.py - API Gateway -> validate X-HubSpot-Signature-v3 -> route to ACE submit / update queue
     submit_to_ace.py            - SQS -> 3-call ACE submission with resume-from-step idempotency
     update_in_ace.py            - SQS -> UpdateOpportunity with optimistic locking
-    handle_ace_event.py         - EventBridge -> mirror AWS state changes to HubSpot
+    handle_ace_event.py         - EventBridge (aws.partnercentral-selling) -> mirror AWS state changes to HubSpot
+    reconcile_pending.py        - EventBridge Scheduler -> replay deferred edits parked during AWS review
+    ui_extension_reads.py       - API Gateway GET /ui-extension/{solutions,aws-products} for the Submit card
+    ui_extension_writes.py      - API Gateway POST /ui-extension/{submit,update} for the Submit and Update cards
+    _ui_extension_common.py     - Shared signature, CORS, and replay-gate helpers for the UI Extension Lambdas
+    _webhook_routing.py         - Shared property-name to queue routing for the webhook receiver
 hubspot-app/                    - HubSpot developer-platform (2025.2+) project; webhook subscriptions
 terraform/
   provider.tf            - AWS provider config with profile

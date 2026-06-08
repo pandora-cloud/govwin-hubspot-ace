@@ -72,7 +72,7 @@ govwin_password           = "..."
 hubspot_private_app_token = "..."
 aws_profile               = "your-mfa-profile"
 aws_region                = "us-east-1"
-environment               = "prod"   # use "sandbox" or "dev" if you want a non-prod resource prefix
+environment               = "prod"   # use "staging" or "dev" if you want a non-prod resource prefix
 
 # Sandbox testing (until you flip to AWS catalog)
 ace_catalog                  = "Sandbox"

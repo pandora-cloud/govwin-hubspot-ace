@@ -22,12 +22,12 @@ Reasonable alternatives for the state surface include DynamoDB, Amazon Relationa
 - PAY_PER_REQUEST billing mode. No provisioned capacity to manage; cost scales with usage. At the project's expected scale (~1,000 to ~100,000 opportunities) the bill rounds to a few dollars per month.
 - Customer-managed Key Management Service (KMS) key for encryption at rest, scoped via key policy, auditable via CloudTrail.
 - DynamoDB Streams enabled to support future event-driven extensions (not currently consumed; left enabled because the cost is negligible and turning streams on later requires a table-level re-write).
-- Two tables: `sync_state` (incremental cursors and per-opportunity update timestamps) and `entity_mappings` (`ACE#`, `WHK#`, and id mapping rows).
+- Two tables: `sync_state` (incremental cursors and per-opportunity update timestamps) and `entity_mappings` (`ACE#`, `EVT#`, `WHK#`, and the `GOVENTITY#`/`CONTACT#`/`COMPANY#` id-mapping rows).
 
 **Credentials: Secrets Manager.**
 
 - Secrets Manager over SSM Parameter Store `SecureString` because Secrets Manager has first-class support for automatic rotation, separate read-quota budgets from SSM, and a richer audit trail.
-- Three secrets per deployment: GovWin client credentials (id plus secret plus password), GovWin OAuth token cache (access plus refresh, refreshed by the orchestrator), HubSpot REST token, and the HubSpot webhook signing secret.
+- Four secrets per deployment: GovWin client credentials (id plus secret plus password), GovWin OAuth token cache (access plus refresh, refreshed by the orchestrator), HubSpot REST token, and the HubSpot webhook signing secret. The first three are provisioned by `terraform/modules/secrets`; the webhook signing secret is provisioned by `terraform/modules/ace` because only the receiver Lambda in that module reads it.
 - IAM grants are per-secret, with Lambda execution roles allowed only the specific secrets they need; the principle of least privilege.
 
 ## Consequences
@@ -42,7 +42,7 @@ Positive:
 Negative:
 
 - DynamoDB lacks ad-hoc analytical queries. Anything more complex than key-value lookup requires either an export to Amazon Athena or a separate analytical store. Out of scope for this project.
-- Secrets Manager costs more per secret than SSM Parameter Store does. At three secrets per deployment, the difference is roughly $1 to $1.50 per month, which we judged acceptable for the rotation and audit trail benefits.
+- Secrets Manager costs more per secret than SSM Parameter Store does. At four secrets per deployment, the difference is roughly $1.50 to $2 per month, which we judged acceptable for the rotation and audit trail benefits.
 - The customer-managed KMS key adds ~$1 per month over AWS-managed KMS keys, in exchange for explicit key policy control and CloudTrail visibility on key use.
 
 Operational:

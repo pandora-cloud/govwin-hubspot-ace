@@ -18,9 +18,9 @@ Built and maintained by [Pandora Cloud](https://pandoracloud.net).
 
 ## What This Does
 
-Federal AWS partners use this to mark opportunities in GovWin and have them flow automatically through HubSpot CRM, where the BD team reviews and adds three ACE-required fields, and into AWS Partner Central as ACE-submitted co-sell deals. The integration handles three boundaries the rest of the market makes you stitch together yourself:
+Federal AWS partners use this to mark opportunities in GovWin and have them flow automatically through HubSpot CRM, where the BD team reviews and adds three ACE-required fields (**Partner Need from AWS**, **Delivery Model**, **Customer Use Case**), and into AWS Partner Central as ACE-submitted co-sell deals. The integration handles three boundaries the rest of the market makes you stitch together yourself:
 
-1. **GovWin IQ to HubSpot.** Marked opportunities sync into HubSpot every few hours with their agency, contacts, and contract details pre-populated across 30 custom properties.
+1. **GovWin IQ to HubSpot.** Marked opportunities sync into HubSpot hourly with their agency, contacts, and contract details pre-populated across 30 custom properties.
 2. **HubSpot to AWS Partner Central.** When a deal moves to a "Submit to AWS" stage, a HubSpot webhook fires, the integration calls `CreateOpportunity` -> `AssociateOpportunity` -> `StartEngagementFromOpportunityTask` against the AWS Partner Central Selling API, and the engagement is queued for AWS review.
 3. **AWS Partner Central back to HubSpot.** EventBridge events on `aws.partnercentral-selling` flow into a handler that updates the HubSpot deal stage. It mirrors AWS review status (Submitted to AWS, Under AWS Review, Approved by AWS, Action Required) and, when a deal reaches a terminal lifecycle stage, that wins over review status: Closed Lost mirrors to Closed Lost (with the closed-lost reason), and Launched mirrors to Closed Won.
 
@@ -36,7 +36,7 @@ The sync runs incrementally and respects both GovWin's 4,000 calls/hour cap and 
 
 1. **Find an opportunity in GovWin IQ** and click "Add to Web Services Download" on the opportunity detail page.
 2. **The integration syncs it to HubSpot** on the next scheduled run (default: every hour). A deal appears in your **GovWin Pipeline** with the opportunity details, agency, and contacts already filled in.
-3. **Open the deal and use the "Submit to AWS Partner Central" card.** In the Submit form, fill the three ACE fields (Delivery Model, AWS Solution, Partner Primary Need from AWS) plus any optional context, then click Submit. The card writes the fields and advances the deal stage for you; BD never drags pipeline stages by hand.
+3. **Open the deal and use the "Submit to AWS Partner Central" card.** In the Submit form, fill the three required ACE fields (**Partner Need from AWS**, **Delivery Model**, **Customer Use Case**) and confirm or change the **AWS Solution** (required in the AWS production catalog, optional in Sandbox; defaults to the Terraform-set `ace_default_solution_id`). You will also typically want to set the AWS Account ID, Industry, Deal Name, Amount, and Close Date if they were not pre-populated; the [BD User Guide](docs/bd-user-guide.md) walks through every field on the form. Click Submit; the card writes the fields and advances the deal stage for you; BD never drags pipeline stages by hand.
 4. **The submission fires automatically** via HubSpot webhook. The deal moves through the AWS Partner Central review and the card's read-only status follows AWS as it responds. To close or launch a live deal, use the card's Update form (LifeCycle Stage dropdown), not a manual stage move.
 
 For the step-by-step operator walkthrough, see the [BD User Guide](docs/bd-user-guide.md).
@@ -61,7 +61,7 @@ The HubSpot to AWS Partner Central half:
 - **HubSpot developer-platform app** (private, static auth) registers webhook subscriptions for the deal properties we care about.
 - **API Gateway HTTP API** in front of a small Lambda receiver that validates `X-HubSpot-Signature-v3` and routes events into either the submit queue (deal-stage transitions) or the update queue (content-property changes).
 - **Two SQS queues with DLQs** decouple webhook delivery from the AWS Partner Central API calls so we never blow HubSpot's 5-second response budget.
-- **Three new AWS Lambdas:** `submit_to_ace` runs the three-call submission with resume-from-step idempotency, `update_in_ace` handles UpdateOpportunity with optimistic locking, and `handle_ace_event` consumes EventBridge events from `aws.partnercentral-selling` to mirror AWS-side state changes back into HubSpot.
+- **Six AWS Lambdas on the submission half:** `hubspot_webhook_receiver` validates signatures and routes to the right queue, `submit_to_ace` runs the three-call submission with resume-from-step idempotency, `update_in_ace` handles UpdateOpportunity with optimistic locking, `handle_ace_event` consumes EventBridge events from `aws.partnercentral-selling` to mirror AWS-side state changes back into HubSpot, `reconcile_pending` sweeps deals whose content edits were deferred during the AWS review window, and a pair of UI Extension Lambdas (`ui_extension_reads` and `ui_extension_writes`) back the Submit and Update cards on the deal record.
 - **DynamoDB** ACE# pk pattern stores the AWS opportunity ID, ClientToken, engagement task ID, and last-modified date for optimistic locking on subsequent updates.
 
 ## ACE-Ready Deals
@@ -89,7 +89,7 @@ For the full end-to-end ACE submission workflow, see the [ACE Integration Guide]
 
 ## Before you install
 
-Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It covers the stakeholders to engage, the eleven decisions to make BEFORE `terraform apply` (including the AWS catalog choice and the pipeline-stage IDs that drive ACE submission), the compliance posture, and the cost expectations. The deployment steps below assume those decisions are made.
+Read [docs/pre-install-checklist.md](docs/pre-install-checklist.md) first. It covers the stakeholders to engage, the configuration decisions to make BEFORE `terraform apply` (the AWS catalog choice, the default Solution ID, the notification email, and the pipeline-stage IDs that drive ACE submission), the compliance posture, and the cost expectations. The deployment steps below assume those decisions are made.
 
 ## Prerequisites
 
@@ -251,7 +251,7 @@ The integration creates 30 custom deal properties, 5 company properties, and 3 c
 | `description` | `description` | HTML stripped, truncated to 65,536 chars |
 | `pAwardDateTo` / `responseDate` | `closedate` | Converted to HubSpot epoch milliseconds |
 | `id` (e.g., OPP12345) | `govwin_opp_id` | Deduplication key |
-| `status` | Deal stage | Mapped to pipeline stages (Pre-RFP, RFP Released, etc.) |
+| `status` | `dealstage` | Mapped to a pipeline stage label (see Pipeline stages below) |
 | `govEntity.title` | Associated Company `name` | Creates/updates HubSpot company |
 | `primaryNAICS` | `govwin_industry` | NAICS code mapped to AWS ACE industry values |
 | `solicitationNumber` | `govwin_solicitation_number` | Direct |
@@ -265,13 +265,14 @@ GovWin statuses map to stage labels in your **GovWin Pipeline**. The labels belo
 
 | GovWin Status | HubSpot Stage Label |
 |---|---|
-| Pre-RFP, Pre-Solicitation | Opportunity Identified |
+| Pre-RFP, Pre-Solicitation, Forecast Pre-RFP, Umbrella Program | Opportunity Identified |
 | RFP Released, RFP, Solicitation | Reviewing Requirements |
 | Proposal Submitted | Preparing Response |
-| Under Evaluation, Evaluation | Submitted |
-| Awarded, Award | Closed Won |
-| Cancelled, Closed, Lost | Closed Lost |
+| Under Evaluation, Evaluation, Source Selection, Post-RFP | Submitted |
+| Awarded, Award, Partial Award | Closed Won |
+| Cancelled, Canceled, Closed, Lost, Deleted/Canceled, Expired/Archived | Closed Lost |
 | Declined | Declined |
+| Other, plus any unrecognized status | Other |
 
 ### Associations
 

@@ -284,15 +284,16 @@ terraform apply
 ```
 
 Terraform will create:
-- 2 DynamoDB tables
-- 3 Secrets Manager secrets
-- 7 Lambda functions + shared layer
-- 1 Step Function state machine
-- 1 EventBridge rule (scheduled trigger)
+- 2 DynamoDB tables (`govwin_sync_state`, `govwin_entity_mappings`)
+- 4 Secrets Manager secrets (`govwin`, `govwin-tokens`, `hubspot`, `hubspot-webhook`)
+- 10 Lambda functions + shared dependency layer (`govwin_orchestrator`, `govwin_worker`, `setup_hubspot`, `hubspot_webhook_receiver`, `submit_to_ace`, `update_in_ace`, `handle_ace_event`, `reconcile_pending`, `ui_extension_reads`, `ui_extension_writes`)
+- 1 API Gateway HTTP API (multi-route: `/webhook`, `/ui-extension/*`)
+- 2 EventBridge Scheduler schedules (`govwin_orchestrator` hourly, `reconcile_pending` periodic) plus 1 EventBridge rule on `aws.partnercentral-selling`
 - 1 SNS topic (notifications)
-- 1 SQS queue (dead letter queue)
-- IAM roles and policies
-- CloudWatch log groups
+- 8 SQS queues: 3 operational (`govwin-sync`, `ace-submit`, `ace-update`) plus 5 DLQs (one per operational queue, one project-wide, plus the reconcile-sweep DLQ)
+- 1 customer-managed KMS CMK encrypting DynamoDB, SNS, and all SQS queues
+- IAM roles and policies (least-privilege per Lambda)
+- CloudWatch log groups (one per Lambda + API Gateway access logs)
 
 ## Step 7: Mark Opportunities for Sync
 
@@ -331,7 +332,7 @@ The orchestrator handles token refresh, runs the configured discovery mode (mark
 
 - **Lambda console**: see invocation counts, errors, and durations for `govwin-hubspot-prod-govwin-orchestrator` and `govwin-hubspot-prod-govwin-worker`
 - **CloudWatch Logs**: per-function log streams under `/aws/lambda/<function-name>`
-- **SQS console**: backlog and DLQ depth for the sync, ACE submission, ACE update, and webhook queues
+- **SQS console**: backlog and DLQ depth for the sync, ACE submission, and ACE update queues, plus the reconcile-sweep DLQ
 - **SNS Notifications**: summary email after each sync (if `notification_email` is set)
 
 ## Step 9: Wire up the AWS Partner Central submission half
@@ -362,7 +363,7 @@ hs accounts use <your-portal-name>   # if you authenticated against multiple acc
 hs project upload         # uploads the bundled hubspot-app/ project
 ```
 
-`hs init` requires browser-based OAuth and writes the resulting credentials to `~/.hubspot.config.yml`; this will not work in a fully headless environment. The project (`hubspot-app/`) is committed to the repo with the right scopes and webhook subscriptions pre-declared (deal-stage, amount, closedate, dealname, govwin_ace_delivery_model, govwin_ace_partner_need). Subscriptions ship inactive; we activate them in step 9d after the API Gateway URL is known.
+`hs init` requires browser-based OAuth and writes the resulting credentials to `~/.hubspot.config.yml`; this will not work in a fully headless environment. The project (`hubspot-app/`) is committed to the repo with the right scopes and webhook subscriptions pre-declared. Subscriptions cover `dealstage`, `amount`, `closedate`, `dealname`, `description`, `govwin_industry`, `govwin_aws_cosell_id`, and the full `govwin_ace_*` property family (delivery_model, partner_need, use_case, solution_id, opportunity_type, lifecycle_stage, sales_activities, aws_account_id, aws_products, competitor_name, national_security, closed_lost_reason, additional_comments, next_steps, related_opportunity_id, and the marketing block). See `hubspot-app/src/app/webhooks/webhooks-hsmeta.json` for the authoritative manifest. Subscriptions ship inactive; we activate them in step 9d after the API Gateway URL is known.
 
 After upload, the **App ID** and **client secret** are visible in the HubSpot developer portal at:
 

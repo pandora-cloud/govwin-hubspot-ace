@@ -35,7 +35,7 @@ ops/day, ~30 ACE submissions/month.
 |---|---|---|
 | **AWS Lambda** | ~110k orchestrator + worker invocations (4-hour sync, batched), ~15k UI Extension + webhook receiver, ~5k EventBridge handler. ARM64. Mostly within 1M free tier; spillover at $0.20 / 1M. | ~$2 |
 | **DynamoDB** | PAY_PER_REQUEST, ~10k entity-mapping reads + ~50k sync-state writes / month. CMK-encrypted (key use within free tier 1k requests/month). | ~$3 |
-| **Secrets Manager** | 3 secrets (GovWin creds, GovWin tokens, HubSpot PAT) × $0.40/month. ~30k retrievals at $0.05/10k = $0.15. | ~$1.40 |
+| **Secrets Manager** | 4 secrets (GovWin creds, GovWin tokens, HubSpot PAT, HubSpot webhook signing) × $0.40/month. ~30k retrievals at $0.05/10k = $0.15. | ~$1.75 |
 | **KMS (customer-managed CMK)** | 1 CMK × $1/month + ~100k API requests at $0.03/10k. | ~$1.30 |
 | **SQS** | ~150k messages across submit / update / govwin-sync / 3 DLQs. CMK-encrypted. First 1M / month free. | ~$0 |
 | **SNS** | ~30 notifications/month. Within free tier. | ~$0 |
@@ -58,12 +58,12 @@ Sized for a typical small federal AWS partner: ~1,000 opportunities,
 |---|---|
 | Lambda | ~$0 (within free tier) |
 | DynamoDB | ~$0.50 |
-| Secrets Manager | ~$1.40 |
+| Secrets Manager | ~$1.75 |
 | KMS | ~$1.20 |
 | CloudWatch Logs + Alarms | ~$2.50 |
 | Everything else | <$0.30 |
 
-**Total: ~$6/month.**
+**Total: ~$6.25/month.**
 
 The CMK adds ~$1 vs the AWS-managed key default, in exchange for
 CloudTrail auditability and the ability to scope key use via key
