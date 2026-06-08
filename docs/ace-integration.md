@@ -102,6 +102,13 @@ Typical timeline: 24-72 hours. Review status flows back via EventBridge:
 
 A terminal `LifeCycle.Stage` (Closed Lost or Launched) takes precedence over `ReviewStatus`. A closed or launched opportunity keeps `ReviewStatus = Approved`, so mapping by review status alone would revert a just-closed deal back to `approved_by_aws`; the stage check wins so the deal stays terminal. When AWS reports Closed Lost, the handler also mirrors `ClosedLostReason` onto the deal.
 
+The handler also subscribes to two engagement-lifecycle events that AWS publishes outside the regular Opportunity/Invitation flow:
+
+- **`Engagement Resource Snapshot Created`** fires when AWS snapshots a new revision of opportunity data (a reviewer changes a field, the customer's AWS account linkage changes, etc.). The handler routes this to the same `GetOpportunity` and diff-into-HubSpot path as `Opportunity Updated`, so AWS-side amendments propagate to HubSpot in near-real-time instead of waiting for the next hourly sync.
+- **`Engagement Created`** fires when a new engagement is created on the opportunity (typically the downstream of our `StartEngagementFromOpportunityTask` call). The handler logs the `aws_opp -> engagement` linkage to CloudWatch for audit. Full DynamoDB persistence of the engagement id against the ACE# row is deferred until a reverse `AWSOPP#` index is added to `src.sync.state`.
+
+Two other AWS-published detail-types (`Engagement Member Added` and `Engagement Updated`) are intentionally not subscribed at the EventBridge rule layer. The reference doc marks both as "Informational; log only" and we have no per-event behavior; filtering them at the rule pattern avoids paying for an invocation per noop. See [the EventBridge events reference](reference/aws-partner-central/eventbridge-events.md) for the full subscription matrix.
+
 The handler dedups on EventBridge `id` with a 24-hour TTL via a conditional `put_item` so duplicate deliveries are no-ops.
 
 ### 6. Updates after submission

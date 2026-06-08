@@ -7,6 +7,22 @@
 # `account` to the pattern means even a misconfigured custom bus or a
 # future cross-account event-bus policy cannot land non-local events on
 # our handler.
+#
+# AWS publishes ten detail-types from `aws.partnercentral-selling`. We
+# subscribe to eight of them (see docs/reference/aws-partner-central/
+# eventbridge-events.md for the full matrix). Two are deliberately
+# filtered out at this layer:
+#
+#   - `Engagement Member Added` (informational; AWS publishes when a
+#     new member joins an engagement, no action required on our side)
+#   - `Engagement Updated` (informational; engagement metadata changed,
+#     no action required on our side)
+#
+# Filtering them at the EventBridge rule pattern means they never
+# invoke our Lambda at all, so we do not pay invocation cost to immediately
+# skip them in code. If the action policy changes for either type, add the
+# detail-type to the matching rule below; the handler-side dispatch will
+# already route it through the relevant branch.
 
 data "aws_caller_identity" "current" {}
 
@@ -41,6 +57,22 @@ resource "aws_cloudwatch_event_rule" "invitation_outcomes" {
   })
 }
 
+resource "aws_cloudwatch_event_rule" "engagement_lifecycle" {
+  name        = "${var.name_prefix}-ace-engagement-lifecycle"
+  description = "Engagement and resource-snapshot lifecycle events"
+  event_pattern = jsonencode({
+    source  = ["aws.partnercentral-selling"]
+    account = [data.aws_caller_identity.current.account_id]
+    "detail-type" = [
+      "Engagement Created",
+      "Engagement Resource Snapshot Created",
+    ]
+    detail = {
+      catalog = [var.ace_catalog]
+    }
+  })
+}
+
 resource "aws_cloudwatch_event_target" "opportunity_changes" {
   rule      = aws_cloudwatch_event_rule.opportunity_changes.name
   target_id = "handle_ace_event"
@@ -49,6 +81,12 @@ resource "aws_cloudwatch_event_target" "opportunity_changes" {
 
 resource "aws_cloudwatch_event_target" "invitation_outcomes" {
   rule      = aws_cloudwatch_event_rule.invitation_outcomes.name
+  target_id = "handle_ace_event"
+  arn       = aws_lambda_function.handle_ace_event.arn
+}
+
+resource "aws_cloudwatch_event_target" "engagement_lifecycle" {
+  rule      = aws_cloudwatch_event_rule.engagement_lifecycle.name
   target_id = "handle_ace_event"
   arn       = aws_lambda_function.handle_ace_event.arn
 }
@@ -67,4 +105,12 @@ resource "aws_lambda_permission" "eventbridge_invitation" {
   function_name = aws_lambda_function.handle_ace_event.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.invitation_outcomes.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_engagement" {
+  statement_id  = "AllowEventBridgeEngagement"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.handle_ace_event.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.engagement_lifecycle.arn
 }

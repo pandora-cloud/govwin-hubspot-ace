@@ -642,3 +642,173 @@ def test_reconcile_failure_does_not_block_stage_writeback(
         result = handle_ace_event.handler(_opportunity_event(), context=None)
     assert result["status"] == "updated"
     hubspot_mock.update_deal.assert_called_once()
+
+
+#------Engagement lifecycle events------
+
+
+def _snapshot_event(aws_id: str = "O1") -> dict:
+    """``Engagement Resource Snapshot Created`` carries the same
+    ``opportunity.identifier`` shape as ``Opportunity Updated``.
+    """
+    return {
+        "id": "ev-snap-1",
+        "detail-type": "Engagement Resource Snapshot Created",
+        "source": "aws.partnercentral-selling",
+        "detail": {
+            "catalog": "AWS",
+            "opportunity": {"identifier": aws_id},
+        },
+    }
+
+
+def _engagement_created_event(
+    *,
+    engagement_id: str | None = "eng-1",
+    aws_opp_id: str | None = "O1",
+) -> dict:
+    detail: dict = {"catalog": "AWS"}
+    if engagement_id is not None:
+        detail["engagement"] = {"identifier": engagement_id}
+    if aws_opp_id is not None:
+        detail["opportunity"] = {"identifier": aws_opp_id}
+    return {
+        "id": "ev-eng-1",
+        "detail-type": "Engagement Created",
+        "source": "aws.partnercentral-selling",
+        "detail": detail,
+    }
+
+
+def test_snapshot_event_with_opportunity_id_routes_to_opportunity_handler(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """Snapshot events with a valid opportunity.identifier go through the
+    same Get + diff + write-back path as Opportunity Updated."""
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(_snapshot_event(), context=None)
+    assert result["status"] == "updated"
+    ace_mock.get_opportunity.assert_called_once_with("O1")
+
+
+def test_snapshot_event_without_opportunity_id_skipped(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """If AWS changes the snapshot payload shape and omits
+    opportunity.identifier, we skip with an observable reason rather
+    than silently lose data."""
+    event = {
+        "id": "ev-snap-2",
+        "detail-type": "Engagement Resource Snapshot Created",
+        "source": "aws.partnercentral-selling",
+        "detail": {"catalog": "AWS"},
+    }
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(event, context=None)
+    assert result["status"] == "skipped"
+    assert "opportunity.identifier" in result["reason"]
+    ace_mock.get_opportunity.assert_not_called()
+
+
+def test_engagement_created_logs_linkage(state_mock, ace_mock, hubspot_mock) -> None:
+    """The engagement-created handler returns a 'logged' status with both
+    ids so CloudWatch Logs Insights can query the audit trail."""
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(
+            _engagement_created_event(engagement_id="eng-42", aws_opp_id="O42"),
+            context=None,
+        )
+    assert result["status"] == "logged"
+    assert result["engagement_id"] == "eng-42"
+    assert result["aws_opp_id"] == "O42"
+
+
+def test_engagement_created_without_engagement_id_skipped(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(
+            _engagement_created_event(engagement_id=None), context=None
+        )
+    assert result["status"] == "skipped"
+    assert "engagement.identifier" in result["reason"]
+
+
+def test_engagement_created_without_opp_id_still_logs(
+    state_mock, ace_mock, hubspot_mock
+) -> None:
+    """The handler logs as long as engagement.identifier is present, even
+    if AWS omits opportunity.identifier; aws_opp_id falls back to None."""
+    with (
+        patch.object(handle_ace_event, "SyncStateManager", return_value=state_mock),
+        patch.object(handle_ace_event, "ACEClient", return_value=ace_mock),
+        patch.object(handle_ace_event, "HubSpotClient", return_value=hubspot_mock),
+    ):
+        result = handle_ace_event.handler(
+            _engagement_created_event(engagement_id="eng-x", aws_opp_id=None),
+            context=None,
+        )
+    assert result["status"] == "logged"
+    assert result["engagement_id"] == "eng-x"
+    assert result["aws_opp_id"] is None
+
+
+#------Subscription drift guard------
+
+
+def test_handler_subscribed_detail_types_match_terraform_rules() -> None:
+    """Pin the handler-side dispatch set and the Terraform-side rule set
+    to the same authoritative list. If a future change subscribes to a
+    new detail-type without wiring it into the handler (or vice versa),
+    this test fails so the gap surfaces before deploy.
+    """
+    import re
+    from pathlib import Path
+
+    eventbridge_tf = (
+        Path(__file__).resolve().parent.parent.parent
+        / "terraform"
+        / "modules"
+        / "ace"
+        / "eventbridge.tf"
+    )
+    text = eventbridge_tf.read_text()
+    # Pull every string in a `"detail-type" = [...]` array; the rule
+    # patterns are the only place those strings live.
+    detail_type_arrays = re.findall(r'"detail-type"\s*=\s*\[([^\]]+)\]', text)
+    terraform_types: set[str] = set()
+    for block in detail_type_arrays:
+        terraform_types.update(re.findall(r'"([^"]+)"', block))
+
+    assert terraform_types == set(handle_ace_event.SUBSCRIBED_DETAIL_TYPES), (
+        "Handler-side SUBSCRIBED_DETAIL_TYPES and Terraform-side "
+        "EventBridge rule patterns have drifted. Terraform set: "
+        f"{sorted(terraform_types)}. Handler set: "
+        f"{sorted(handle_ace_event.SUBSCRIBED_DETAIL_TYPES)}."
+    )
+
+
+def test_unsubscribed_set_is_disjoint_from_subscribed_set() -> None:
+    """Sanity check: the documented-but-not-subscribed types do not
+    accidentally overlap with the subscribed set."""
+    assert (
+        handle_ace_event.SUBSCRIBED_DETAIL_TYPES
+        & handle_ace_event.UNSUBSCRIBED_DETAIL_TYPES
+        == frozenset()
+    )

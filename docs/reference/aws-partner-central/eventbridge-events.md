@@ -10,18 +10,22 @@ The `aws.partnercentral-selling` source publishes to the partner's **default** E
 
 ## All ten event types
 
-| Event detail-type | Trigger | Action we should take |
-|---|---|---|
-| `Opportunity Created` | New opportunity created (by us or AWS) | If created by AWS (referral), call `GetOpportunity` and create matching HubSpot deal |
-| `Opportunity Updated` | Existing opportunity changed | Call `GetOpportunity`, update HubSpot deal |
-| `Engagement Invitation Created` | AWS sent us a referral, OR our `StartEngagement` task created our outgoing invitation | If `participantType=Receiver`: notify deal owner of incoming AWS referral. If `Sender`: persist invitation ID in DynamoDB |
-| `Engagement Invitation Accepted` | The other side accepted the invitation | Update HubSpot deal stage to reflect AWS engagement acceptance |
-| `Engagement Invitation Rejected` | The other side declined | Update HubSpot deal stage to "Closed Lost" with rejection reason |
-| `Engagement Invitation Expired` | 15 days elapsed without action | Notify the deal owner via SNS |
-| `Engagement Member Added` | A new member joined an engagement | Informational; log only |
-| `Engagement Resource Snapshot Created` | A new revision of opportunity data was snapshotted | Trigger HubSpot resync to pick up AWS-side changes |
-| `Engagement Created` | New engagement was created | Persist `engagementId` against the opportunity |
-| `Engagement Updated` | Engagement metadata changed | Informational; log only |
+AWS publishes ten detail-types from `aws.partnercentral-selling`. We subscribe to eight; two are deliberately not subscribed (rationale in the rightmost column). The current subscription set is enforced at deploy time by the EventBridge rules in `terraform/modules/ace/eventbridge.tf` and at test time by the drift guard in `tests/unit/test_handle_ace_event_lambda.py`, so the matrix below cannot silently fall out of sync with what runs in production.
+
+| Event detail-type | Trigger | Action we take | Subscribed? |
+|---|---|---|---|
+| `Opportunity Created` | New opportunity created (by us or AWS) | If created by AWS (referral), call `GetOpportunity` and create matching HubSpot deal | Yes |
+| `Opportunity Updated` | Existing opportunity changed | Call `GetOpportunity`, diff into HubSpot, advance the deal stage if review status changed | Yes |
+| `Engagement Invitation Created` | AWS sent us a referral, OR our `StartEngagement` task created our outgoing invitation | If `participantType=Receiver`: notify deal owner of incoming AWS referral. If `Sender`: persist invitation ID in DynamoDB | Yes |
+| `Engagement Invitation Accepted` | The other side accepted the invitation | Update HubSpot deal stage to reflect AWS engagement acceptance | Yes |
+| `Engagement Invitation Rejected` | The other side declined | Update HubSpot deal stage to "Closed Lost" with rejection reason | Yes |
+| `Engagement Invitation Expired` | 15 days elapsed without action | Notify the deal owner via SNS | Yes |
+| `Engagement Created` | New engagement was created | Log the `aws_opp -> engagement` linkage to CloudWatch for audit. Full ACE# row persistence is deferred until a reverse `AWSOPP#` index exists in `src.sync.state`. | Yes |
+| `Engagement Resource Snapshot Created` | A new revision of opportunity data was snapshotted (AWS-side amendment, customer linkage change, etc.) | Treat like `Opportunity Updated`: call `GetOpportunity`, diff into HubSpot. Catches changes that would otherwise only surface on the next hourly sync. | Yes |
+| `Engagement Member Added` | A new member joined an engagement | Informational only; AWS sends this whenever any participant adds or removes a member. We have no per-member behavior in HubSpot. | **No** (intentionally filtered at the EventBridge rule pattern; subscribing would cost invocation per noop) |
+| `Engagement Updated` | Engagement metadata changed | Informational only; we already get the relevant changes through the more specific detail-types above. | **No** (intentionally filtered at the EventBridge rule pattern) |
+
+The dispatch in `src/lambdas/handle_ace_event.py` is keyed on the same exact strings; see the module-level `SUBSCRIBED_DETAIL_TYPES` and `UNSUBSCRIBED_DETAIL_TYPES` frozensets.
 
 ## Sample event: `Opportunity Updated`
 

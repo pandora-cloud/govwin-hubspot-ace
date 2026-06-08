@@ -32,6 +32,37 @@ logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 _AWS_OPP_ID_PATTERN = re.compile(r"^O[A-Z0-9-]{1,99}$")
 
 
+# Set of EventBridge detail-types this Lambda dispatches on. Held as
+# module-level constants so the unit-test drift guard can pin both this
+# set AND the Terraform-side subscription set (terraform/modules/ace/
+# eventbridge.tf) to the same authoritative list. If you add or remove
+# a type from either side, update the other and the drift test will
+# fail loudly.
+OPPORTUNITY_DETAIL_TYPES: frozenset[str] = frozenset(
+    {"Opportunity Created", "Opportunity Updated"}
+)
+INVITATION_DETAIL_TYPES: frozenset[str] = frozenset(
+    {
+        "Engagement Invitation Created",
+        "Engagement Invitation Accepted",
+        "Engagement Invitation Rejected",
+        "Engagement Invitation Expired",
+    }
+)
+ENGAGEMENT_DETAIL_TYPES: frozenset[str] = frozenset(
+    {"Engagement Created", "Engagement Resource Snapshot Created"}
+)
+SUBSCRIBED_DETAIL_TYPES: frozenset[str] = (
+    OPPORTUNITY_DETAIL_TYPES | INVITATION_DETAIL_TYPES | ENGAGEMENT_DETAIL_TYPES
+)
+# Detail-types AWS publishes that we deliberately do not subscribe to;
+# documented here so a future maintainer can audit the gap without
+# re-reading the EventBridge reference.
+UNSUBSCRIBED_DETAIL_TYPES: frozenset[str] = frozenset(
+    {"Engagement Member Added", "Engagement Updated"}
+)
+
+
 # Keys must match boto3 LifeCycle.ReviewStatus casing exactly; in
 # particular 'In review' is lowercase-r. Statuses not in the map are
 # intentionally ignored ('Pending Submission' fires on every Create but
@@ -629,6 +660,79 @@ def _handle_invitation_event(
     return {"status": "updated", "deal_id": deal_id, "stage": target_stage}
 
 
+def _handle_engagement_snapshot_event(
+    detail: dict[str, Any],
+    *,
+    state: SyncStateManager,
+    ace: ACEClient,
+    hubspot: HubSpotClient,
+) -> dict[str, Any]:
+    """``Engagement Resource Snapshot Created``.
+
+    AWS publishes this detail-type when it snapshots a new revision of
+    opportunity data. The typical trigger is an AWS-side amendment (a
+    reviewer changes a field, the customer updates their AWS account
+    linkage, etc.) that we would otherwise only discover on the next
+    hourly sync. The snapshot detail carries the same
+    ``opportunity.identifier`` shape as ``Opportunity Updated``, so the
+    right action is the same: fetch the current opportunity, diff into
+    HubSpot, advance the stage if review status changed.
+
+    The payload schema for ``Engagement Resource Snapshot Created`` is
+    not documented separately by AWS; we route via
+    :func:`_handle_opportunity_event` when ``opportunity.identifier`` is
+    present and skip with an observable reason when it is not, so any
+    future schema change surfaces in CloudWatch instead of silently
+    losing data.
+    """
+    if not (detail.get("opportunity") or {}).get("identifier"):
+        return {
+            "status": "skipped",
+            "reason": "snapshot event missing opportunity.identifier",
+        }
+    return _handle_opportunity_event(detail, state=state, ace=ace, hubspot=hubspot)
+
+
+def _handle_engagement_created_event(detail: dict[str, Any]) -> dict[str, Any]:
+    """``Engagement Created``.
+
+    AWS publishes this when a new engagement is created on the
+    opportunity (typically the downstream of our own
+    ``StartEngagementFromOpportunityTask`` call, but also possible for
+    engagements created AWS-side). We log the linkage between the AWS
+    opportunity id and the engagement id so it is queryable from
+    CloudWatch Logs Insights for audit, but we do not write it to
+    DynamoDB today: the matching ACE# row is keyed by GovWin id, and
+    reverse-lookup from AWS-opp-id to GovWin id requires either a
+    full-table Scan or a new reverse-index row pattern we have not yet
+    added.
+
+    The doc-only audit path is fine for v1; if a future incident or
+    compliance ask needs the engagement id pinned to the ACE# row, add
+    an ``AWSOPP#`` reverse index in :mod:`src.sync.state` and update
+    this handler to write through it.
+    """
+    engagement = detail.get("engagement") or {}
+    engagement_id = engagement.get("identifier") or detail.get("engagementId")
+    opportunity = detail.get("opportunity") or {}
+    aws_opp_id = opportunity.get("identifier") or detail.get("opportunityIdentifier")
+    if not engagement_id:
+        return {
+            "status": "skipped",
+            "reason": "engagement-created event missing engagement.identifier",
+        }
+    logger.info(
+        "handle_ace_event.engagement_created aws_opp=%s engagement=%s (audit log only)",
+        aws_opp_id or "unknown",
+        engagement_id,
+    )
+    return {
+        "status": "logged",
+        "engagement_id": str(engagement_id),
+        "aws_opp_id": str(aws_opp_id) if aws_opp_id else None,
+    }
+
+
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     config = load_config()
     # Pre-warm SNS for the orphan-alert + self-heal-mismatch alert
@@ -656,9 +760,15 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     ace = ACEClient(config)
 
     with HubSpotClient(config) as hubspot:
-        if detail_type in {"Opportunity Created", "Opportunity Updated"}:
+        if detail_type in OPPORTUNITY_DETAIL_TYPES:
             result = _handle_opportunity_event(detail, state=state, ace=ace, hubspot=hubspot)
-        elif detail_type.startswith("Engagement Invitation"):
+        elif detail_type == "Engagement Resource Snapshot Created":
+            result = _handle_engagement_snapshot_event(
+                detail, state=state, ace=ace, hubspot=hubspot
+            )
+        elif detail_type == "Engagement Created":
+            result = _handle_engagement_created_event(detail)
+        elif detail_type in INVITATION_DETAIL_TYPES:
             result = _handle_invitation_event(
                 detail_type, detail, state=state, ace=ace, hubspot=hubspot
             )
