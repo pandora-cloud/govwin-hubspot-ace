@@ -395,6 +395,24 @@ ace_trigger_stages = "3590200042,3590200043"
 
 If you skip this step, the webhook receiver will still receive HubSpot events but will never recognize a stage match, and no ACE submission will ever fire. Symptom: `hs project upload` succeeds and deals appear in HubSpot, but nothing arrives in AWS Partner Central.
 
+#### 9b.ii Verify the Submit-to-AWS card renders on a deal record
+
+`hs project upload` deploys three things in one go: the webhook subscriptions, the developer-platform app credentials (visible in the Auth tab), and the **Submit-to-AWS** UI Extension card that shows up on every deal record on the GovWin Pipeline. The card is what BD uses day-to-day; if it does not render, the rest of the integration is dark to them even when the backend is working.
+
+To confirm it deployed:
+
+1. In HubSpot, open any deal that is on the GovWin Pipeline (or create a test one with the **GovWin Pipeline** selected).
+2. The right-hand sidebar (the "About" section) should list **Submit to AWS Partner Central** as one of the cards. If the card is collapsed, click to expand it.
+3. The card shows a status badge ("Not submitted" for a fresh deal), an opportunity-type chip, and either a **Submit to AWS** or **Update opportunity in AWS** button. If those elements render, the card is working.
+
+If the card does not appear:
+
+- **Confirm the project uploaded.** Run `hs project list` and look for the project name (matches `hubspot-app/src/app/extensions/app.json`). The project should show as deployed with a recent timestamp.
+- **Confirm the right portal.** `hs accounts list` shows which HubSpot portal is active. If you authenticated against multiple portals and uploaded to the wrong one, the card will be missing in the portal you are looking at and present in the other. Use `hs accounts use <portal>` to switch.
+- **Confirm card placement.** UI Extension cards must be added manually to the deal record sidebar the first time. Go to **Settings -> Objects -> Deals -> Record customization -> Default view**, click **Customize the right sidebar**, and drag the **Submit to AWS Partner Central** card into the layout. Save. This is a one-time HubSpot quirk; once placed, the card stays for all deals.
+- **Confirm permissions.** The HubSpot user who deployed the project needs **Super Admin** (or at minimum a role with developer-platform-projects access). If `hs project upload` succeeds for an underprivileged user, the card files upload but the card is not enabled. Re-run from a Super Admin account.
+- **Confirm UI Extension Lambda reachability.** The card backs onto the `ui_extension_reads` / `ui_extension_writes` Lambdas via API Gateway. If the card renders the layout but shows "Failed to load" inside, the Lambda or its CORS or signature configuration is the problem; tail CloudWatch logs on those Lambdas while you reload the card to see the error.
+
 ### 9c. Set the Partner Central Terraform variables
 
 ```hcl

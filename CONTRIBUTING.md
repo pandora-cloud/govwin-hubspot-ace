@@ -38,6 +38,32 @@ Maintainers keep these GitHub topics set on the repo so search and discovery wor
 
 `govwin`, `hubspot`, `aws-partner-central`, `ace-connector`, `federal-contracting`, `government-contracting`, `terraform`, `aws-lambda`, `python`, `crm-integration`, `co-sell`, `woman-owned-small-business`, `serverless`, `aws`, `deltek`, `dynamodb`, `sqs`, `eventbridge`, `oss`.
 
+## Regenerating diagrams
+
+The three architecture diagrams live in `docs/diagrams/` as `.drawio` sources with rendered `.svg` outputs alongside them. The SVG files are what GitHub renders inline in the README and `docs/architecture.md`; the drawio files are the source of truth for editing.
+
+To edit a diagram, open the matching `.drawio` file in [draw.io desktop](https://github.com/jgraph/drawio-desktop/releases). When you save, regenerate the SVG so the rendered version stays in sync:
+
+```bash
+# Single diagram
+/Applications/draw.io.app/Contents/MacOS/draw.io \
+  --export --format svg \
+  --output docs/diagrams/sync-architecture.svg \
+  docs/diagrams/sync-architecture.drawio
+
+# All three
+for f in pipeline-overview sync-architecture submission-architecture; do
+  /Applications/draw.io.app/Contents/MacOS/draw.io \
+    --export --format svg \
+    --output docs/diagrams/$f.svg \
+    docs/diagrams/$f.drawio
+done
+```
+
+Commit both the updated `.drawio` and the regenerated `.svg`. The logo data URIs are embedded in each SVG so the GitHub-rendered view does not depend on external image hosts; if you swap out a logo, do it in the drawio source and re-export.
+
+The SVGs are large (60 to 130 KB each) because they include the embedded logos. That is intentional; do not "compress" or strip the data URIs.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the same Apache License, Version 2.0 as the project. Apache-2.0 includes an explicit patent grant from contributors, which gives downstream federal users stronger protection than MIT and aligns with AWS Open Source program preferences. See [LICENSE](LICENSE) for the full text.

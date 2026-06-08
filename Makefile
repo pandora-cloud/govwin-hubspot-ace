@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile release merge-pr
+.PHONY: help install install-dev test lint format typecheck deploy destroy clean local-up local-test local-down validate dry-run dlq-status dlq-redrive reconcile release merge-pr docs-properties docs-properties-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -24,6 +24,18 @@ format: ## Auto-format code
 
 typecheck: ## Run type checker
 	mypy src/
+
+docs-properties: ## Regenerate docs/reference/hubspot-properties.md from src/hubspot/properties.py
+	@.venv/bin/python scripts/generate_hubspot_properties_doc.py
+
+docs-properties-check: ## Fail if docs/reference/hubspot-properties.md is out of date
+	@.venv/bin/python scripts/generate_hubspot_properties_doc.py > /dev/null
+	@if ! git diff --quiet docs/reference/hubspot-properties.md; then \
+		echo "ERROR: docs/reference/hubspot-properties.md is out of date."; \
+		echo "Run 'make docs-properties' and commit the result."; \
+		git --no-pager diff docs/reference/hubspot-properties.md | head -40; \
+		exit 1; \
+	fi
 
 deploy: ## Deploy infrastructure with Terraform
 	cd terraform && terraform init && terraform apply

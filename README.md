@@ -240,7 +240,7 @@ This is not recommended for production - GovWin contains hundreds of thousands o
 
 ## Data Mapping
 
-The integration creates 30 custom deal properties, 5 company properties, and 3 contact properties in HubSpot, all under the `govwin_` prefix. Deals are placed in your existing **GovWin Pipeline**, with GovWin statuses mapped to its stage labels.
+The integration creates 53 custom deal properties, 5 company properties, and 3 contact properties in HubSpot, all under the `govwin_` prefix. Deals are placed in your existing **GovWin Pipeline**, with GovWin statuses mapped to its stage labels. For the exhaustive list with HubSpot type, field type, group, and description for each property, see [docs/reference/hubspot-properties.md](docs/reference/hubspot-properties.md) (auto-generated from `src/hubspot/properties.py`; CI fails if it drifts).
 
 ### Key field mappings
 
@@ -278,7 +278,7 @@ GovWin statuses map to stage labels in your **GovWin Pipeline**. The labels belo
 
 Deals are linked to their government agency (Company) and agency contacts (Contacts). Companies and contacts are deduplicated across opportunities - if three deals reference GSA, a single GSA company record is shared.
 
-For the complete mapping of all 38 properties, NAICS-to-industry codes, and association logic, see the [Field Mapping Reference](docs/field-mapping.md).
+For the curated GovWin-to-HubSpot field mapping, NAICS-to-industry codes, and association logic, see the [Field Mapping Reference](docs/field-mapping.md). For the property-by-property listing (all 61) generated from the source, see [docs/reference/hubspot-properties.md](docs/reference/hubspot-properties.md).
 
 ## Pre-deployment Testing
 
@@ -372,6 +372,7 @@ docs/
 
 **Planning and install**
 
+- [AWS Partner Network prerequisites](docs/aws-partner-prerequisites.md) - APN membership, Approved Solution registration, and ACE program eligibility (start here if you have not deployed an AWS Marketplace or ACE listing before)
 - [Pre-install planning and decisions](docs/pre-install-checklist.md) - Stakeholder map, decisions to make BEFORE `terraform apply`, compliance posture, what cannot be changed later
 - [Deployment Guide](docs/deployment-guide.md) - Full deployment walkthrough, credential setup, troubleshooting
 - [ACE Integration Guide](docs/ace-integration.md) - End-to-end workflow for submitting deals to AWS Partner Central

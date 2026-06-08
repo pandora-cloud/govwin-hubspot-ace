@@ -197,3 +197,58 @@ locked at the top.*
   contact the integration owner.
 - **Anything else.** Contact your HubSpot administrator or the integration owner
   for your organization.
+
+---
+
+## 9. Frequently asked questions
+
+### What do I pick for AWS Solution? It says it is required and the dropdown is huge.
+
+The **AWS Solution** dropdown on the Submit form lists every Solution your organization has registered in AWS Partner Central. A Solution is your packaged offering (software, services, or a bundle) that AWS has validated. Each opportunity has to be associated with at least one Solution so the AWS reviewer knows what is being co-sold.
+
+What to pick:
+
+- **In the AWS (production) catalog**, a Solution is required. Your integration owner or PDM (AWS Partner Development Manager) will tell you which Solution is the default for your team. If you are not sure, pick the one whose name and category most closely match what you are actually selling on this deal.
+- **In the Sandbox catalog**, a Solution is optional. If you leave it blank, the integration falls back to a `_NONE_REGISTERED_` placeholder so you can still smoke-test the flow without an Approved Solution registered.
+- You can change the Solution on the Update form later if you picked the wrong one, but only while the deal is *not* in Submitted or Under review.
+
+If the dropdown is empty when you open the Submit form, your AWS Partner Central account does not yet have an Approved Solution. Talk to your integration owner; you cannot submit to the production catalog until at least one Solution is registered and approved.
+
+### What is the AWS Co-sell ID property on the deal? Should I edit it?
+
+The `govwin_aws_cosell_id` property is an **audit-only** field. The integration writes the AWS-side opportunity identifier here after a successful submission so anyone looking at the deal in HubSpot can cross-reference it to the opportunity in Partner Central. It is not used for routing or business logic; it is read-only context for humans.
+
+**Never edit it by hand.** The card and the `handle_ace_event` Lambda own the value. Hand-editing can de-sync the HubSpot deal from its AWS counterpart and trigger an SNS alert. If the value looks wrong, contact your integration owner; do not try to fix it from the property panel.
+
+### My deal has been Submitted for days. Is something broken?
+
+AWS reviewer SLAs for co-sell opportunities are typically **5 to 10 business days**, but can stretch longer for complex deals, specific industries, or during AWS reporting weeks. A deal sitting in **Submitted to AWS** or **Under AWS Review** for under two weeks is normal, not stuck.
+
+What to check before escalating:
+
+1. **Card status badge.** If it shows **Action Required**, AWS has come back asking for something. The badge text plus the card's status section tell you what; act on it from the Update form, do not just resubmit.
+2. **AWS review status** in the card. **In review** is normal; **Submitted** with no further activity past two weeks is worth a follow-up with your PDM.
+3. **The deal's last activity in HubSpot** vs the AWS-side last update. The integration mirrors AWS state every time AWS publishes an EventBridge event; if the dates are weeks apart, AWS has not touched the deal recently.
+
+If the deal is genuinely stuck past two weeks with no Action Required, contact your PDM with the AWS opportunity ID (visible in the card and stored in the `govwin_aws_cosell_id` property). Do not resubmit; the original submission still has the engagement task on AWS's side.
+
+### I changed the deal Amount but the card still shows the old number.
+
+If the deal is currently in **Submitted to AWS** or **Under AWS Review**, AWS is blocking changes to the underlying opportunity. The integration sees your edit, recognizes the review-window block, and parks the edit until review exits. Once AWS responds (Approved, Action Required, or a terminal state), the parked edit replays automatically. You do not need to do anything.
+
+The same parking behavior applies to: Amount, Close Date, Deal Name, Description, Customer Use Case, Delivery Model, and Partner Need from AWS. The Closed Lost reason is a special case (see below).
+
+### I want to Close Lost a deal but the Stage dropdown will not save.
+
+Closing a deal during the active review window is also blocked by AWS, the same way other edits are. The Update form will accept your **Closed Lost** selection and the **Closed Lost reason**, and the integration parks the change until AWS review finishes. Once review exits, the parked Closed Lost replays automatically.
+
+If you need the deal to close immediately and the wait is unacceptable, contact your integration owner; they can manually nudge the AWS-side state through the operator runbook, but that is exceptional.
+
+### I do not see the GovWin Pipeline at all.
+
+Your HubSpot user does not have access to the pipeline, or the pipeline has not been created yet. Both are administrator issues. Confirm with your HubSpot administrator that:
+
+1. The pipeline named **GovWin Pipeline** exists under Settings -> Objects -> Deals -> Pipelines, and
+2. Your user has visibility to it (HubSpot scopes pipeline visibility by team and permission).
+
+This is a one-time setup; once your administrator grants access, the pipeline shows up on every deal record.

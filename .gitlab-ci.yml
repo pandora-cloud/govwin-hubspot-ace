@@ -40,6 +40,22 @@ lint:
     - ruff check src/ tests/
   allow_failure: false
 
+docs-properties-drift:
+  stage: lint
+  image: python:3.12-slim
+  before_script:
+    - pip install --quiet -r requirements-dev.txt
+  script:
+    - python scripts/generate_hubspot_properties_doc.py
+    - |
+      if ! git diff --quiet docs/reference/hubspot-properties.md; then
+        echo "ERROR: docs/reference/hubspot-properties.md is out of date."
+        echo "Run 'make docs-properties' locally and commit the result."
+        git --no-pager diff docs/reference/hubspot-properties.md | head -60
+        exit 1
+      fi
+  allow_failure: false
+
 integration:
   stage: integration
   image: python:3.12-slim
