@@ -44,9 +44,16 @@ docs-properties-drift:
   stage: lint
   image: python:3.12-slim
   before_script:
+    # python:3.12-slim ships without git; the drift guard below needs it,
+    # otherwise `git diff` exits 127 and the job fails as a false positive.
+    - apt-get update && apt-get install -y --no-install-recommends git
     - pip install --quiet -r requirements-dev.txt
   script:
     - python scripts/generate_hubspot_properties_doc.py
+    - |
+      # Fail loudly if git is unavailable rather than letting a non-zero
+      # `git diff` exit code masquerade as a documentation drift failure.
+      command -v git >/dev/null || { echo "ERROR: git is required for the drift check but is not installed."; exit 1; }
     - |
       if ! git diff --quiet docs/reference/hubspot-properties.md; then
         echo "ERROR: docs/reference/hubspot-properties.md is out of date."
